@@ -37,16 +37,53 @@ function rejectedObjectKind(value: object): string | null {
   return null;
 }
 
-function sortDeep(value: unknown, path = "$"): unknown {
+function findPathAndThrow(root: unknown, target: object, kind: string): never {
+  function find(val: unknown, currentPath: string): string | null {
+    if (val === target) return currentPath;
+    if (Array.isArray(val)) {
+      for (let i = 0; i < val.length; i++) {
+        const res = find(val[i], `${currentPath}[${i}]`);
+        if (res) return res;
+      }
+    } else if (val !== null && typeof val === "object") {
+      const keys = Object.keys(val as Record<string, unknown>).sort();
+      for (const k of keys) {
+        const res = find(
+          (val as Record<string, unknown>)[k],
+          currentPath === "$" ? k : `${currentPath}.${k}`,
+        );
+        if (res) return res;
+      }
+    }
+    return null;
+  }
+  const path = find(root, "$") ?? "$";
+  throw new TypeError(
+    `canonicalize: a ${kind} at ${path} has no JSON-visible keys and would collapse to "{}"; convert it to a plain object or array first (bug_0607).`,
+  );
+}
+
+/**
+ * Recursively clone and sort object keys for deterministic canonical serialization.
+ *
+ * Performance optimization:
+ * Eliminate path string allocations (`${path}[${index}]` / `${path}.${key}`) on every node
+ * during normal traversal. Path formatting is deferred to `findPathAndThrow` if a rejected
+ * object kind (e.g. Map, Set, Date) is encountered. Plain objects (`ctor === Object`) and
+ * null-prototype objects (`ctor === undefined`) skip the `rejectedObjectKind` checks.
+ */
+function sortDeep(value: unknown, root?: unknown): unknown {
+  const top = root ?? value;
   if (Array.isArray(value)) {
-    return value.map((item, index) => sortDeep(item, `${path}[${index}]`));
+    return value.map((item) => sortDeep(item, top));
   }
   if (value !== null && typeof value === "object") {
-    const kind = rejectedObjectKind(value);
-    if (kind !== null) {
-      throw new TypeError(
-        `canonicalize: a ${kind} at ${path} has no JSON-visible keys and would collapse to "{}"; convert it to a plain object or array first (bug_0607).`,
-      );
+    const ctor = (value as { constructor?: unknown }).constructor;
+    if (ctor !== Object && ctor !== undefined) {
+      const kind = rejectedObjectKind(value);
+      if (kind !== null) {
+        findPathAndThrow(top, value, kind);
+      }
     }
     const obj = value as Record<string, unknown>;
     // A NULL-PROTOTYPE accumulator so a key literally named "__proto__" is stored as
@@ -60,8 +97,13 @@ function sortDeep(value: unknown, path = "$"): unknown {
     // enumerable property — the load-integrity threat model, cf. bug_0190). Normal states
     // carry no such key, so every existing hash is byte-identical.
     const out = Object.create(null) as Record<string, unknown>;
-    for (const key of Object.keys(obj).sort()) {
-      out[key] = sortDeep(obj[key], path === "$" ? key : `${path}.${key}`);
+    const keys = Object.keys(obj);
+    if (keys.length > 1) {
+      keys.sort();
+    }
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]!;
+      out[key] = sortDeep(obj[key], top);
     }
     return out;
   }
