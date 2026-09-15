@@ -703,8 +703,11 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
     );
   }
 
+  const roomVisible = visibleObjectIds(index, state, here);
+  const presentIds = new Set([...state.inventory, ...roomVisible]);
+
   // Objects visible in the room.
-  for (const oid of visibleObjectIds(index, state, here)) {
+  for (const oid of roomVisible) {
     const o = index.objects.get(oid);
     if (!o) continue;
     const oName = objectName(o, state);
@@ -748,9 +751,15 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   // `use <obj> on <obj>`.
   for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
+      if (it.verb !== "USE" || it.target === undefined) continue;
+      // Fast presence gate: target must be present (held or visible in current room)
+      // and required item must be in inventory.
+      if (!presentIds.has(it.target)) continue;
+      if (it.item !== undefined && !state.inventory.includes(it.item)) continue;
+
+      if (!evalConditions(it.conditions, state)) continue;
       const projection = projectUseAction(index, state, it);
       if (!projection || projection.action.type !== "USE") continue;
-      if (!evalConditions(it.conditions, state)) continue;
       // Several authored rows may share one (item, target) pair, and the id is derived
       // from that pair alone — so they all mint the SAME action id. Only one of them can
       // ever run: `useInteraction`, and with it every id-addressed surface, takes the
