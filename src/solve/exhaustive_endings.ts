@@ -95,30 +95,44 @@ function isProgressAction(a: EngineAction): boolean {
  * `journal` (append-only player-facing narration that no condition reads, and which is
  * path-dependent, so including it would likewise prevent all dedupe).
  */
+function trueKeys(rec: Record<string, boolean>): string {
+  const trueList: string[] = [];
+  for (const k in rec) {
+    if (rec[k]) trueList.push(k);
+  }
+  return trueList.sort().join(",");
+}
+
 export function stateKey(s: GameState): string {
-  const trueKeys = (rec: Record<string, boolean>): string =>
-    Object.entries(rec)
-      .filter(([, v]) => v)
-      .map(([k]) => k)
-      .sort()
-      .join(",");
   const flags = trueKeys(s.flags);
   const visited = trueKeys(s.visited);
   const inv = [...s.inventory].sort().join(",");
-  const vars = Object.entries(s.vars)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([k, v]) => `${k}=${v}`)
-    .join(",");
-  const objects = Object.entries(s.objectState)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([id, o]) => {
-      return `${id}:${o.open ? 1 : 0}${o.locked ? 1 : 0}:${o.takenBy ?? ""}:${o.room ?? ""}`;
-    })
-    .join(";");
-  const quests = Object.entries(s.questStage)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([k, v]) => `${k}=${v}`)
-    .join(",");
+
+  const varKeys = Object.keys(s.vars).sort();
+  const varParts: string[] = [];
+  for (let i = 0; i < varKeys.length; i++) {
+    const k = varKeys[i]!;
+    varParts.push(`${k}=${s.vars[k]}`);
+  }
+  const vars = varParts.join(",");
+
+  const objKeys = Object.keys(s.objectState).sort();
+  const objParts: string[] = [];
+  for (let i = 0; i < objKeys.length; i++) {
+    const id = objKeys[i]!;
+    const o = s.objectState[id]!;
+    objParts.push(`${id}:${o.open ? 1 : 0}${o.locked ? 1 : 0}:${o.takenBy ?? ""}:${o.room ?? ""}`);
+  }
+  const objects = objParts.join(";");
+
+  const questKeys = Object.keys(s.questStage).sort();
+  const questParts: string[] = [];
+  for (let i = 0; i < questKeys.length; i++) {
+    const k = questKeys[i]!;
+    questParts.push(`${k}=${s.questStage[k]}`);
+  }
+  const quests = questParts.join(",");
+
   return `${s.current}|${visited}|${flags}|${inv}|${vars}|${objects}|${quests}|${s.ended ? "E" : ""}${s.endingId ?? ""}`;
 }
 
