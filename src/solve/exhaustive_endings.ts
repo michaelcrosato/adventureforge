@@ -96,29 +96,39 @@ function isProgressAction(a: EngineAction): boolean {
  * path-dependent, so including it would likewise prevent all dedupe).
  */
 export function stateKey(s: GameState): string {
-  const trueKeys = (rec: Record<string, boolean>): string =>
-    Object.entries(rec)
-      .filter(([, v]) => v)
-      .map(([k]) => k)
-      .sort()
-      .join(",");
+  // Optimization: Collect true boolean flag/visited keys directly without tuple allocations from Object.entries
+  const trueKeys = (rec: Record<string, boolean>): string => {
+    const keys: string[] = [];
+    for (const k of Object.keys(rec)) {
+      if (rec[k]) keys.push(k);
+    }
+    if (keys.length > 1) keys.sort();
+    return keys.join(",");
+  };
   const flags = trueKeys(s.flags);
   const visited = trueKeys(s.visited);
-  const inv = [...s.inventory].sort().join(",");
-  const vars = Object.entries(s.vars)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([k, v]) => `${k}=${v}`)
-    .join(",");
-  const objects = Object.entries(s.objectState)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([id, o]) => {
+  const inv =
+    s.inventory.length > 1
+      ? [...s.inventory].sort().join(",")
+      : s.inventory[0] ?? "";
+
+  const varKeys = Object.keys(s.vars);
+  if (varKeys.length > 1) varKeys.sort();
+  const vars = varKeys.map((k) => `${k}=${s.vars[k]}`).join(",");
+
+  const objKeys = Object.keys(s.objectState);
+  if (objKeys.length > 1) objKeys.sort();
+  const objects = objKeys
+    .map((id) => {
+      const o = s.objectState[id]!;
       return `${id}:${o.open ? 1 : 0}${o.locked ? 1 : 0}:${o.takenBy ?? ""}:${o.room ?? ""}`;
     })
     .join(";");
-  const quests = Object.entries(s.questStage)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([k, v]) => `${k}=${v}`)
-    .join(",");
+
+  const questKeys = Object.keys(s.questStage);
+  if (questKeys.length > 1) questKeys.sort();
+  const quests = questKeys.map((k) => `${k}=${s.questStage[k]}`).join(",");
+
   return `${s.current}|${visited}|${flags}|${inv}|${vars}|${objects}|${quests}|${s.ended ? "E" : ""}${s.endingId ?? ""}`;
 }
 
