@@ -1468,7 +1468,18 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
 function allAuthoredEffects(pack: RpgPack): Effect[] {
   const out: Effect[] = [];
   for (const r of pack.rooms) out.push(...r.on_enter);
-  for (const o of pack.objects) for (const it of o.interactions) out.push(...it.effects);
+  for (const o of pack.objects) {
+    // An object carries effects in three slots, not one: UNLOCK fires
+    // unlock_effects and the first pickup fires take_effects (legal_actions.ts,
+    // bug_0077/bug_0107), both outside interactions[]. Omitting them
+    // UNDER-counts writes, and every consumer of this set treats a missing
+    // write as evidence of absence — so the omission reads as a false positive
+    // rather than a missed finding. rpg_foundation_validator.ts's equivalent
+    // walk already learned this (bug_0077).
+    if (o.unlock_effects) out.push(...o.unlock_effects);
+    if (o.take_effects) out.push(...o.take_effects);
+    for (const it of o.interactions) out.push(...it.effects);
+  }
   for (const n of pack.npcs) for (const node of n.dialogue.nodes) out.push(...node.effects);
   return out;
 }

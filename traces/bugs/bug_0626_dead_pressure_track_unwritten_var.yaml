@@ -42,13 +42,16 @@ soundness_argument: >
   This is the write-side liveness dual of INERT_FLAG/INERT_OBJECT_STATE
   (rpg_foundation_validator.ts, bug_0104/bug_0262 lineage): those flag a WRITE that
   nothing ever READS; DEAD_PRESSURE_TRACK flags a projected READ (the track's display)
-  that nothing ever WRITES. Sound (no false positives): writesVar is a pure existence
-  check over buffEffects, the SAME effect set this validator already uses for the
-  combat stat-ceiling — rpgRuntimeEffects (enemy on_defeat, maneuvers, skill-check
-  branches) plus allAuthoredEffects (room on_enter, object interactions, NPC dialogue
-  nodes) — so no new effect-collection logic was invented, and any authored write this
-  validator already credits toward combat buffs is equally credited toward pressure-
-  track liveness. It keys strictly on inc_var/dec_var/set_var effects that TARGET the
+  that nothing ever WRITES. writesVar is a pure existence check over buffEffects — the
+  SAME effect set this validator already uses for the combat stat-ceiling. As first
+  shipped, that reuse was the defect rather than the safeguard, and this argument
+  originally claimed "no false positives" on the strength of it: buffEffects is
+  assembled for an upper-bound question, where OVER-counting is the safe direction, so
+  inheriting it unaudited for a question where UNDER-counting FABRICATES a finding left
+  allAuthoredEffects's two missing object effect slots (unlock_effects, take_effects)
+  reading as "nothing writes this var." bug_0627 completed that walk; the
+  no-false-positives property holds from that fix forward, not as originally asserted
+  here. It keys strictly on inc_var/dec_var/set_var effects that TARGET the
   track's var (not on var_gte/var_lte reads, which do not move the value). Severity is
   `warning`, matching INERT_FLAG/INERT_OBJECT_STATE: a dead track is a no-op display, not
   a soft-lock, so it must never turn a legitimate pack red. The change is purely additive

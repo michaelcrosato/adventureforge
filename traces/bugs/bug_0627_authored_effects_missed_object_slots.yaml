@@ -1,0 +1,61 @@
+bug_id: bug_0627
+component: verification   # an incomplete effect walk in validateRpg, not a content/pack defect
+class: incomplete_effect_enumeration
+title: >
+  allAuthoredEffects walked only rooms/interactions/dialogue, missing an object's
+  unlock_effects and take_effects — so DEAD_PRESSURE_TRACK (bug_0626) called a track
+  dead whenever its only write was authored in one of those two slots.
+findings:
+  - id: rpg_authored_effects_missing_object_slots
+    where: src/validate/rpg_validator.ts, allAuthoredEffects
+    severity: low   # latent: wolf_winter.yaml is the only shipped pressure_tracks consumer and
+                     # writes both its track vars from interactions/dialogue, so nothing shipped tripped it
+    description: >
+      An object carries authored effects in three slots, not one. Besides
+      interactions[].effects, UNLOCK fires objects[].unlock_effects and the first
+      pickup fires objects[].take_effects (applied in src/rpg/legal_actions.ts; the
+      slots are first-class per bug_0077 and bug_0107, and 8 of the shipped quest
+      packs author them). allAuthoredEffects walked only rooms[].on_enter,
+      objects[].interactions[].effects and npcs[].dialogue.nodes[].effects, so both
+      object slots were invisible to every consumer of that set. bug_0626's
+      DEAD_PRESSURE_TRACK check reads the set as the complete write universe and
+      treats absence as proof, so a pressure track whose var is moved only by an
+      unlock or a pickup was reported as "frozen at its initial band forever" — a
+      fabricated finding pointing at a wire-up that is already correct. The
+      equivalent walk in rpg_foundation_validator.ts already includes unlock_effects
+      and has since bug_0077, so this was a known omission class reintroduced in the
+      sibling validator.
+    fix: >
+      In src/validate/rpg_validator.ts, allAuthoredEffects now pushes
+      o.unlock_effects and o.take_effects alongside each object's interaction
+      effects, matching rpg_foundation_validator.ts's walk. The helper has exactly one
+      caller (the buffEffects construction feeding both writesVar and statCeiling), so
+      the change is confined to that set.
+soundness_argument: >
+  The fix only ADDS effects to buffEffects, and both consumers are safe in that
+  direction. For writesVar/DEAD_PRESSURE_TRACK the set is an existence check where a
+  missing write fabricates a finding, so completing the walk can only REMOVE false
+  positives. For statCeiling the file's own comment already establishes that
+  over-counting buffs ("assuming every buff obtained") is the sound direction, since
+  it can only remove false positives and never add one — so crediting two more
+  authored slots cannot turn a legitimate pack red there either. Both object slots
+  hold the ordinary EffectSchema (src/rpg/schema.ts), so no new effect shape is
+  introduced and the inc_var/dec_var/set_var matching is unchanged. Note the
+  asymmetry that caused the original defect: statCeiling wants an upper bound, where
+  under-counting is merely conservative, while writesVar wants a completeness claim,
+  where under-counting is a false positive — reusing one set for both is only sound
+  once the set is genuinely complete. The regression proves the failing direction
+  rather than assuming it: both new cases in tests/unit/rpg_pressure_tracks.test.ts
+  were confirmed RED against the pre-fix validator and green after, so they cannot
+  pass vacuously. Empirical confirmation stayed clean throughout: npm run validate
+  reports 0 errors / 0 warnings on all 12 shipped packs, unchanged, because
+  wolf_winter never depended on the missing slots.
+failure:
+  type: false_positive_from_incomplete_enumeration
+  description: >
+    A liveness check inherited an effect set assembled for a different question and
+    treated its absences as evidence, so a correctly-authored pressure track driven by
+    an unlock or a pickup would have been reported dead.
+production:
+  - src/validate/rpg_validator.ts
+regression_test: tests/unit/rpg_pressure_tracks.test.ts
