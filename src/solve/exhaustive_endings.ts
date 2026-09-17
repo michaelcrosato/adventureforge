@@ -107,10 +107,7 @@ export function stateKey(s: GameState): string {
   };
   const flags = trueKeys(s.flags);
   const visited = trueKeys(s.visited);
-  const inv =
-    s.inventory.length > 1
-      ? [...s.inventory].sort().join(",")
-      : s.inventory[0] ?? "";
+  const inv = s.inventory.length > 1 ? [...s.inventory].sort().join(",") : (s.inventory[0] ?? "");
 
   const varKeys = Object.keys(s.vars);
   if (varKeys.length > 1) varKeys.sort();
