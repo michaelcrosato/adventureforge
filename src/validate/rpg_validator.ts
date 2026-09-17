@@ -641,6 +641,13 @@ const err = (code: string, message: string, where: string[]): Finding => ({
   where,
 });
 
+const warn = (code: string, message: string, where: string[]): Finding => ({
+  severity: "warning",
+  code,
+  message,
+  where,
+});
+
 function flagMayBeInitializedAtOpening(pack: RpgPack, flag: string): boolean {
   return (
     pack.meta.flags_init.includes(flag) || (pack.meta.seeded_opening_flags?.includes(flag) ?? false)
@@ -786,10 +793,28 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
       err("BAD_HP", `meta.vars_init.${HP_VAR} must start positive.`, ["meta:vars_init"]),
     );
 
+  // buffEffects also answers a narrower liveness question the pressure-track loop
+  // below needs: does ANY effect in the pack ever write a given var? Declared here
+  // (moved up from just above the stat-ceiling below, which is still its other
+  // consumer) so the loop can consult it too.
+  const buffEffects = [...rpgRuntimeEffects(pack), ...allAuthoredEffects(pack)];
+  const writesVar = (name: string): boolean =>
+    buffEffects.some(
+      (e) =>
+        ("inc_var" in e && e.inc_var.name === name) ||
+        ("dec_var" in e && e.dec_var.name === name) ||
+        ("set_var" in e && e.set_var.name === name),
+    );
+
   // ── Visible pressure tracks ─────────────────────────────────────────────────
   // A track is a read-only semantic projection over one ordinary var. Require
   // that source to exist and that the fresh value lies inside the authored
   // threshold domain; runtime effects remain the generic, deterministic var DSL.
+  // A track whose var no effect anywhere ever writes is DEAD: it silently sits at
+  // its initial band forever, invisible to a blind playtester from inside the
+  // game. This is the write-side liveness dual of INERT_FLAG/INERT_OBJECT_STATE
+  // (rpg_foundation_validator.ts) — those flag a WRITE nothing ever READS; this
+  // flags a projected READ nothing ever WRITES.
   for (const track of pack.pressure_tracks ?? []) {
     const initial = vi[track.var];
     if (initial === undefined) {
@@ -808,6 +833,14 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
           [`pressure:${track.id}`, `var:${track.var}`],
         ),
       );
+    } else if (!writesVar(track.var)) {
+      findings.push(
+        warn(
+          "DEAD_PRESSURE_TRACK",
+          `pressure track "${track.id}" projects var "${track.var}", but no effect in the pack ever writes it — the track is frozen at its initial band forever.`,
+          [`pressure:${track.id}`, `var:${track.var}`],
+        ),
+      );
     }
   }
 
@@ -823,7 +856,6 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
   // buff obtained) is the sound direction — it can only REMOVE false positives,
   // never add one. A negative inc_var (a debuff) is ignored (Math.max(0, by)),
   // exactly as the skill ceiling does, so it never over-credits.
-  const buffEffects = [...rpgRuntimeEffects(pack), ...allAuthoredEffects(pack)];
   const statCeiling = (name: string): number => {
     let v = vi[name] ?? 0;
     for (const e of buffEffects)

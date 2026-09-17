@@ -56,6 +56,21 @@ function compiledPressurePack(): RpgPack {
   return result.compiled.pack;
 }
 
+// Derived from SYNTHETIC_PRESSURE_SOURCE by removing its one write to cattle_alarm
+// (the "finish" room's on_enter inc_var) — the var is still declared in vars_init
+// and still projected by the pressure track, but now nothing in the pack ever
+// writes it: the DEAD_PRESSURE_TRACK fixture.
+const SYNTHETIC_DEAD_PRESSURE_SOURCE = SYNTHETIC_PRESSURE_SOURCE.replace(
+  "    on_enter:\n      - inc_var: { name: cattle_alarm, by: 4 }\n",
+  "",
+);
+
+function compiledDeadPressurePack(): RpgPack {
+  const result = compileRpgSource(SYNTHETIC_DEAD_PRESSURE_SOURCE);
+  if (!result.ok) throw result.error;
+  return result.compiled.pack;
+}
+
 function pressureTrack(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "alarm",
@@ -146,6 +161,18 @@ describe("RPG pressure-track authoring contract", () => {
     expect(validateRpg(below).findings.map((finding) => finding.code)).toContain(
       "PRESSURE_INITIAL_BELOW_MIN",
     );
+  });
+
+  it("flags DEAD_PRESSURE_TRACK when no effect ever writes the track's var, and not when one does", () => {
+    const alive = compiledPressurePack();
+    expect(validateRpg(alive).findings.map((finding) => finding.code)).not.toContain(
+      "DEAD_PRESSURE_TRACK",
+    );
+
+    const dead = compiledDeadPressurePack();
+    const finding = validateRpg(dead).findings.find((f) => f.code === "DEAD_PRESSURE_TRACK");
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe("warning");
   });
 });
 

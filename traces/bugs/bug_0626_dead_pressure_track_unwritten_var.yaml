@@ -1,0 +1,74 @@
+bug_id: bug_0626
+component: verification   # a missing liveness-direction warning in validateRpg, not a content/pack defect
+class: missing_liveness_direction_warning
+title: >
+  validateRpg had no liveness check for pressure tracks — a track var declared in
+  meta.vars_init and starting in-domain (so neither PRESSURE_VAR_UNDECLARED nor
+  PRESSURE_INITIAL_BELOW_MIN fires) but that no effect anywhere ever writes
+  validated GREEN and silently froze at its initial band forever.
+findings:
+  - id: rpg_dead_pressure_track_unwitnessed
+    where: src/validate/rpg_validator.ts, the pressure-track loop (after the PRESSURE_INITIAL_BELOW_MIN arm)
+    severity: low   # latent: wolf_winter.yaml is the only shipped pressure_tracks consumer and both its
+                     # tracks (cattle_alarm, pack_drive) are genuinely written, so nothing shipped trips it
+    description: >
+      A pressure track is a read-only semantic projection over one ordinary var (spec:
+      declared in pressure_tracks, sourced from meta.vars_init, rendered in bands to the
+      player). The existing loop checked only that the source var is declared
+      (PRESSURE_VAR_UNDECLARED) and that its initial value is in-domain
+      (PRESSURE_INITIAL_BELOW_MIN) — never that anything actually MOVES it afterward. A
+      typo'd or forgotten effect wire-up (e.g. an inc_var authored against the wrong var
+      name) would ship a track that looks "live" to the player — it has bands, a label, a
+      description — but is mechanically inert: the value never changes for the rest of
+      the game. A blind playtester has no way to tell this apart from an intentionally
+      static track from inside the game (same blind spot INERT_FLAG/bug_0104 and
+      INERT_OBJECT_STATE/bug_0262 close for flags and object open/lock state). This is
+      the third declared, player-visible surface (after flags and object state) that had
+      a feasibility/declaration check but no liveness check.
+    fix: >
+      (1) In src/validate/rpg_validator.ts, moved the existing `const buffEffects =
+      [...rpgRuntimeEffects(pack), ...allAuthoredEffects(pack)]` construction (previously
+      declared just below the pressure-track loop, for the combat stat-ceiling) to just
+      above the loop, so the loop can consult it too; its other consumer (statCeiling)
+      is unaffected since it reads the same binding. (2) Added a `writesVar(name):
+      boolean` helper next to it that checks whether any inc_var/dec_var/set_var effect
+      in buffEffects targets the given var name. (3) Added a `warn(code, message, where)`
+      helper beside the file's existing `err(...)` helper (severity: "warning" instead of
+      "error"). (4) The pressure-track loop's `if (initial === undefined) ... else if
+      (initial < bands[0].min) ...` chain gained a third arm: `else if
+      (!writesVar(track.var))` pushes `warn("DEAD_PRESSURE_TRACK", ...)` naming the track
+      id and var.
+soundness_argument: >
+  This is the write-side liveness dual of INERT_FLAG/INERT_OBJECT_STATE
+  (rpg_foundation_validator.ts, bug_0104/bug_0262 lineage): those flag a WRITE that
+  nothing ever READS; DEAD_PRESSURE_TRACK flags a projected READ (the track's display)
+  that nothing ever WRITES. Sound (no false positives): writesVar is a pure existence
+  check over buffEffects, the SAME effect set this validator already uses for the
+  combat stat-ceiling — rpgRuntimeEffects (enemy on_defeat, maneuvers, skill-check
+  branches) plus allAuthoredEffects (room on_enter, object interactions, NPC dialogue
+  nodes) — so no new effect-collection logic was invented, and any authored write this
+  validator already credits toward combat buffs is equally credited toward pressure-
+  track liveness. It keys strictly on inc_var/dec_var/set_var effects that TARGET the
+  track's var (not on var_gte/var_lte reads, which do not move the value). Severity is
+  `warning`, matching INERT_FLAG/INERT_OBJECT_STATE: a dead track is a no-op display, not
+  a soft-lock, so it must never turn a legitimate pack red. The change is purely additive
+  (new warning code, new arm at the end of an existing if/else-if chain) — it does not
+  touch the PRESSURE_VAR_UNDECLARED or PRESSURE_INITIAL_BELOW_MIN branches, so
+  verify:integrity's matcher-count/floor guards are unaffected. Verified against the one
+  shipped pressure_tracks consumer: content/rpg/quests/wolf_winter.yaml declares
+  cattle_alarm and pack_drive; direct grep confirms both are written by many inc_var/
+  dec_var/set_var effects, all located inside `objects[].interactions[].effects` or
+  `npcs[].dialogue.nodes[].effects` (never inside `rooms[]`), both scanned by
+  allAuthoredEffects — so `npm run validate` emits zero new DEAD_PRESSURE_TRACK findings
+  on the shipped world. The dedicated regression proves both directions: a fixture
+  deriving from the file's own SYNTHETIC_PRESSURE_SOURCE by removing its one write must
+  warn, while the unmodified (written) fixture must not.
+failure:
+  type: latent_soundness_gap
+  description: >
+    The pressure-track declaration/feasibility checks had no liveness-direction
+    counterpart; an authored track var that nothing ever wrote validated GREEN and
+    would silently freeze at its initial band for the rest of the game.
+production:
+  - src/validate/rpg_validator.ts
+regression_test: tests/unit/rpg_pressure_tracks.test.ts
