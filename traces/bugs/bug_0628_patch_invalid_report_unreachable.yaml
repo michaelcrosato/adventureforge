@@ -1,0 +1,96 @@
+id: bug_0628
+title: "apply_content_patch's structured PATCH_INVALID report was unreachable — a malformed op threw a raw Zod error instead"
+reported_by: >
+  Intake ticket f63012f07982e235 (backlog audit of src/mcp/server.ts and
+  src/mcp/tools.ts around the apply_content_patch tool).
+severity: S2
+
+symptom: >
+  Sending a content-patch proposal with an op outside the closed vocabulary (or any
+  other proposal-shape violation, e.g. the retired `mode` discriminator) through the
+  MCP apply_content_patch tool did not come back as the tool's own structured
+  validation report. Instead the call threw a raw ZodError — a pretty-printed JSON
+  dump of Zod issues as the exception message — which the MCP wrap() handler could
+  only render as a generic `Error: ...` text blob (isError: true), not the
+  `{ ok: false, world_quest_id, report: { findings: [...] } }` shape every other
+  patch rejection (PATCH_TARGET_MISSING, PATCH_UNSAFE_FIELD, PATCH_SCHEMA_BREAK)
+  already returns.
+
+root_cause: >
+  agents/fixer.ts's applyContentPatch already validates its `proposal` argument
+  against ContentPatchProposalSchema with `.safeParse` (fixer.ts:103) and, on
+  failure, returns a well-formed `PATCH_INVALID` finding via makeReport — this is
+  the designed, structured rejection path. But src/mcp/tools.ts's
+  apply_content_patch handler called `ContentPatchProposalSchema.parse(args.proposal)`
+  (a THROWING parse) one step earlier, before ever calling applyContentPatch. Every
+  proposal-shape violation was therefore caught — and thrown past the PATCH_INVALID
+  branch — by this redundant pre-validation, making that branch dead code on the
+  only production call path. The op vocabulary itself (agents/fixer.ts's
+  `PatchOpSchema`, a z.discriminatedUnion of exactly set_meta / set_object_field /
+  add_room_journal_hint) was never in question; what was broken was which layer's
+  rejection the caller actually saw.
+
+  The MCP-input schema in server.ts (`ops: z.array(z.record(z.string(), z.unknown()))`)
+  independently does NOT enforce this closed vocabulary — investigated as a
+  candidate second fix and deliberately left alone; see nonclaims below.
+
+fix: >
+  src/mcp/tools.ts's apply_content_patch handler no longer pre-parses the proposal.
+  `args.proposal` (untrusted MCP input) is passed straight through, unparsed, to
+  applyContentPatch, whose own internal `ContentPatchProposalSchema.safeParse` now
+  runs on every call and produces the structured PATCH_INVALID report for any
+  proposal-shape violation, including a non-vocabulary op. The now-unused
+  `ContentPatchProposalSchema` import was removed from tools.ts; `applyContentPatch`
+  and `agents/fixer.ts` were not changed. A pre-existing test
+  ("rejects the retired proposal mode discriminator") asserted the old throwing
+  behavior for the same class of proposal-shape violation (an extra `mode` key) and
+  was rewritten to assert the corrected, non-throwing, structured-report contract
+  instead — its underlying case (a `.strict()` violation) was always going to change
+  shape once PATCH_INVALID became reachable.
+
+deterministic_witnesses:
+  - "the fix is 1 call site: src/mcp/tools.ts's apply_content_patch handler, net -1/+10 lines including the rationale comment, plus removing the now-unused ContentPatchProposalSchema import"
+  - "reverting only src/mcp/tools.ts (git stash of the two changed lines) turns both the rewritten mode-discriminator test and the new non-vocabulary-op regression test red, throwing the exact raw ZodError JSON described above, confirmed by re-running the suite before restoring the fix"
+  - "with the fix restored, the same two tests pass, and the JSON payload's report.findings[0] is { severity: 'error', code: 'PATCH_INVALID', message: <zod issue text>, where: ['proposal'] } — the exact shape agents/fixer.ts:107-114 constructs"
+  - "the three pre-existing, unrelated apply_content_patch tests (whitelisted hint apply, PATCH_TARGET_MISSING, missing/ambiguous source identity) are untouched and still pass, so ordinary valid proposals and non-proposal argument errors are unaffected"
+
+mechanics_unchanged:
+  - "the closed op vocabulary itself (agents/fixer.ts's PatchOpSchema: set_meta, set_object_field, add_room_journal_hint) — nothing outside it is now accepted that was rejected before, or vice versa"
+  - "applyContentPatch's own logic, its PATCH_TARGET_MISSING / PATCH_UNSAFE_FIELD / PATCH_SCHEMA_BREAK branches, and the re-validation-through-RpgPackSchema step"
+  - "resolveWorldQuestSourceId's argument-identity checks (missing/ambiguous world_quest_id vs pack_path), which still throw exactly as before — that failure mode is unrelated to proposal validation and is not what this bug is about"
+  - "the server.ts MCP tool registration and its input schema — left exactly as-is (see nonclaims)"
+
+nonclaims:
+  - >
+    The ticket that raised this also named tightening server.ts's MCP-input schema
+    for `ops` (a z.discriminatedUnion mirroring PatchOpSchema, in place of
+    z.record(z.string(), z.unknown())) as a candidate fix. That was investigated and
+    deliberately NOT done: reading node_modules/@modelcontextprotocol/sdk's
+    McpServer (mcp.js), the CallTool request handler validates `args` against the
+    registered inputSchema via its own safeParseAsync BEFORE the tool's callback
+    ever runs, and on failure returns createToolError(...) — a generic
+    "Input validation error: ..." text, not applyContentPatch's PATCH_INVALID
+    report. Tightening the MCP-boundary schema would make a non-vocabulary op fail
+    at that earlier, generic layer for real MCP clients instead of ever reaching
+    applyContentPatch, which is the opposite of "make PATCH_INVALID reachable."
+    Leaving the boundary schema loose is therefore load-bearing, not an oversight:
+    it lets a structurally op-shaped-but-invalid value pass through to the one place
+    (applyContentPatch) that turns a vocabulary violation into a graceful report
+    instead of a protocol-level error.
+  - "This does not change what proposals are ACCEPTED or APPLIED — only how a rejected one is reported. No valid, in-vocabulary proposal that previously applied cleanly is affected; the three untouched pre-existing tests in the same describe block are the evidence."
+  - "Direct callers of createToolApi() (this repo's own test convention, bypassing server.ts and the MCP SDK entirely) were the only path exercised here; a live end-to-end MCP-stdio-transport check was not separately spun up, since server.ts and wrap() were not changed and tools.ts is unit-tested directly per its own file header (\"These are unit-tested directly, without a live MCP client — a §9.4 rule\")."
+
+production:
+  - src/mcp/tools.ts
+
+tests:
+  - tests/unit/mcp_tools.test.ts
+
+verification:
+  - npm run crawl:smoke
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npx vitest run tests/unit/mcp_tools.test.ts tests/regression/mcp_server_registration.test.ts tests/unit/compact_legend.test.ts tests/unit/debugger_fixer.test.ts
+  - npm run health:fast
+  - npm run verify:bug-traces
