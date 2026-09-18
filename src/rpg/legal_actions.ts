@@ -828,7 +828,6 @@ export function enumerateRpgBlockedActions(
 ): RpgBlockedActionOption[] {
   if (state.ended) return [];
 
-  const legalIds = new Set(enumerateRpgBaseActions(index, state).map((option) => option.id));
   const emitted = new Set<string>();
   const out: RpgBlockedActionOption[] = [];
 
@@ -840,7 +839,16 @@ export function enumerateRpgBlockedActions(
       if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
       if (!evalConditions(hint.visible_when, state)) continue;
       if (evalConditions(interaction.conditions, state)) continue;
-      if (legalIds.has(projection.id) || emitted.has(projection.id)) continue;
+      if (emitted.has(projection.id)) continue;
+
+      // Bolt Optimization: Instead of building full legal action options for the room
+      // via `enumerateRpgBaseActions(index, state)`, directly check if any USE interaction
+      // for this target/item pair currently resolves (i.e., is executable / legal).
+      // This saves significant CPU time in RPG observation generation.
+      const isLegal =
+        useInteraction(index, projection.action.target, projection.action.item, state) !==
+        undefined;
+      if (isLegal) continue;
 
       emitted.add(projection.id);
       out.push({ id: projection.id, command: projection.command, reason: hint.reason });
