@@ -845,9 +845,10 @@ export function enumerateRpgBlockedActions(
       // via `enumerateRpgBaseActions(index, state)`, directly check if any USE interaction
       // for this target/item pair currently resolves (i.e., is executable / legal).
       // This saves significant CPU time in RPG observation generation.
+      const useAction = projection.action;
       const isLegal =
-        useInteraction(index, projection.action.target, projection.action.item, state) !==
-        undefined;
+        useAction.type === "USE" &&
+        useInteraction(index, useAction.target, useAction.item, state) !== undefined;
       if (isLegal) continue;
 
       emitted.add(projection.id);
