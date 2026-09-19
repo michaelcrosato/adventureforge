@@ -208,24 +208,61 @@ export function isLocked(index: RpgModelIndex, state: GameState, id: string): bo
   return coreIsLocked(index, state, id);
 }
 
+/** True if `id` and all containing objects satisfy their `visible_when` conditions. */
+export function worldVisible(
+  index: RpgModelIndex,
+  state: GameState,
+  id: string,
+  ancestors: ReadonlySet<string> = new Set(),
+): boolean {
+  if (ancestors.has(id)) return false;
+  const object = index.objects.get(id);
+  if (!object || !evalConditions(object.visible_when ?? [], state)) return false;
+
+  // Runtime placement wins over static containment. A moved object is no longer
+  // inside its authored container, while a currently-contained object inherits
+  // every containing object's world-visibility gate. Inventory is handled by
+  // callers before this world-only helper and deliberately bypasses these gates.
+  const location = locateObject(index, state, id);
+  if (location.kind !== "container") return true;
+  const nextAncestors = new Set(ancestors);
+  nextAncestors.add(id);
+  return worldVisible(index, state, location.container, nextAncestors);
+}
+
+/**
+ * Direct O(1) check if a specific object is visible in a room.
+ * Avoids scanning all world objects via `visibleObjectIds(index, state, room).includes(id)`.
+ */
+export function isObjectVisibleInRoom(
+  index: RpgModelIndex,
+  state: GameState,
+  id: string,
+  room: string,
+): boolean {
+  let curr = id;
+  const visitedContainers = new Set<string>();
+  while (true) {
+    const loc = locateObject(index, state, curr);
+    if (loc.kind === "room") {
+      if (loc.room !== room) return false;
+      break;
+    } else if (loc.kind === "container") {
+      if (visitedContainers.has(loc.container) || !isOpen(state, loc.container)) {
+        return false;
+      }
+      visitedContainers.add(loc.container);
+      curr = loc.container;
+    } else {
+      return false;
+    }
+  }
+
+  return worldVisible(index, state, id);
+}
+
 export function visibleObjectIds(index: RpgModelIndex, state: GameState, room: string): string[] {
-  const worldVisible = (id: string, ancestors: ReadonlySet<string> = new Set()): boolean => {
-    if (ancestors.has(id)) return false;
-    const object = index.objects.get(id);
-    if (!object || !evalConditions(object.visible_when ?? [], state)) return false;
-
-    // Runtime placement wins over static containment. A moved object is no longer
-    // inside its authored container, while a currently-contained object inherits
-    // every containing object's world-visibility gate. Inventory is handled by
-    // callers before this world-only helper and deliberately bypasses these gates.
-    const location = locateObject(index, state, id);
-    if (location.kind !== "container") return true;
-    const nextAncestors = new Set(ancestors);
-    nextAncestors.add(id);
-    return worldVisible(location.container, nextAncestors);
-  };
-
-  return coreVisibleObjectIds(index, state, room).filter((id) => worldVisible(id));
+  return coreVisibleObjectIds(index, state, room).filter((id) => worldVisible(index, state, id));
 }
 
 export { dlgVar, nodeByOrdinal, nodeOrdinal };

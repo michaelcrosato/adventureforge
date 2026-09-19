@@ -20,6 +20,7 @@ import {
   activeDialogue,
   dlgVar,
   isLocked,
+  isObjectVisibleInRoom,
   isOpen,
   locateObject,
   nodeText,
@@ -97,7 +98,7 @@ function definiteObjectNounPhrase(name: string): string {
 /** True if `id` is reachable for the player right now (held or visible in the room). */
 export function present(index: RpgModelIndex, state: GameState, id: string): boolean {
   if (state.inventory.includes(id)) return true;
-  return visibleObjectIds(index, state, state.current).includes(id);
+  return isObjectVisibleInRoom(index, state, id, state.current);
 }
 
 /**
@@ -285,7 +286,7 @@ function resolveRpgActionCore(
     case "TAKE": {
       const o = index.objects.get(action.item);
       if (!o || !o.takeable || state.inventory.includes(action.item)) return null;
-      if (!visibleObjectIds(index, state, here).includes(action.item)) return null;
+      if (!isObjectVisibleInRoom(index, state, action.item, here)) return null;
       const takeEffects =
         state.objectState[action.item]?.takenBy === "player" ? [] : (o.take_effects ?? []);
       // take_effects (bug_0107) fire after the first pickup, so a goal item can award

@@ -17,6 +17,7 @@ import { resolveAttack, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
 import { enemyHpVar, RpgPackSchema, type Enemy } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
+import { isObjectVisibleInRoom, indexRpgModel } from "../../src/rpg/model.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const baseState = () => ({
@@ -196,5 +197,72 @@ describe("RPG pack state initialization boundary", () => {
 
     expect(index.pack).toBe(parsed);
     expect("rpgPack" in index).toBe(false);
+  });
+});
+
+describe("nested container visibility", () => {
+  it("correctly evaluates visibility through nested containers", () => {
+    const pack = {
+      meta: {
+        id: "nested_containers_fixture",
+        title: "Nested Containers",
+        start_room: "room1",
+        vars_init: {},
+      },
+      rooms: [{ id: "room1", name: "Room 1", description: "Room 1.", objects: ["outer_box"] }],
+      objects: [
+        {
+          id: "outer_box",
+          name: "outer box",
+          description: "An outer box.",
+          openable: true,
+          contents: ["inner_box"],
+          interactions: [],
+        },
+        {
+          id: "inner_box",
+          name: "inner box",
+          description: "An inner box.",
+          openable: true,
+          contents: ["jewel"],
+          interactions: [],
+        },
+        {
+          id: "jewel",
+          name: "jewel",
+          description: "A shiny jewel.",
+          takeable: true,
+          interactions: [],
+        },
+      ],
+      win_conditions: [{ id: "win", conditions: [{ has_flag: "won" }], ending: "ending_win" }],
+      endings: [{ id: "ending_win", title: "Win", text: "Done." }],
+    };
+
+    const parsed = RpgPackSchema.parse(pack);
+    const index = indexRpgModel(parsed);
+    let state = initState({ seed: 1, start: "room1" });
+
+    // Both containers closed initially -> jewel is not visible
+    expect(isObjectVisibleInRoom(index, state, "jewel", "room1")).toBe(false);
+
+    // Open outer_box only -> inner_box visible, but jewel inside closed inner_box is not visible
+    state = {
+      ...state,
+      objectState: { ...state.objectState, outer_box: { open: true } },
+    };
+    expect(isObjectVisibleInRoom(index, state, "inner_box", "room1")).toBe(true);
+    expect(isObjectVisibleInRoom(index, state, "jewel", "room1")).toBe(false);
+
+    // Open inner_box as well -> jewel is now visible
+    state = {
+      ...state,
+      objectState: {
+        ...state.objectState,
+        outer_box: { open: true },
+        inner_box: { open: true },
+      },
+    };
+    expect(isObjectVisibleInRoom(index, state, "jewel", "room1")).toBe(true);
   });
 });
