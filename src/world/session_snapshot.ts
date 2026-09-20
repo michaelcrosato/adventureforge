@@ -704,12 +704,30 @@ export function parseOverworldSessionSnapshot(raw: unknown): OverworldSessionSna
 }
 
 export function cloneJournalEntries<T extends OverworldJournalEntry>(entries: readonly T[]): T[] {
-  const clones: T[] = [];
-  for (const entry of entries) clones.push(cloneOverworldJournalEntry(entry) as T);
+  // Pre-allocate array capacity to avoid dynamic reallocation overhead during loop.
+  const count = entries.length;
+  const clones: T[] = new Array(count);
+  for (let i = 0; i < count; i += 1) {
+    clones[i] = cloneOverworldJournalEntry(entries[i]!) as T;
+  }
   return clones;
 }
 
 export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): OverworldJournalEntry {
+  // Fast path: Most journal entries have no optional nested proof objects.
+  // Performing a shallow copy directly avoids evaluating multiple conditional checks
+  // and constructing unnecessary temporary object literals.
+  if (
+    !entry.questStartProof &&
+    !entry.localSceneProof &&
+    !entry.questCompletionBoundary &&
+    !entry.registrationBoundary &&
+    !entry.serviceBoundary &&
+    !entry.storyChoiceBoundary
+  ) {
+    return { ...entry };
+  }
+
   return {
     ...entry,
     ...(entry.questStartProof
