@@ -11,7 +11,7 @@ import { sha256Hex } from "./sha256.js";
 
 /** Deterministic JSON: object keys sorted; arrays preserved; no whitespace. */
 export function canonicalize(value: unknown): string {
-  return JSON.stringify(sortDeep(value));
+  return JSON.stringify(sortDeep(value, value));
 }
 
 /**
@@ -33,22 +33,64 @@ const REJECTED_OBJECT_KINDS: ReadonlyArray<readonly [string, (value: object) => 
 ];
 
 function rejectedObjectKind(value: object): string | null {
-  for (const [name, test] of REJECTED_OBJECT_KINDS) if (test(value)) return name;
+  // Fast path: standard plain objects and Object.create(null) are guaranteed
+  // not to be non-plain collections (Map, Set, Date, etc.).
+  const ctor = value.constructor;
+  if (ctor === Object || ctor === undefined) return null;
+  for (let i = 0; i < REJECTED_OBJECT_KINDS.length; i++) {
+    const entry = REJECTED_OBJECT_KINDS[i]!;
+    if (entry[1](value)) return entry[0];
+  }
   return null;
 }
 
-function sortDeep(value: unknown, path = "$"): unknown {
+/**
+ * Lazily re-traverses `root` to construct the object path only when formatting
+ * a `TypeError` for an invalid object kind, avoiding string path allocations
+ * during normal canonical serialization.
+ */
+function findObjectPath(root: unknown, target: unknown, currentPath = "$"): string {
+  if (root === target) return currentPath;
+  if (Array.isArray(root)) {
+    for (let i = 0; i < root.length; i++) {
+      const p = findObjectPath(root[i], target, `${currentPath}[${i}]`);
+      if (p !== "") return p;
+    }
+  } else if (root !== null && typeof root === "object") {
+    const keys = Object.keys(root as Record<string, unknown>);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]!;
+      const child = (root as Record<string, unknown>)[key];
+      const nextPath = currentPath === "$" ? key : `${currentPath}.${key}`;
+      const p = findObjectPath(child, target, nextPath);
+      if (p !== "") return p;
+    }
+  }
+  return "";
+}
+
+function sortDeep(value: unknown, root: unknown): unknown {
   if (Array.isArray(value)) {
-    return value.map((item, index) => sortDeep(item, `${path}[${index}]`));
+    const len = value.length;
+    const out = new Array(len);
+    for (let i = 0; i < len; i++) {
+      out[i] = sortDeep(value[i], root);
+    }
+    return out;
   }
   if (value !== null && typeof value === "object") {
     const kind = rejectedObjectKind(value);
     if (kind !== null) {
+      const path = findObjectPath(root, value);
       throw new TypeError(
         `canonicalize: a ${kind} at ${path} has no JSON-visible keys and would collapse to "{}"; convert it to a plain object or array first (bug_0607).`,
       );
     }
     const obj = value as Record<string, unknown>;
+    const keys = Object.keys(obj);
+    if (keys.length > 1) {
+      keys.sort();
+    }
     // A NULL-PROTOTYPE accumulator so a key literally named "__proto__" is stored as
     // an own data property. With a normal `{}`, `out["__proto__"] = v` hits Object's
     // `__proto__` SETTER: a primitive v is silently dropped, and an object v re-points
@@ -60,8 +102,9 @@ function sortDeep(value: unknown, path = "$"): unknown {
     // enumerable property — the load-integrity threat model, cf. bug_0190). Normal states
     // carry no such key, so every existing hash is byte-identical.
     const out = Object.create(null) as Record<string, unknown>;
-    for (const key of Object.keys(obj).sort()) {
-      out[key] = sortDeep(obj[key], path === "$" ? key : `${path}.${key}`);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]!;
+      out[key] = sortDeep(obj[key], root);
     }
     return out;
   }
