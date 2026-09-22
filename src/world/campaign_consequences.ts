@@ -358,7 +358,9 @@ export function campaignCharacterMatchesConditions(
   character: CampaignCharacterState,
   input: CampaignCharacterConditions,
 ): boolean {
-  const conditions = CampaignCharacterConditionsSchema.parse(input);
+  // Optimization: Skip re-parsing Zod schema on every condition match check in hot loops.
+  // The input parameter is already strongly typed as CampaignCharacterConditions.
+  const conditions = input;
   const companions = new Set(character.companions);
   const promises = new Map(
     character.promises.map((promise) => [promise.promiseId, promise.status] as const),
@@ -403,8 +405,9 @@ export function campaignCharacterConditionsAreMutuallyExclusive(
   left: CampaignCharacterConditions,
   right: CampaignCharacterConditions,
 ): boolean {
-  const parsedLeft = CampaignCharacterConditionsSchema.parse(left);
-  const parsedRight = CampaignCharacterConditionsSchema.parse(right);
+  // Optimization: Skip re-parsing Zod schema on typed condition objects in hot validation loops.
+  const parsedLeft = left;
+  const parsedRight = right;
   const leftRequiredCompanions = new Set(parsedLeft.requires_all_companions ?? []);
   const rightRequiredCompanions = new Set(parsedRight.requires_all_companions ?? []);
   if (
@@ -534,8 +537,9 @@ export function deriveCampaignWorldFactIds(
 ): string[] {
   const facts = new Set<string>();
   for (const group of effectGroups) {
-    const effects = CampaignConsequenceEffectsSchema.parse(group);
-    for (const effect of effects) {
+    // Optimization: Directly iterate over already-validated effect groups instead of
+    // calling CampaignConsequenceEffectsSchema.parse on every derivation step in hot loops.
+    for (const effect of group) {
       if (effect.type === "set_world_fact") facts.add(effect.fact_id);
     }
   }
