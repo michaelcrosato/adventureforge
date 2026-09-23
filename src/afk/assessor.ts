@@ -31,6 +31,7 @@ import {
   generatorRpgDriftCandidate,
   rpgGeneratorChecksForRoot,
 } from "./generated_eval.js";
+import { loopStateEntriesOldestFirst } from "./loop_state.js";
 
 export type { Category, ImprovementCandidate } from "./assessment_model.js";
 export {
@@ -281,8 +282,19 @@ export function packStem(ref: string): string {
  * leading backtick/asterisk run; the capture still stops at the CLOSING tick (a backtick
  * is not in the class), so the bare stem is recovered. Unwrapped prose and path forms are
  * unaffected ([\`*]* matches zero).
+ *
+ * bug_0638: "the log is newest-first" stopped being true of the whole file at the
+ * 2026-08-29 two-loop migration. The driver now APPENDS each cycle's "## AFK Cycle" entry
+ * at the END, so the live ledger is legacy "### Cycle result" entries newest-first
+ * followed by AFK entries OLDEST-first. Scanning raw file order gave the newest AFK entry
+ * the LARGEST offset — the pack it just attended looked stale and could be re-nominated.
+ * The scan therefore runs over {@link attendanceScanText}, the same entries laid out
+ * truly newest-first, so the first-match-wins rule and every regex/capture below are
+ * unchanged. Offsets are positions in that reordered text: still >= 0, still "smaller
+ * offset = more recent", still comparable only with each other.
  */
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
+  const scanText = attendanceScanText(loopStateText);
   const map = new Map<string, number>();
   // bug_0293: ALSO match the model-INDEPENDENT code-written recommendation line
   // `Blind-playtest "<id>"` / `Blind-playtest quest "<id>"` (legacy), current
@@ -292,7 +304,7 @@ export function parseAttendanceOffsets(loopStateText: string): Map<string, numbe
   // on a captured pack id is normalized by packStem.
   const re =
     /(?:(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest(?:\s+quest)?|Review\s+quest)\s+["`*]*|Rec:\s+playtest-)([A-Za-z0-9_./-]+)/gi;
-  for (const m of loopStateText.matchAll(re)) {
+  for (const m of scanText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;
     const stem = packStem(captured.replace(/[.,;]+$/, "")); // strip sentence-ending punctuation
@@ -300,6 +312,26 @@ export function parseAttendanceOffsets(loopStateText: string): Map<string, numbe
     if (!map.has(stem)) map.set(stem, m.index ?? 0); // newest-first ⇒ first match is most recent
   }
   return map;
+}
+
+/**
+ * The ledger's cycle entries laid out NEWEST-FIRST (bug_0638): the entries from
+ * loop_state.ts's single chronology ({@link loopStateEntriesOldestFirst}), reversed, then
+ * the intro last. The intro is the ledger's standing contract and machine markers, not a
+ * cycle, so nothing in it may outrank a real entry. Each piece ends in a newline so no
+ * match can straddle a join. A text with no entry headings at all is returned unchanged,
+ * so free-form text keeps its plain top-is-newest reading. Pure.
+ */
+export function attendanceScanText(loopStateText: string): string {
+  const oldestFirst = loopStateEntriesOldestFirst(loopStateText);
+  if (oldestFirst.length === 0) return loopStateText;
+  const withNewline = (piece: string): string => (piece.endsWith("\n") ? piece : `${piece}\n`);
+  const introEnd = Math.min(...oldestFirst.map((entry) => entry.start));
+  const newestFirst = [...oldestFirst]
+    .reverse()
+    .map((entry) => withNewline(loopStateText.slice(entry.start, entry.end)));
+  const intro = loopStateText.slice(0, introEnd);
+  return newestFirst.join("") + (intro === "" ? "" : withNewline(intro));
 }
 
 const BLIND_REPORT_FILE_RE = /^(\d{8}T\d{6}Z)_(.+)_seed\d+\.md$/;

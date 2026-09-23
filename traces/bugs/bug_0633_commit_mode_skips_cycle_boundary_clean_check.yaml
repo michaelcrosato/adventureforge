@@ -1,0 +1,42 @@
+id: bug_0633
+title: loop.sh re-checked a clean tree at each cycle boundary only in evidence-only mode, so commit mode was protected on its first cycle alone
+reported_by: repo audit at c17192f9 (2026-09-22)
+severity: S3
+
+symptom: >
+  In commit mode (AI_LOOP_COMMIT=1) without AI_LOOP_ALLOW_DIRTY, loop.sh refused to START
+  on a dirty tree, but later cycles began on whatever the tree held. Anything that
+  dirtied the checkout between cycles — another process writing into it, or a failed
+  cycle's cleanup that could not remove every path it created — was either hard-reset
+  away by the next red gate or swept into the next provisional commit, which is exactly
+  the loss the startup guard exists to prevent. AGENTS.md says the driver rechecks
+  cleanliness at every cycle boundary.
+
+cause: >
+  require_clean_evidence_cycle_start returned 0 immediately whenever AI_LOOP_COMMIT=1.
+  The early return existed so AI_LOOP_ALLOW_DIRTY=1 could keep working for commit mode,
+  but it also skipped the check for commit-mode runs that never asked for the dirty
+  override.
+
+reproduction: >
+  tests/regression/loop_driver_gates.test.ts "rechecks a commit-mode cycle boundary too,
+  unless the dirty override was given (bug_0633)": with AI_LOOP_COMMIT=1 and a tracked
+  edit (or a stray untracked file) the old function returned 0.
+
+fix: >
+  The function, renamed require_clean_cycle_start, now checks both modes. Commit mode
+  refuses a dirty tree unless AI_LOOP_ALLOW_DIRTY=1 — the same opt-out, with the same
+  meaning, as at startup — and evidence-only mode keeps its exact-clean requirement
+  that the override never waives. The failure is still classified as "clean-start".
+  docs/afk_loop.md now says the check repeats at every boundary.
+
+production:
+  - loop.sh
+  - docs/afk_loop.md
+regression:
+  - tests/regression/loop_driver_gates.test.ts
+verification:
+  - The new case shows commit mode passes on a clean tree and fails on a tracked edit and on an
+    untracked file, naming the override; the existing case still proves evidence-only
+    ignores the override and commit mode with the override passes a dirty tree.
+  - npx vitest run tests/regression/loop_driver_gates.test.ts tests/regression/loop_process_scripts.test.ts is green; bash -n loop.sh passes.

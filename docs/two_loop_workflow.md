@@ -10,7 +10,7 @@ flowchart LR
         B --> C["one focused change"]
         C --> D["provisional commit"]
         D --> E["crawl · health · verifier integrity"]
-        E --> F["seal + push"]
+        E --> F["seal, then land via npm run ship"]
     end
 
     F ==>|"a new build"| BUILD[("published build")]
@@ -74,7 +74,7 @@ learns a vendor's name.
 
 ```bash
 npm run qa:bucket -- --summary              # what the dev loop can pick up
-AI_AGENT=claude ./loop.sh                   # dev loop on Claude Code
+AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh ./loop.sh   # dev loop on Claude Code
 PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 ```
 
@@ -400,14 +400,18 @@ Two things to do before the first launch, both of which cost you a wave otherwis
   from the corpus with no other trace. `C:\dev` is already excluded; a corpus on
   another volume is not.
 
-The dev-loop refusal is worth understanding precisely, because it is weaker than it
-reads: it is a bare `-f ai-runs/loop.pid` existence test relative to the script's own
-checkout. `ai-runs/` is gitignored and therefore per-worktree, so a dev loop in one
-worktree is invisible to a playtest loop in another — the guard does not police
-worktrees, and it is not a multi-instance lock either. It also never clears itself if
-the dev loop is killed with `taskkill` or by closing the terminal: the file survives and
-that checkout then refuses every playtest loop forever. Clear it with
-`scripts/loop-stop.sh`, or `rm -f ai-runs/loop.pid`.
+The dev-loop refusal is worth understanding precisely. Both drivers write an
+authenticated pid record (`ai-runs/loop.pid`, `ai-runs/playtest-loop.pid`: pid plus the
+process's `/proc` start tick, via the shared `scripts/process-record.sh`), and each
+refuses to start while the OTHER's record names a live process — so it no longer matters
+which loop starts first, and a record left behind by a crash or a `taskkill` (dead pid,
+or a pid since reused) is recognised as stale and ignored rather than blocking forever.
+A second playtest loop in the same checkout is refused the same way.
+`PLAYTEST_ALLOW_SHARED_CHECKOUT=1` opts out from either side. `ai-runs/` is gitignored
+and therefore per-worktree, so a loop in one worktree is invisible to a loop in another —
+the guard polices one checkout, which is exactly the scope of the hard-reset hazard. On a
+system without a compatible `/proc` (macOS) the playtest loop writes no record; `loop.sh`
+fails closed there and cannot run at all.
 
 ### Preflight, part one and a half: ask what this machine can actually do
 
@@ -452,11 +456,18 @@ wrong and a real cohort would have failed the same way.
 
 ```bash
 cd /d/zork-unlimited
-AI_AGENT=claude \
+AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh \
 AI_LOOP_TRIAGE_STORE=/d/af-corpus \
-AI_LOOP_COMMIT=1 AI_LOOP_PUSH=1 \
+AI_LOOP_COMMIT=1 \
 ./loop.sh
 ```
+
+Leave `AI_LOOP_PUSH` at its default `0`, as loop.sh and `docs/afk_loop.md` say: `main` is
+protected by the required `verify` check, so a bare push of a fresh loop commit is always
+rejected and only prints a warning. The loop's verified commits reach the published build
+the same way every landing does — `npm run ship` (a PR squash-merged into `main`) — and the
+QA worktrees below, whose branches track `origin/main`, play each landed build on their
+next refresh.
 
 `AI_LOOP_TRIAGE_STORE` is what makes several QA worktrees work without syncing anything:
 triage is pure over the corpus, so the dev loop re-derives the queue itself at cycle

@@ -38,7 +38,13 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { countCycleEntries, LOOP_STATE_FILE, ROTATE_KEEP } from "../src/afk/loop_state.js";
+import {
+  countLiveEntries,
+  liveEntryBytes,
+  LOOP_STATE_FILE,
+  ROTATE_KEEP,
+  ROTATE_MAX_ENTRY_BYTES,
+} from "../src/afk/loop_state.js";
 
 /** Verification assets the project's correctness rests on. Must always exist. */
 export const PROTECTED_FILES = [
@@ -90,6 +96,21 @@ export const PROTECTED_FILES = [
   // Decides WHICH test files CI runs. A filter here silently shrinks the suite while
   // every shard still reports green, so it belongs beside the counts it could hide.
   "scripts/ci-test-groups.ts",
+  // The same rationale for the two files that choose WHICH BAR a change must clear.
+  // test-lanes.ts owns CENSUS_PROOF_SOURCE_SCOPES and the fast versus exhaustive
+  // partition of the vitest projects; cycle-bar.ts is how loop.sh asks it. Dropping one
+  // scope from that list, or teaching the classifier to answer fast, sends an engine or
+  // content change through health:fast with the census proofs never run, while every
+  // count here and every shard stays green. bug_0636.
+  //
+  // NOTE: keep this comment free of apostrophes and quotes and brackets — see below.
+  "scripts/test-lanes.ts",
+  "scripts/cycle-bar.ts",
+  // Two of the nine health steps are verifiers in their own right, beside this file: the
+  // opening-density budget and the bug-trace corpus check. Hollowing either one turns a
+  // health step into a no-op that still exits 0. bug_0636.
+  "scripts/verify-opening-density.ts",
+  "scripts/verify-bug-traces.ts",
   // The same rationale one layer lower, and the sharper half of it. ci-test-groups.ts
   // only chooses which PATHS are handed to vitest; vitest.config.ts decides which of
   // those paths a project actually RUNS. Appending one glob to a project exclude array
@@ -255,19 +276,25 @@ export const APPROVED_D10_COMPLETION_RECORD = "docs/EXTERNAL_REVIEW_COMPLETION.m
 // this raise repeats the same maintenance. The decay is structural: the corpus grows
 // every cycle and these constants do not. Whenever an audit re-measures, re-raise to
 // ~80% of the fresh numbers — and treat a gap wider than ~5 points as overdue.
+//
+// Re-measured 2026-09-22 over 509 files, with this file's own counters (listTestFiles +
+// countTestCases / countAssertions / countStrongAssertions): 4,017 cases / 24,489
+// assertions / 23,388 strong. The 08-30 floors had decayed to 74.1% / 76.4% / 76.5% —
+// the case floor past the overdue line above. Re-raised to ~80% again (79.7% / 79.6% /
+// 80.0%); raising only, and the drift ratchet still owns single-cycle drops.
 
 /** Never drop below this many test cases (a mass-deletion tripwire). */
-export const MIN_TEST_CASES = 2975;
+export const MIN_TEST_CASES = 3200;
 
 /** Never drop below this many `expect()` assertions (the assertion-gutting tripwire,
  *  parallel to MIN_TEST_CASES), while the drift ASSERTION_COUNT_REGRESSION guards the
  *  precise per-cycle drop. */
-export const MIN_ASSERTIONS = 18700;
+export const MIN_ASSERTIONS = 19500;
 
 /** Never drop below this many STRONG (value-pinning) matchers — the strict→loose-swap
  *  tripwire, parallel to MIN_ASSERTIONS, while the drift STRONG_ASSERTION_REGRESSION
  *  guards the precise per-cycle drop. */
-export const MIN_STRONG_ASSERTIONS = 17900;
+export const MIN_STRONG_ASSERTIONS = 18700;
 
 /** Any chain of vitest modifiers sitting between the runner name and the terminal
  *  modifier — `.concurrent`, `.sequential`, `.each(...)`, `.for(...)`, `.extend(...)`.
@@ -329,8 +356,17 @@ export type Finding = {
 export const MAX_TAUTOLOGY_ASSERTIONS = 0;
 
 /** Live loop-state handoff must stay bounded; old cycle detail belongs in git
- *  history or ignored local archives, not in every agent prompt. */
+ *  history or ignored local archives, not in every agent prompt. Counts entries of
+ *  BOTH shapes — the legacy "### Cycle result" and the "## AFK Cycle" scaffold the
+ *  driver actually writes (bug_0631); counting only the legacy shape let the ledger
+ *  grow one scaffold per cycle while this guard reported it within bounds. */
 export const MAX_LIVE_LOOP_STATE_ENTRIES = ROTATE_KEEP;
+
+/** Byte ceiling on the live entry section (first cycle heading to EOF), alongside the
+ *  entry cap: the count alone let a 15-entry ledger reach ~49 KB against a ≤8-line
+ *  per-entry contract nothing enforced (intake c1101bfc). `loop:rotate-state` trims to
+ *  the same ceiling, so a red finding here means one entry is itself too long. */
+export const MAX_LIVE_LOOP_STATE_ENTRY_BYTES = ROTATE_MAX_ENTRY_BYTES;
 
 /** Matches vacuous assertion patterns the three-count system cannot catch:
  *  (a) literal-bool:   expect(true).toBe(true)  / expect(false).toBe(false)
@@ -380,17 +416,28 @@ export function detectLoopStateOverflow(
   text: string,
   keep: number = MAX_LIVE_LOOP_STATE_ENTRIES,
   where: string = LOOP_STATE_FILE,
+  maxBytes: number = MAX_LIVE_LOOP_STATE_ENTRY_BYTES,
 ): Finding[] {
-  const entries = countCycleEntries(text);
-  if (entries <= keep) return [];
-  return [
-    {
+  const findings: Finding[] = [];
+  const entries = countLiveEntries(text);
+  if (entries > keep) {
+    findings.push({
       severity: "error",
       code: "LOOP_STATE_OVER_ROTATED",
-      message: `${LOOP_STATE_FILE} carries ${entries} live cycle entries; limit is ${keep}. Rotate before committing so old detail stays in git history or ignored local archives instead of every agent context.`,
+      message: `${LOOP_STATE_FILE} carries ${entries} live cycle entries; limit is ${keep}. Rotate before committing (npm run loop:rotate-state) so old detail stays in git history or ignored local archives instead of every agent context.`,
       where,
-    },
-  ];
+    });
+  }
+  const bytes = liveEntryBytes(text);
+  if (bytes > maxBytes) {
+    findings.push({
+      severity: "error",
+      code: "LOOP_STATE_OVER_BYTES",
+      message: `${LOOP_STATE_FILE} carries ${bytes} bytes of live cycle entries; limit is ${maxBytes}. Rotate before committing (npm run loop:rotate-state); if one entry alone exceeds the limit, shorten it to the ledger's terse contract.`,
+      where,
+    });
+  }
+  return findings;
 }
 
 export function detectForbiddenPathPatterns(

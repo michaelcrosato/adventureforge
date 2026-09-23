@@ -501,14 +501,23 @@ describe("--check-attestation, the seal's precondition on its own", () => {
    * from the repo, which silently blew the 60s budget and failed the bar on a change that
    * touched nothing near it. Resolving the binary by path keeps the cwd honest and the
    * test hermetic.
+   *
+   * It is tsx's JS entry run under this node, never `node_modules/.bin/tsx` (bug_0629):
+   * on Windows `.bin/tsx` is a POSIX shell shim beside a `tsx.cmd`, and spawnSync without
+   * a shell cannot execute either, so the spawn failed ENOENT with a null status and the
+   * bar went red on every Windows checkout. `process.execPath` + `dist/cli.mjs` is how
+   * every other CLI-spawning test here invokes tsx, on every platform.
    */
-  const TSX_BIN = join(REPO_ROOT, "node_modules", ".bin", "tsx");
+  const TSX_CLI = join(REPO_ROOT, "node_modules", "tsx", "dist", "cli.mjs");
   const check = (root: string): { status: number | null; output: string } => {
     const result = spawnSync(
-      TSX_BIN,
-      [join(REPO_ROOT, "scripts", "seal-feedback-acceptance.ts"), "--check-attestation"],
+      process.execPath,
+      [TSX_CLI, join(REPO_ROOT, "scripts", "seal-feedback-acceptance.ts"), "--check-attestation"],
       { cwd: root, encoding: "utf8" },
     );
+    // A spawn that never started (ENOENT) has no status and no output; say so instead of
+    // letting it read as an unexplained `null !== 0`.
+    if (result.error) throw result.error;
     return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
   };
 
@@ -579,18 +588,24 @@ describe("feedback acceptance cycle seal", () => {
       beforeRotation.lastIndexOf("### Cycle result"),
     );
 
-    expect(rotateLoopState(root)).toBe(1);
+    // Rotation counts BOTH entry shapes and archives oldest-first (bug_0631): 16 legacy
+    // entries plus this cycle's "## AFK Cycle" scaffold is 17, so the two OLDEST legacy
+    // entries go and the scaffold — the newest entry — stays live in place, frozen
+    // selection and all. (Before the fix the scaffold was archived and its selection
+    // relocated into the intro; either way the seal must still find exactly one.)
+    expect(rotateLoopState(root)).toBe(2);
     const rotated = readFileSync(statePath, "utf8");
     const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
-    expect(countCycleEntries(rotated)).toBe(15);
-    expect(historicalCycleCount(rotated)).toBe(701);
+    expect(countCycleEntries(rotated)).toBe(14);
+    expect(historicalCycleCount(rotated)).toBe(702);
     expect(rotated.match(/feedback_cycle_selection:/gu)).toHaveLength(1);
-    expect(rotated).toContain(selection);
-    expect(rotated.indexOf(selection)).toBeLessThan(rotated.indexOf("### Cycle result"));
+    expect(rotated).toContain(`## AFK Cycle ${RUN_ID}\n${selection}\n`);
     expect(rotated).not.toContain("### Cycle result - prior_14");
-    expect(rotated).not.toContain(`## AFK Cycle ${RUN_ID}`);
+    expect(rotated).not.toContain("### Cycle result - prior_13");
+    expect(rotated).toContain("### Cycle result - prior_12");
     expect(archive).toContain("### Cycle result - prior_14");
-    expect(archive).toContain(`## AFK Cycle ${RUN_ID}`);
+    expect(archive).toContain("### Cycle result - prior_13");
+    expect(archive).not.toContain(`## AFK Cycle ${RUN_ID}`);
     expect(archive).not.toContain("feedback_cycle_selection");
 
     const result = sealFeedbackAcceptance({
@@ -607,8 +622,8 @@ describe("feedback acceptance cycle seal", () => {
     const sealed = readFileSync(statePath, "utf8");
     expect(sealed).toContain("### Cycle result - rotated_selection");
     expect(sealed).not.toContain("feedback_cycle_selection");
-    expect(countCycleEntries(sealed)).toBe(15);
-    expect(historicalCycleCount(sealed)).toBe(701);
+    expect(countCycleEntries(sealed)).toBe(14);
+    expect(historicalCycleCount(sealed)).toBe(702);
   });
 
   it("keeps noncanonical tail selection material live so the real seal rejects it", () => {
@@ -632,16 +647,16 @@ describe("feedback acceptance cycle seal", () => {
       beforeRotation.split(/\r?\n/u).filter((line) => line.includes("feedback_cycle_selection:")),
     ).toEqual([selection, noncanonicalSelection]);
 
-    expect(rotateLoopState(root)).toBe(1);
+    // The scaffold is the newest entry, so rotation archives the two oldest legacy entries
+    // and leaves both selection lines live in the scaffold, in place (bug_0631).
+    expect(rotateLoopState(root)).toBe(2);
     const rotated = readFileSync(statePath, "utf8");
     const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
     const liveSelectionLines = rotated
       .split(/\r?\n/u)
       .filter((line) => line.includes("feedback_cycle_selection:"));
     expect(liveSelectionLines).toEqual([selection, noncanonicalSelection]);
-    for (const line of liveSelectionLines) {
-      expect(rotated.indexOf(line)).toBeLessThan(rotated.indexOf("### Cycle result"));
-    }
+    expect(rotated).toContain(`## AFK Cycle ${RUN_ID}\n${selection}\n${noncanonicalSelection}\n`);
     expect(archive).not.toContain("feedback_cycle_selection:");
 
     const beforeSeal = readFileSync(statePath, "utf8");
@@ -1165,7 +1180,8 @@ describe("feedback acceptance cycle seal without cycle playtest artifacts", () =
   it("keeps a full live ledger sealable through rotation with nothing played", () => {
     const { root, statePath, startRef, head, selection, provisional } = initRotatingCycle(false);
     writeFileSync(statePath, prependFinalCycleResult(provisional, "rotated_no_playtest"));
-    expect(rotateLoopState(root)).toBe(1);
+    // 16 legacy + the scaffold: the two oldest legacy entries rotate out (bug_0631).
+    expect(rotateLoopState(root)).toBe(2);
     expect(readFileSync(statePath, "utf8")).toContain(selection);
 
     const result = sealFeedbackAcceptance({
@@ -1178,8 +1194,8 @@ describe("feedback acceptance cycle seal without cycle playtest artifacts", () =
     const sealed = readFileSync(statePath, "utf8");
     expect(sealed).toContain("### Cycle result - rotated_no_playtest");
     expect(sealed).not.toContain("feedback_cycle_selection");
-    expect(countCycleEntries(sealed)).toBe(15);
-    expect(historicalCycleCount(sealed)).toBe(701);
+    expect(countCycleEntries(sealed)).toBe(14);
+    expect(historicalCycleCount(sealed)).toBe(702);
   });
 
   it("keeps noncanonical tail selection material fatal", () => {
@@ -1192,7 +1208,7 @@ describe("feedback acceptance cycle seal without cycle playtest artifacts", () =
         "rotated_no_playtest_malformed",
       ),
     );
-    expect(rotateLoopState(root)).toBe(1);
+    expect(rotateLoopState(root)).toBe(2);
 
     const beforeSeal = readFileSync(statePath, "utf8");
     expect(() =>

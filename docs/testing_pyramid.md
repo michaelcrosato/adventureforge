@@ -288,7 +288,11 @@ action, message, stateHash, commit, repro: {kind,trace,minimized} }`. Nine
 finding codes: `CRASH · INTEGRITY · DESYNC · PERSIST · LEGALITY · SOFTLOCK ·
 RENDER · WORLD · ORPHAN`, each with a fixed severity (`CODE_SEVERITY`);
 `findingFingerprint` (code + canonical location + normalized message) dedupes
-repeats, and `repro` holds a ddmin-minimized, replayable trace.
+repeats, and `repro` holds a replayable trace where one exists. `repro.minimized`
+says whether it was cut down: quest-crawler `rpg-trace` repros are ddmin-minimized
+(best effort, `src/crawl/minimize.ts`), while overworld `overworld-actions` repros
+are the full action journal up to the finding and always carry `minimized: false`,
+and a `kind: "none"` repro has no trace at all.
 
 **Pure exit evidence** (`src/blind/exit_interview.ts` plus the server-authored
 run JSONL): report-schema V2 reports declare `play_mode: pure`,

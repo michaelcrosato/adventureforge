@@ -140,25 +140,65 @@ export function parsePorcelainPaths(porcelainZ: string): string[] {
   return paths;
 }
 
-/** Tracked-and-untracked changed paths, plus anything already committed on this branch
- *  but not yet on main — a resumed ship must weigh its whole diff, not just today's. */
-function changedPaths(branch: string): string[] {
-  const working = parsePorcelainPaths(
-    execFileSync("git", ["status", "--porcelain=v1", "-z"], { encoding: "utf8" }),
-  );
+export interface ShipDiff {
+  /** Every path the landing would carry: the working tree plus commits ahead of main. */
+  paths: string[];
+  /** True when the commits ahead of origin/main could not be read, so `paths` may be
+   *  missing some of what the landing would carry. The bar must not be chosen off it. */
+  committedUnreadable: boolean;
+}
+
+/**
+ * Tracked-and-untracked changed paths, plus EVERYTHING committed on this checkout but not
+ * yet on origin/main — a resumed ship must weigh its whole diff, not just today's.
+ *
+ * That includes a ship started ON `main` (bug_0635). Local commits on main are carried into
+ * the new ship branch by `git checkout -b` and land in the PR, but the committed diff used
+ * to be read only on a non-main branch — so a docs-only working tree on top of an unpushed
+ * engine or content commit chose `health:fast` and shipped that commit without the census
+ * proofs. `origin/main...HEAD` is empty when nothing is ahead, so asking unconditionally
+ * costs nothing in the common case.
+ *
+ * `runGit` returns git's RAW stdout (no trim — porcelain -z fields may begin with a space).
+ */
+export function shipDiff(runGit: (args: string[]) => string): ShipDiff {
+  const working = parsePorcelainPaths(runGit(["status", "--porcelain=v1", "-z"]));
   let committed: string[] = [];
-  if (branch !== PROTECTED_BRANCH) {
-    try {
-      // --no-renames so a rename is reported as the delete AND the add rather than as one
-      // destination path, for the same reason parsePorcelainPaths keeps both sides.
-      committed = git(["diff", "--name-only", "--no-renames", `origin/${PROTECTED_BRANCH}...HEAD`])
-        .split("\n")
-        .filter((line) => line.trim() !== "");
-    } catch {
-      committed = [];
-    }
+  let committedUnreadable = false;
+  try {
+    // --no-renames so a rename is reported as the delete AND the add rather than as one
+    // destination path, for the same reason parsePorcelainPaths keeps both sides.
+    committed = runGit(["diff", "--name-only", "--no-renames", `origin/${PROTECTED_BRANCH}...HEAD`])
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+  } catch {
+    // Unknown is not empty. Treating an unreadable ref as "nothing committed" picked the
+    // fast bar for whatever the commits held; the caller escalates instead.
+    committedUnreadable = true;
   }
-  return [...new Set([...working, ...committed])];
+  return { paths: [...new Set([...working, ...committed])], committedUnreadable };
+}
+
+/** Pure bar choice for a landing: the full bar whenever the diff touches a census scope,
+ *  --full was asked for, or the diff could not be fully read. */
+export function chooseShipBar(
+  diff: ShipDiff,
+  full: boolean,
+): { bar: "full" | "fast"; reason: string } {
+  if (diff.committedUnreadable)
+    return {
+      bar: "full",
+      reason: `the commits ahead of origin/${PROTECTED_BRANCH} could not be read, so the fast lane cannot vouch for the whole diff`,
+    };
+  if (barForChangedFiles(diff.paths) === "full")
+    return {
+      bar: "full",
+      reason:
+        "the diff touches a scope the census proofs read, so the fast lane cannot vouch for it",
+    };
+  if (full) return { bar: "full", reason: "--full was requested" };
+  return { bar: "fast", reason: "the diff touches nothing the census proofs read" };
 }
 
 /** gh reports "no required checks reported" as a plain error, not as pending. The CI
@@ -199,8 +239,9 @@ function main(): void {
 
   // A dry run must not contact the remote. Fetching first made the "touch nothing" preview
   // update git metadata, and fail outright when origin was unreachable — which is exactly
-  // when someone reaches for a preview. changedPaths already falls back cleanly when the
-  // local tracking ref is stale or missing.
+  // when someone reaches for a preview. With a stale tracking ref the preview weighs the
+  // commits ahead of that ref; with a missing one shipDiff reports the diff unreadable
+  // and the plan shows the full bar rather than guessing.
   if (!options.dryRun) git(["fetch", "origin", PROTECTED_BRANCH]);
   const startingBranch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
   const branch =
@@ -208,20 +249,14 @@ function main(): void {
       ? shipBranchName(options.message, new Date())
       : startingBranch;
 
-  const paths = changedPaths(startingBranch);
-  if (paths.length === 0 && startingBranch === PROTECTED_BRANCH) {
+  const diff = shipDiff((args) => execFileSync("git", args, { encoding: "utf8" }));
+  const paths = diff.paths;
+  if (paths.length === 0 && !diff.committedUnreadable && startingBranch === PROTECTED_BRANCH) {
     console.log("Nothing to ship: no changes against main.");
     return;
   }
-  const requiredBar = barForChangedFiles(paths);
-  const bar = options.full || requiredBar === "full" ? "full" : "fast";
+  const { bar, reason } = chooseShipBar(diff, options.full);
   const barScript = bar === "full" ? "health" : "health:fast";
-  const reason =
-    requiredBar === "full"
-      ? "the diff touches a scope the census proofs read, so the fast lane cannot vouch for it"
-      : options.full
-        ? "--full was requested"
-        : "the diff touches nothing the census proofs read";
 
   step("Plan");
   console.log(`  branch:  ${branch}${startingBranch === PROTECTED_BRANCH ? " (new)" : ""}`);

@@ -43,6 +43,7 @@ import {
   MIN_STRONG_ASSERTIONS,
   MAX_TAUTOLOGY_ASSERTIONS,
   MAX_LIVE_LOOP_STATE_ENTRIES,
+  MAX_LIVE_LOOP_STATE_ENTRY_BYTES,
   APPROVED_D10_DECISION_MARKER,
   APPROVED_D10_COMPLETION_RECORD,
   APPROVED_D10_REMOVED_PATHS,
@@ -279,6 +280,50 @@ describe("detectLoopStateOverflow — live handoff stays token-small", () => {
     const findings = detectLoopStateOverflow(log(MAX_LIVE_LOOP_STATE_ENTRIES + 1));
     expect(findings.map((f) => f.code)).toEqual(["LOOP_STATE_OVER_ROTATED"]);
     expect(findings[0]!.message).toContain(`${MAX_LIVE_LOOP_STATE_ENTRIES + 1}`);
+  });
+
+  it("counts the '## AFK Cycle' entries the driver actually writes (bug_0631)", () => {
+    // Pre-fix the guard counted "### Cycle result" alone, so a full legacy section plus
+    // any number of driver scaffolds read as within bounds.
+    const scaffold = (i: number): string => `## AFK Cycle 2026-09-0${i}T00-00-00-000Z\n- done.\n`;
+    const mixed = `${log(MAX_LIVE_LOOP_STATE_ENTRIES)}\n${scaffold(1)}`;
+    const findings = detectLoopStateOverflow(mixed);
+    expect(findings.map((f) => f.code)).toEqual(["LOOP_STATE_OVER_ROTATED"]);
+    expect(findings[0]!.message).toContain(`${MAX_LIVE_LOOP_STATE_ENTRIES + 1} live cycle entries`);
+
+    const scaffoldsOnly = Array.from({ length: MAX_LIVE_LOOP_STATE_ENTRIES }, (_, i) =>
+      scaffold(i),
+    ).join("");
+    expect(detectLoopStateOverflow(scaffoldsOnly)).toEqual([]);
+    expect(detectLoopStateOverflow(`${scaffoldsOnly}${scaffold(9)}`).map((f) => f.code)).toEqual([
+      "LOOP_STATE_OVER_ROTATED",
+    ]);
+  });
+
+  it("blocks live entry text over the byte ceiling, measured from the first entry (c1101bfc)", () => {
+    const intro = `# AI Loop State\n\n<!-- feedback_acceptance: ${"m".repeat(8000)} -->\n\n`;
+    const entry = (bytes: number): string => {
+      const heading = "## AFK Cycle 2026-09-22T00-00-00-000Z\n";
+      return `${heading}${"x".repeat(bytes - heading.length - 1)}\n`;
+    };
+    // Exactly at the ceiling passes, and a large machine-owned intro is not counted: the
+    // post-gate seal rewrites it after the bar, so it must not be able to fail the next one.
+    expect(detectLoopStateOverflow(`${intro}${entry(MAX_LIVE_LOOP_STATE_ENTRY_BYTES)}`)).toEqual(
+      [],
+    );
+    const over = detectLoopStateOverflow(`${intro}${entry(MAX_LIVE_LOOP_STATE_ENTRY_BYTES + 1)}`);
+    expect(over.map((f) => f.code)).toEqual(["LOOP_STATE_OVER_BYTES"]);
+    expect(over[0]!.message).toContain(`${MAX_LIVE_LOOP_STATE_ENTRY_BYTES + 1} bytes`);
+    expect(over[0]!.severity).toBe("error");
+  });
+
+  it("keeps the byte ceiling at or below the rotation's own target (never looser)", () => {
+    expect(MAX_LIVE_LOOP_STATE_ENTRY_BYTES).toBeLessThanOrEqual(30 * 1024);
+    expect(MAX_LIVE_LOOP_STATE_ENTRIES).toBeLessThanOrEqual(15);
+  });
+
+  it("holds on the real, committed AI_LOOP_STATE.md", () => {
+    expect(detectLoopStateOverflow(readFileSync("AI_LOOP_STATE.md", "utf8"))).toEqual([]);
   });
 });
 

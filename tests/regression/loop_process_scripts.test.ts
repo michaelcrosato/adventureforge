@@ -407,3 +407,157 @@ describe("loop status/stop process helpers", () => {
     expect(statusScript).toContain("loop:failures -- summary");
   });
 });
+
+/**
+ * bug_0634 (intake 14e1722c): the dev loop and the QA loop guard ONE checkout against each
+ * other with the same authenticated pid records. playtest-loop.sh used to refuse on the bare
+ * existence of ai-runs/loop.pid (a stale file blocked it forever) and wrote no record of its
+ * own (so a dev loop started second was unguarded). These run the REAL guard text from both
+ * drivers against a fake /proc, so liveness is deterministic: a pid is "live" exactly when
+ * its fake stat entry carries the recorded start tick.
+ */
+describe("dev loop / playtest loop mutual exclusion (bug_0634)", () => {
+  const processRecord = readFileSync("scripts/process-record.sh", "utf8");
+  const playtestScript = readFileSync("playtest-loop.sh", "utf8");
+  const between = (text: string, start: string, end: string): string => {
+    const from = text.indexOf(start);
+    const to = text.indexOf(end, from);
+    expect(from, `missing ${start}`).toBeGreaterThanOrEqual(0);
+    expect(to, `missing ${end}`).toBeGreaterThan(from);
+    return text.slice(from, to);
+  };
+  const playtestGuard = between(
+    playtestScript,
+    "# shellcheck source=scripts/process-record.sh",
+    "\n# Default cohort:",
+  );
+  const loopGuards = `${between(
+    loopScript,
+    "refuse_if_live_loop() {",
+    "\n}\n\non_loop_signal()",
+  )}\n}`;
+
+  /** A fake /proc: $$ gets start tick 777; pid 4242 is a live "other" loop with tick 555. */
+  const FAKE_PROC = [
+    'export AFK_PROC_ROOT="$PWD/fakeproc"',
+    'fake_stat() { mkdir -p "fakeproc/$1"; printf "%s (bash) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 %s 0 0\n" "$1" "$2" > "fakeproc/$1/stat"; }',
+    'fake_stat "$$" 777',
+    "fake_stat 4242 555",
+  ].join("\n");
+
+  function runPlaytestGuard(
+    records: Record<string, string>,
+    env: Record<string, string> = {},
+  ): { status: number | null; output: string; recordAfterExit: boolean } {
+    let outcome = { status: null as number | null, output: "", recordAfterExit: false };
+    withTempRoot((root) => {
+      mkdirSync(join(root, "ai-runs"));
+      mkdirSync(join(root, "scripts"));
+      writeFileSync(join(root, "scripts", "process-record.sh"), processRecord);
+      for (const [file, body] of Object.entries(records)) {
+        writeFileSync(join(root, "ai-runs", file), body);
+      }
+      const exports = Object.entries(env).map(([k, v]) => `export ${k}='${v}'`);
+      const harness = [
+        "set -euo pipefail",
+        ...exports,
+        FAKE_PROC,
+        'REPO_ROOT="$PWD"',
+        playtestGuard,
+        'echo "guard passed; record=$(cat ai-runs/playtest-loop.pid)"',
+      ].join("\n");
+      const result = runBashScript(harness, root);
+      outcome = {
+        status: result.status,
+        output: result.output,
+        recordAfterExit: existsSync(join(root, "ai-runs", "playtest-loop.pid")),
+      };
+    });
+    return outcome;
+  }
+
+  it("playtest-loop is no longer blocked by a STALE dev-loop record, and writes its own", () => {
+    // Pre-fix: a bare `-f ai-runs/loop.pid` test refused here forever after a crash.
+    for (const stale of ["4242 999\n", "999999 1\n", "not-a-pid\n"]) {
+      const result = runPlaytestGuard({ "loop.pid": stale });
+      expect(result.status, `${stale}: ${result.output}`).toBe(0);
+      expect(result.output).toMatch(/guard passed; record=\d+ 777/u);
+      // Its EXIT trap removes the record it wrote, and only that one.
+      expect(result.recordAfterExit).toBe(false);
+    }
+  });
+
+  it("playtest-loop still refuses a LIVE dev loop unless the operator opts in", () => {
+    const live = runPlaytestGuard({ "loop.pid": "4242 555\n" });
+    expect(live.status).toBe(1);
+    expect(live.output).toContain("A dev loop is running in this checkout");
+    expect(live.output).toContain("PLAYTEST_ALLOW_SHARED_CHECKOUT=1");
+
+    const shared = runPlaytestGuard(
+      { "loop.pid": "4242 555\n" },
+      { PLAYTEST_ALLOW_SHARED_CHECKOUT: "1" },
+    );
+    expect(shared.status, shared.output).toBe(0);
+    expect(shared.output).toContain("guard passed");
+  });
+
+  it("playtest-loop refuses a second live QA loop but overwrites a stale QA record", () => {
+    const second = runPlaytestGuard({ "playtest-loop.pid": "4242 555\n" });
+    expect(second.status).toBe(1);
+    expect(second.output).toContain("Another playtest loop is running");
+    expect(second.recordAfterExit).toBe(true); // the live holder's record is left alone
+
+    const stale = runPlaytestGuard({ "playtest-loop.pid": "4242 1\n" });
+    expect(stale.status, stale.output).toBe(0);
+    expect(stale.output).toMatch(/record=\d+ 777/u);
+  });
+
+  it("loop.sh refuses to start beside a live playtest loop, not beside a stale record", () => {
+    // Pre-fix loop.sh never looked: the QA loop wrote no record to look at.
+    const refuse = (records: Record<string, string>, env: Record<string, string> = {}) => {
+      let outcome = { status: null as number | null, output: "" };
+      withTempRoot((root) => {
+        mkdirSync(join(root, "ai-runs"));
+        for (const [file, body] of Object.entries(records)) {
+          writeFileSync(join(root, "ai-runs", file), body);
+        }
+        const exports = Object.entries(env).map(([k, v]) => `export ${k}='${v}'`);
+        const harness = [
+          "set -uo pipefail",
+          ...exports,
+          FAKE_PROC,
+          processRecord,
+          loopGuards,
+          "refuse_if_live_loop ai-runs/loop.pid || exit 11",
+          "refuse_if_live_playtest_loop ai-runs/playtest-loop.pid || exit 12",
+          'echo "start permitted"',
+        ].join("\n");
+        outcome = runBashScript(harness, root);
+      });
+      return outcome;
+    };
+
+    const livePlaytest = refuse({ "playtest-loop.pid": "4242 555\n" });
+    expect(livePlaytest.status).toBe(12);
+    expect(livePlaytest.output).toContain("names a live playtest loop (pid 4242)");
+
+    expect(refuse({ "playtest-loop.pid": "4242 1\n" }).status).toBe(0);
+    expect(refuse({ "playtest-loop.pid": "999999 1\n" }).output).toContain("start permitted");
+    expect(
+      refuse({ "playtest-loop.pid": "4242 555\n" }, { PLAYTEST_ALLOW_SHARED_CHECKOUT: "1" }).status,
+    ).toBe(0);
+
+    // The dev loop's own single-writer guard reads the same shared helper.
+    const liveLoop = refuse({ "loop.pid": "4242 555\n" });
+    expect(liveLoop.status).toBe(11);
+    expect(liveLoop.output).toContain("names a live loop (pid 4242, start tick 555)");
+    expect(refuse({ "loop.pid": "4242 556\n" }).status).toBe(0);
+
+    // Wired before loop.sh writes its own record, like the single-writer guard.
+    const startup = loopScript.indexOf(
+      'refuse_if_live_playtest_loop "$PLAYTEST_PID_FILE" || exit 1',
+    );
+    expect(startup).toBeGreaterThan(loopScript.indexOf('refuse_if_live_loop "$LOOP_PID_FILE"'));
+    expect(startup).toBeLessThan(loopScript.indexOf('write_process_record "$LOOP_PID_FILE" "$$"'));
+  });
+});

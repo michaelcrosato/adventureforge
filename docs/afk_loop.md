@@ -116,8 +116,9 @@ only a census proof catches is not caught by that cycle. On `main` the nightly
 `npm run test:exhaustive` against the branch head periodically and after any cycle that
 touched the engine or content.
 
-**Failure handling.** loop.sh refuses to start on a dirty tree (AI_LOOP_ALLOW_DIRTY=1
-overrides commit-mode startup only, accepting the risk below). Each cycle snapshots
+**Failure handling.** loop.sh refuses to start on a dirty tree, and re-checks that at
+every cycle boundary in both modes (AI_LOOP_ALLOW_DIRTY=1 overrides it for commit mode
+only, accepting the risk below). Each cycle snapshots
 its exact non-ignored untracked paths. A red gate fails explicitly (`|| return 1`, not
 `set -e`): tracked work and the provisional commit reset to the pre-cycle ref, and
 only untracked paths absent from that snapshot are cleaned, across the whole repo.
@@ -149,8 +150,8 @@ compile, until `loop:seal-feedback` promotes its exact digest into the tracked
 `AI_LOOP_STATE.md` marker after every outer gate. The same seal consumes a feedback
 recommendation only when the provisional commit's actual-selection attestation names
 it (the assessor's offered recommendation is not authority) and queues the just-tested
-pure report for a later cohort. `loop.sh` also checks that attestation seconds after the
-provisional commit (`npm run --silent loop:seal-feedback -- --check-attestation --meta
+pure report for a later cohort. In commit mode `loop.sh` also checks that attestation seconds
+after the provisional commit (`npm run --silent loop:seal-feedback -- --check-attestation --meta
 ai-runs/latest-cycle.json`), so a worker that leaves `AI_LOOP_STATE.md` out of its commit
 fails before the bar runs rather than after it; the generated prompt hands the worker the
 same command to run before it ends its turn. This one-cycle lag prevents that canonical cycle
@@ -332,9 +333,14 @@ bar off the diff after the provisional commit).
 
 ### A hardened `claude` launcher for unattended runs
 
-The registry's bare `claude -p` entry satisfies the contract, but a multi-day unattended
-run showed what else a headless worker needs, and `agents/claude-headless-worker.sh`
-packages it as an `AI_AGENT_CMD` (`AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh ./loop.sh`):
+For any unattended Claude run, use `agents/claude-headless-worker.sh` as the
+`AI_AGENT_CMD` (`AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh ./loop.sh`).
+The registry's bare `claude` entry (`claude -p --permission-mode acceptEdits`) is only
+the auto-detect default: `acceptEdits` approves file edits, not shell commands, and a
+headless `-p` run has nobody to approve them, so unless the operator's own Claude settings
+happen to allow them, that worker cannot run `npm`/`git` — no focused checks, no
+provisional commit — and a commit-mode cycle fails. The launcher packages what a
+multi-day unattended run showed a headless worker needs:
 
 - **One turn, stated outright.** A `claude -p` run is a single non-interactive turn; nothing
   resumes it. The launcher appends that contract to the system prompt (never background a
@@ -343,7 +349,10 @@ packages it as an `AI_AGENT_CMD` (`AI_AGENT=claude AI_AGENT_CMD=agents/claude-he
   messaging, and worktree tool families, so the worker cannot "end its turn expecting a
   wake-up" — the way the first lost cycles went.
 - **Explicit permissions.** A tool allowlist (`--allowedTools`) under `acceptEdits` instead
-  of a blanket permission bypass, which the CLI refuses for a root process anyway.
+  of a blanket permission bypass, which the CLI refuses for a root process anyway. It is a
+  guardrail, not a sandbox: `node`/`npx`/`npm` can still run anything, but there is no
+  generic command runner (`bash`, `env`, `xargs`, `command`, `python3`), git is allowed
+  only per subcommand a cycle uses, and `git push`/remote-mutating git is denied outright.
 - **A clean process.** `env -i` with only PATH, HOME, the proxy/CA settings, and the loop's
   own `AI_*` knobs; a fresh `--session-id` with `--no-session-persistence`, so the worker
   never writes into an operator's transcript and the CLI's session registry cannot fail a

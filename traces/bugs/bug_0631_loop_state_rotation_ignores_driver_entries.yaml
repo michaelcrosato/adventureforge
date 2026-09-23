@@ -1,0 +1,72 @@
+id: bug_0631
+title: AI_LOOP_STATE.md never rotated again because rotation and its overflow guard counted only the legacy "### Cycle result" entry shape
+reported_by: repo audit at c17192f9 (2026-09-22); follow-up bug_0619 deferred; intake c1101bfc0e6ac3fe (byte ceiling)
+severity: S2
+
+symptom: >
+  The live ledger every cycle agent reads grew without bound: at c17192f9 it held 15
+  legacy "### Cycle result" entries plus 4 driver-written "## AFK Cycle" entries, 49 KB,
+  and each new cycle added another. `npm run loop:rotate-state` reported "already within
+  its limit" and verify-integrity's LOOP_STATE_OVER_ROTATED guard stayed silent. The
+  ledger's own entry-contract prose also told agents to PREPEND a "### Cycle result"
+  entry, contradicting the driver, so an agent obeying the file recorded a cycle twice.
+
+cause: >
+  Since the 2026-08-29 two-loop migration src/ai-loop.ts's formatLoopStateAppend APPENDS
+  each cycle's entry under "## AFK Cycle <stamp>" and the agent completes it in place.
+  bug_0619 taught completedCycleCount/totalCycleCount that shape, but rotateLoopState
+  (src/afk/loop_state.ts) and detectLoopStateOverflow (scripts/verify-integrity.ts)
+  still counted `^### Cycle result` alone. With exactly ROTATE_KEEP legacy entries,
+  neither ever fired again, whatever the scaffold tail grew to. The old single-cut
+  rotation also archived the whole scaffold tail (the NEWEST cycles) whenever the legacy
+  count overflowed, without counting it into historical_cycle_count, so the monotonic
+  total dropped. Separately, the guard had no byte bound, so entries averaging ~2.6 KB
+  against a ≤8-line contract were never constrained (intake c1101bfc).
+
+reproduction: >
+  tests/regression/loop_state_rotation.test.ts: a log of ROTATE_KEEP legacy entries plus
+  one "## AFK Cycle" scaffold rotated 0 entries before the fix; the live ledger's real
+  shape (ROTATE_KEEP legacy + 4 scaffolds) likewise rotated 0. tests/unit/verifier_integrity.test.ts:
+  a full legacy section plus one scaffold produced no LOOP_STATE_OVER_ROTATED finding.
+
+fix: >
+  loop_state.ts splits the log into entries of BOTH shapes and orders them oldest-first
+  (legacy entries reversed, then the append-ordered scaffolds, which are all newer), then
+  archives the oldest until at most ROTATE_KEEP (unchanged, 15) remain, and keeps
+  archiving oldest-first while the entry section exceeds the new ROTATE_MAX_ENTRY_BYTES
+  (30 KiB) — never the last, newest entry. The in-progress cycle's scaffold and its
+  frozen feedback_cycle_selection marker therefore stay live in place; selection lines
+  found in an archived entry are still relocated into the intro for the seal to judge.
+  The historical count now includes every archived entry, so the total is exact.
+  detectLoopStateOverflow counts both shapes (countLiveEntries) and adds
+  LOOP_STATE_OVER_BYTES over MAX_LIVE_LOOP_STATE_ENTRY_BYTES, measured from the first
+  entry heading so the seal's post-bar rewrite of the machine-owned intro markers can
+  never push a verified cycle over. No cap was raised. AI_LOOP_STATE.md's entry
+  contract now describes the appended "## AFK Cycle" shape and the limits, the
+  evidence-only prompts name that heading, and the live ledger was rotated by
+  `npm run loop:rotate-state` itself (8 oldest legacy entries archived; 49 KB to 31 KB;
+  historical_cycle_count 789 to 797, total 808 unchanged).
+
+production:
+  - src/afk/loop_state.ts
+  - scripts/verify-integrity.ts
+  - src/ai-loop.ts
+  - AI_LOOP_STATE.md
+regression:
+  - tests/regression/loop_state_rotation.test.ts
+  - tests/unit/verifier_integrity.test.ts
+  - tests/unit/seal_feedback_acceptance.test.ts
+verification:
+  - New rotation cases cover the live shape, an all-scaffold log (top archived first,
+    newest last), legacy-before-scaffold ordering, the byte ceiling (oldest first, newest
+    never), the in-progress scaffold staying in place, and relocation out of an archived
+    entry; the pre-existing cases were re-pinned to the counted scaffold, including the
+    total-count expectation the old cut silently lost one from.
+  - New guard cases cover counting scaffolds, the byte ceiling at and one past its limit
+    with a large intro excluded, and the real committed ledger passing.
+  - The four seal-through-rotation cases now expect the two oldest legacy entries
+    archived and the scaffold kept live with its selection; the seal still accepts the
+    canonical case and still rejects the noncanonical one.
+  - Focused vitest on loop_state_rotation, loop_state, verifier_integrity,
+    seal_feedback_acceptance, generated_eval, assessor_blind_pass_rotation and ai_loop is
+    green.

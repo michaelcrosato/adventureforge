@@ -34,9 +34,10 @@ jobs:
   # Each one BFSes the complete reachable region of every shipped pack; together they were
   # ~79 minutes of measured body time in ci.yml's shard matrix, and vitest.config.ts
   # deliberately serializes them one or two workers wide, so most of that is a
-  # single-threaded tail. They import only src/core, src/rpg, src/validate, src/world and
-  # content/ — nothing else a PR can touch changes their verdict — which is exactly what
-  # makes nightly the right cadence for them and NOT for the rest of the suite.
+  # single-threaded tail. They import only the scopes listed in CENSUS_PROOF_SOURCE_SCOPES
+  # (scripts/test-lanes.ts is the source of truth; a copy of the list here drifted) —
+  # nothing else a PR can touch changes their verdict — which is exactly what makes nightly
+  # the right cadence for them and NOT for the rest of the suite.
   #
   # This is the `test:exhaustive` lane in full. `non-player-audit` below separately runs
   # the ending-render proof under its rolling soft budget; the few duplicated minutes buy

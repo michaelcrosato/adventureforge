@@ -1,0 +1,51 @@
+id: bug_0632
+title: loop.sh spliced the checkout path into the agent command string that bash -c re-parses
+reported_by: intake/queue audit/bug cdae46f8fa80d929 (docs/REPO_AUDIT_2026-09.md finding 10); re-confirmed by the repo audit at c17192f9
+severity: S2
+
+symptom: >
+  A dev-loop checkout whose path contains a space launched codex with `--cd` split into
+  two arguments, and a path containing `;` or `$(...)` executed that text as a command
+  when the cycle's agent started. The same applied to the operator-supplied
+  AI_CODEX_SANDBOX value. dev-agents.json documented the substitution as "exact token
+  replacement, no shell", which was true of the substitution and false of what ran next.
+
+cause: >
+  dev_agent_command in loop.sh replaced {CWD} with "$PWD" and {SANDBOX} with the env
+  value inside the registry's command TEMPLATE, returning one string; run_agent then
+  executed it as `bash -c '...; exec '"$cmd"`, so the substituted values were parsed as
+  shell source a second time.
+
+reproduction: >
+  tests/regression/loop_driver_gates.test.ts "launches a registry agent without
+  re-parsing the cwd or sandbox as shell (bug_0632)" resolves the real codex registry
+  entry and runs the real launch_agent line from a directory named
+  `repo dir;touch PWNED_SEMI;$(touch PWNED_SUB)` with AI_CODEX_SANDBOX
+  `workspace-write;touch PWNED_SANDBOX`, against a stub agent that records its argv.
+  With the old splicing the recorded argv is truncated at the first injected `;`.
+
+fix: >
+  dev_agent_command now turns {CWD} into the literal text "$1" and {SANDBOX} into "$2"
+  (quoted positional references) instead of their values, and the launch — factored out
+  of run_agent into launch_agent — passes `bash "$PWD" "${AI_CODEX_SANDBOX:-workspace-write}"`
+  as the positional arguments of that same `bash -c`. Bash expands a quoted positional
+  as exactly one word and never re-parses it, so the path and sandbox reach the agent
+  verbatim. The pid-record/exec wrapper, timeout and STDIN prompt are unchanged; an
+  operator's AI_AGENT_CMD is still their own command string. The intake suggested
+  tokenizing the template into an argv array; passing the values positionally closes
+  the same hole (only the substituted values were ever untrusted) with a smaller change
+  to the launch path. The "Agent:" log line now prints what $1 and $2 are, and
+  dev-agents.json's comment describes the real mechanism.
+
+production:
+  - loop.sh
+  - dev-agents.json
+regression:
+  - tests/regression/loop_driver_gates.test.ts
+verification:
+  - The new case asserts the stub agent received exactly
+    [-a, never, exec, --sandbox, <hostile sandbox>, --cd, <hostile cwd>, -] and that no
+    PWNED_* file exists; with the old splicing restored it fails on the argv.
+  - The codex auto-detect case now pins the resolved template exactly
+    (`codex -a never exec --sandbox "$2" --cd "$1" -`).
+  - npx vitest run tests/regression/loop_driver_gates.test.ts tests/regression/loop_process_scripts.test.ts is green; bash -n loop.sh passes.
