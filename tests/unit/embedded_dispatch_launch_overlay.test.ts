@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
-import { WOLF_WINTER_DISPATCH_DELAY_FLAG } from "../../src/core/embedded_launch_overlay_receipt.js";
+import {
+  EMBEDDED_LAUNCH_OVERLAY_RECEIPT_VERSION,
+  WOLF_WINTER_DISPATCH_DELAY_FLAG,
+  cloneEmbeddedLaunchOverlayReceipt,
+} from "../../src/core/embedded_launch_overlay_receipt.js";
+import { embeddedLaunchOverlayFromPersistedReceipt } from "../../src/world/embedded_launch_overlay.js";
 import { startOverworldQuestThroughRpg } from "../../src/mcp/overworld_quest_bridge.js";
 import { SaveIntegrityError, load, save } from "../../src/persist/save_load.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -169,7 +174,8 @@ describe("embedded dispatch opening overlay", () => {
         const selected = seededOpeningFlagForSeed(openingFlags, seed);
         expect(openingFlags.filter((flag) => state.flags[flag] === true)).toEqual([selected]);
         expect(state.flags[WOLF_WINTER_DISPATCH_DELAY_FLAG]).toBe(true);
-        expect(state.embeddedLaunchOverlayReceipt?.overworld_session_id).toBe("ow-seeded-opening");
+        // bug_0644: the launching handle never enters deterministic child state.
+        expect(state.embeddedLaunchOverlayReceipt).not.toHaveProperty("overworld_session_id");
         assertRpgStateReferences(seededIndex, state);
         return { session_id: "r-seeded-opening" };
       },
@@ -192,9 +198,11 @@ describe("embedded dispatch opening overlay", () => {
         expect(Object.isFrozen(context.launchOverlay)).toBe(true);
         const state = initStateForRpgPack(wolfIndex, 505, undefined, context.launchOverlay);
         expect(state.flags[WOLF_WINTER_DISPATCH_DELAY_FLAG]).toBe(true);
-        expect(state.embeddedLaunchOverlayReceipt).toMatchObject({
+        expect(state.embeddedLaunchOverlayReceipt).toEqual({
+          version: EMBEDDED_LAUNCH_OVERLAY_RECEIPT_VERSION,
+          kind: "overworld_dispatch_opening",
           world_quest_id: "wolf_winter",
-          overworld_session_id: "ow-dispatch-window",
+          dispatch_window_version: window.schemaVersion,
           status: "delayed",
           ledger_minutes: 65,
           provenance_hash: window.proofHash,
@@ -318,6 +326,54 @@ describe("embedded dispatch opening overlay", () => {
     ).toThrow(/lacks live session provenance/i);
     expect(startEmbeddedWorldQuest).not.toHaveBeenCalled();
     expect(commitQuestStart).not.toHaveBeenCalled();
+  });
+
+  // bug_0644: version-1 receipts recorded the launching surface's session handle.
+  // Already-started child saves must keep loading and replaying to their original
+  // bytes, while a receipt can never mix the two shapes.
+  it("keeps legacy v1 receipts loadable and replayable byte-for-byte", () => {
+    const session = delayedDispatchSession();
+    let current: ReturnType<typeof initStateForRpgPack> | undefined;
+    startOverworldQuestThroughRpg({
+      session,
+      overworldSessionId: "o-00000000-0000-4000-8000-000000000000",
+      questId: WOLF.id,
+      approachId: WOLF.launch!.options[0]!.id,
+      startOptions: {},
+      startEmbeddedWorldQuest: (_args, context) => {
+        current = initStateForRpgPack(wolfIndex, 505, undefined, context.launchOverlay);
+        return { session_id: "r-legacy" };
+      },
+    });
+    if (!current?.embeddedLaunchOverlayReceipt) throw new Error("Expected delayed state.");
+    const legacyReceipt = {
+      ...current.embeddedLaunchOverlayReceipt,
+      version: 1 as const,
+      overworld_session_id: "o-00000000-0000-4000-8000-000000000000",
+    };
+    const legacy = initStateForRpgPack(
+      wolfIndex,
+      505,
+      undefined,
+      embeddedLaunchOverlayFromPersistedReceipt(legacyReceipt),
+    );
+    expect(legacy.embeddedLaunchOverlayReceipt).toEqual(legacyReceipt);
+    expect(hashState(legacy)).not.toBe(hashState(current));
+    const restored = load(
+      save(legacy, wolf.compiled.contentHash, "rpg", { worldQuestId: "wolf_winter" }),
+      wolf.compiled.contentHash,
+    );
+    expect(restored.state).toEqual(legacy);
+    expect(hashState(restored.state)).toBe(hashState(legacy));
+
+    expect(() =>
+      cloneEmbeddedLaunchOverlayReceipt({
+        ...current!.embeddedLaunchOverlayReceipt!,
+        overworld_session_id: "o-mixed",
+      } as never),
+    ).toThrow();
+    const { overworld_session_id: _handle, ...v1WithoutHandle } = legacyReceipt;
+    expect(() => cloneEmbeddedLaunchOverlayReceipt(v1WithoutHandle as never)).toThrow();
   });
 
   it("rejects a saved overlay when its required opening flag was tampered", () => {

@@ -912,7 +912,7 @@ export default function App(): JSX.Element {
       const plan = worldSession.prepareQuestStart(quest.id, approachId);
       // Same shared derivation the MCP bridge uses: a delayed Wolf-Winter
       // dispatch must open the same child state on every interface.
-      const launchOverlay = embeddedLaunchOverlayForPlan(plan, "ui-journey");
+      const launchOverlay = embeddedLaunchOverlayForPlan(plan);
       const session = GameSession.startEmbedded(
         pack.source,
         plan.characterAfter,

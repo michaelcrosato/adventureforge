@@ -79,7 +79,7 @@ export function startOverworldQuestThroughRpg<Payload extends OverworldStartedRp
 }): OverworldQuestStartSync<Payload> {
   const plan = args.session.prepareQuestStart(args.questId, args.approachId);
   assertAuthenticatedQuestStartPreparation(args.session, plan);
-  const launchOverlay = embeddedLaunchOverlayForPlan(plan, args.overworldSessionId);
+  const launchOverlay = embeddedLaunchOverlayForPlan(plan);
   const rpgSession = args.startEmbeddedWorldQuest(
     rpgStartArgsForOverworldQuest(plan.quest.id, args.startOptions),
     {

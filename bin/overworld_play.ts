@@ -1607,7 +1607,7 @@ export async function runQuestSession(
   // before committing it. A bad pack or import therefore cannot spend the approach
   // resources, record its memory, or consume the quest-start decision.
   const plan = session.prepareQuestStart(quest.id, approachId);
-  const launchOverlay = embeddedLaunchOverlayForPlan(plan, "cli-journey");
+  const launchOverlay = embeddedLaunchOverlayForPlan(plan);
   const source = runtime.requireWorldQuestPlayable(plan.quest.id);
 
   const index = indexRpgPack(source.compiled.pack);
