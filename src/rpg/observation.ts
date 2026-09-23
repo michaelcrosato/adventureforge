@@ -139,9 +139,18 @@ export function buildRpgObservation(
     }
   }
 
+  // Enumerated here only when the caller neither supplied the list nor opted out of it.
+  // The blocked-action pass below reuses this enumeration of the same state rather than
+  // running the base enumeration a second time. A caller-supplied list is not reused for
+  // that: it is the caller's (possibly cached) copy, and the blocked rows stay derived
+  // from the state alone exactly as before.
+  const ownActions =
+    opts.includeAvailableActions !== false && opts.availableActions === undefined
+      ? enumerateRpgActions(index, state)
+      : undefined;
   const availableActions: RpgObservation["available_actions"] = [];
   if (opts.includeAvailableActions !== false) {
-    for (const option of opts.availableActions ?? enumerateRpgActions(index, state)) {
+    for (const option of opts.availableActions ?? ownActions ?? []) {
       availableActions.push({
         id: option.id,
         command: option.command,
@@ -161,7 +170,7 @@ export function buildRpgObservation(
   }
 
   const blockedActions: RpgObservation["blocked_actions"] = [];
-  for (const option of enumerateRpgBlockedActions(index, state)) {
+  for (const option of enumerateRpgBlockedActions(index, state, ownActions)) {
     blockedActions.push({ id: option.id, command: option.command, reason: option.reason });
   }
   const pressureTracks = resolveRpgPressureTracks(index.pack.pressure_tracks, state);

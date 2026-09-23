@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { resolve as resolveCli } from "../../bin/rpg_play.js";
 import type { GameState } from "../../src/core/state.js";
+import { enumerateRpgBaseActions } from "../../src/rpg/legal_actions.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   enumerateRpgActions,
   enumerateRpgBlockedActions,
@@ -345,5 +347,53 @@ describe("RPG blocked hint validator integration", () => {
         (finding) => finding.code === "INERT_FLAG" && finding.message.includes('"hint_enabled"'),
       ),
     ).toBe(false);
+  });
+});
+
+describe("enumerateRpgBlockedActions with a caller-supplied legal list", () => {
+  // The observation hands its own enumeration of the state to the blocked pass instead of
+  // enumerating the base actions a second time. That must never change which rows appear.
+  const blocked = setup();
+  const legalSibling = setup([
+    blockedInteraction(),
+    blockedInteraction({ conditions: [{ not_flag: "treatment_ready" }], blocked_hint: undefined }),
+  ]);
+  const ready = {
+    ...blocked,
+    state: { ...blocked.state, flags: { ...blocked.state.flags, treatment_ready: true } },
+  };
+
+  it.each([
+    ["a visible blocked row", blocked],
+    ["a legal sibling suppressing the row", legalSibling],
+    ["an open gate (row legal, nothing blocked)", ready],
+  ])("matches the self-enumerated rows for %s", (_label, { index, state }) => {
+    const own = enumerateRpgBlockedActions(index, state);
+    expect(enumerateRpgBlockedActions(index, state, enumerateRpgActions(index, state))).toEqual(
+      own,
+    );
+    expect(enumerateRpgBlockedActions(index, state, enumerateRpgBaseActions(index, state))).toEqual(
+      own,
+    );
+    expect(buildRpgObservation(index, state).blocked_actions).toEqual(own);
+  });
+
+  it("ignores appended combat rows: only a legal BASE row suppresses a blocked id", () => {
+    // enumerateRpgActions appends ATTACK/MANEUVER rows to the base list. A combat row that
+    // happened to share a blocked row's id never suppressed it when the blocked pass
+    // enumerated the base list itself, so it must not when handed the full list either.
+    const { index, state } = blocked;
+    const withCombat = [
+      ...enumerateRpgActions(index, state),
+      {
+        id: "use_herb_on_patient",
+        command: "attack patient",
+        action: { type: "ATTACK" as const, enemy: "patient" },
+      },
+    ];
+    expect(enumerateRpgBlockedActions(index, state, withCombat)).toEqual(
+      enumerateRpgBlockedActions(index, state),
+    );
+    expect(enumerateRpgBlockedActions(index, state)).toHaveLength(1);
   });
 });

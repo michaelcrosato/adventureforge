@@ -837,14 +837,26 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
  * Enumerate authored USE affordances that are visible and structurally possible,
  * but whose gameplay conditions do not currently hold. This is a derived display
  * projection only: blocked rows are never mixed into the executable legal set.
+ *
+ * A row is suppressed when a legal BASE row already carries its id. `legalActions` lets a
+ * caller that has just enumerated this same state (the observation does) hand that list
+ * over instead of paying for `enumerateRpgBaseActions` twice. Either this state's
+ * `enumerateRpgBaseActions` or its `enumerateRpgActions` result is accepted: the latter is
+ * the base list with combat ATTACK/MANEUVER rows appended, and those are skipped here, so
+ * both yield exactly the id set this function would enumerate itself.
  */
 export function enumerateRpgBlockedActions(
   index: RpgModelIndex,
   state: GameState,
+  legalActions?: readonly RpgActionOption[],
 ): RpgBlockedActionOption[] {
   if (state.ended) return [];
 
-  const legalIds = new Set(enumerateRpgBaseActions(index, state).map((option) => option.id));
+  const legalIds = new Set<string>();
+  for (const option of legalActions ?? enumerateRpgBaseActions(index, state)) {
+    if (option.action.type === "ATTACK" || option.action.type === "MANEUVER") continue;
+    legalIds.add(option.id);
+  }
   const emitted = new Set<string>();
   const out: RpgBlockedActionOption[] = [];
 
@@ -852,10 +864,14 @@ export function enumerateRpgBlockedActions(
     for (const interaction of object.interactions) {
       const hint = interaction.blocked_hint;
       if (!hint) continue;
-      const projection = projectUseAction(index, state, interaction);
-      if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
+      // Every test below is a pure filter, so their order cannot change the result; the
+      // two condition checks go first because they reject almost every row, and the
+      // projection (name lookups, command formatting) and presence scan (a walk over
+      // every object's location) are then paid only for a row that is really blocked.
       if (!evalConditions(hint.visible_when, state)) continue;
       if (evalConditions(interaction.conditions, state)) continue;
+      const projection = projectUseAction(index, state, interaction);
+      if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
       if (legalIds.has(projection.id) || emitted.has(projection.id)) continue;
 
       emitted.add(projection.id);
