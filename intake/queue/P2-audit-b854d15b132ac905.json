@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "b854d15b132ac905",
+  "title": "Revisit running census proofs on census-scope PRs now that the lane is ~2.5x faster",
+  "body": "Revisit running the census proofs on census-scope PRs now that they are about 2.5x faster.\n\nToday `verify` runs only the fast lane (ci.yml). The six census proofs run nightly in deep-audit.yml, and `npm run ship` picks the full bar only on the operator's machine, based on the diff. AGENTS.md states the trade on purpose: a content or engine regression that only a census proof catches can sit on main until the nightly run goes red. Merging with the GitHub button skips the census proofs entirely.\n\nTwo things changed the cost side of that trade:\n- #391 (the consolidated Bolt perf work) cut `npm run test:exhaustive` from 1,474 s to 578 s on the owner's Windows box, same 92 tests. CI should see a similar ratio, because the census lane is mostly a single-threaded tail.\n- In the 2026-09-22 sweep, 9 of the 16 Bolt PRs edited census-scope files and were green on PR CI without any census evidence.\n\nProposal to evaluate: a `census-proofs` job gated on `barForChangedFiles` (the helper that ship and cycle-bar.ts already share), required by `verify` only when the diff touches CENSUS_PROOF_SOURCE_SCOPES, and skipped otherwise. Then measure the added PR critical path on census-scope PRs and decide.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (finding \"Green PR checks say nothing about the census proofs\").",
+  "source": "audit",
+  "kind": "research",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": ".github/workflows/ci.yml",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T08:15:32.421Z",
+  "updated_at": "2026-09-23T08:15:32.421Z",
+  "external": null
+}
