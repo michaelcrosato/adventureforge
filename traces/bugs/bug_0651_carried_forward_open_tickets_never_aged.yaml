@@ -1,0 +1,41 @@
+id: bug_0651
+title: A carried-forward open QA ticket was never re-aged, so the bucket was not bounded
+reported_by: 2026-09-22 repository audit at c17192f9 (lane B, task B1 / finding F6)
+severity: S2
+
+symptom: >
+  qa/tickets/README.md promises the bucket is bounded: a stale ticket the corpus stops
+  mentioning retires. But a ticket that was `open` when the corpus stopped mentioning it
+  stayed `open` forever — 55 of the 103 tracked tickets are in exactly that state — so it
+  could never become stale, never retire, and (when corroborated) stayed in the dev loop's
+  view no matter how many builds passed.
+
+cause: >
+  triagePlaytestCorpus (src/qa/triage.ts) applied the age test only inside the loop over
+  CURRENT clusters. The carry-forward loop for tickets absent from the corpus pushed the
+  prior ticket back unchanged, and `isRetireable` requires `status === "stale"`, so an
+  unverified `open` ticket that went quiet had no path out of the bucket.
+
+reproduction: >
+  tests/unit/qa_playtest_pipeline.test.ts, "aging a finding the build history cannot
+  place": a carried-forward `open` ticket on an unplaceable build becomes `stale` on the
+  first pass (not retired), and retires on the second; one on a build nine commits back is
+  aged and one eight back is not; `in_progress`, verified and `wont_fix` tickets are
+  returned byte-identical; nothing ages against a truncated spine.
+
+fix: >
+  The carry-forward loop now applies the same `agedOut` test the cluster loop uses to an
+  unverified, unsuperseded `open` ticket. It ages in one pass and can retire only in a
+  later one, so the next reader always sees a ticket go stale before its file goes.
+  `in_progress` is left alone as a live claim, and every other status is a decision.
+  qa/tickets/README.md's Retention section now says so.
+
+production:
+  - src/qa/triage.ts
+  - qa/tickets/README.md
+regression:
+  - tests/unit/qa_playtest_pipeline.test.ts
+verification:
+  - The carry-forward cases fail against the pre-fix src/qa/triage.ts and pass after it.
+  - The existing "retiring aged-out tickets so the bucket stays bounded" block passes
+    unchanged, including "retires nothing when the corpus itself produced no clusters".
