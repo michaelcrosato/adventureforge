@@ -69,9 +69,10 @@ The active product milestone is now the bounded Albany → Wolf-Winter → truth
 Albany-return starting slice. New towns and unrelated quest ports are frozen
 until its contract in `docs/STARTING_SLICE.md` is proven.
 
-- Keep routine pure-blind evidence flowing from clean, frozen builds: one fresh
-  journey per normal cycle, then compile when at least three new verified
-  reports exist. Treat the tracked feedback ledger as a historical snapshot;
+- Keep routine pure-blind evidence flowing from clean, frozen builds: the
+  playtest loop (`playtest-loop.sh`) plays each landed build independently of
+  the dev loop, which no longer plays a journey per cycle (`docs/two_loop_workflow.md`);
+  compile when at least three new verified reports exist. Treat the tracked feedback ledger as a historical snapshot;
   current decisions must use the intended local report set and newest compiled
   hot spots.
 - Use accumulated evidence to reduce repeated Albany setup and Station-planning

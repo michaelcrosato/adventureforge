@@ -10,7 +10,7 @@ flowchart LR
         B --> C["one focused change"]
         C --> D["provisional commit"]
         D --> E["crawl · health · verifier integrity"]
-        E --> F["seal + push"]
+        E --> F["seal, then land via npm run ship"]
     end
 
     F ==>|"a new build"| BUILD[("published build")]
@@ -458,9 +458,16 @@ wrong and a real cohort would have failed the same way.
 cd /d/zork-unlimited
 AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh \
 AI_LOOP_TRIAGE_STORE=/d/af-corpus \
-AI_LOOP_COMMIT=1 AI_LOOP_PUSH=1 \
+AI_LOOP_COMMIT=1 \
 ./loop.sh
 ```
+
+Leave `AI_LOOP_PUSH` at its default `0`, as loop.sh and `docs/afk_loop.md` say: `main` is
+protected by the required `verify` check, so a bare push of a fresh loop commit is always
+rejected and only prints a warning. The loop's verified commits reach the published build
+the same way every landing does — `npm run ship` (a PR squash-merged into `main`) — and the
+QA worktrees below, whose branches track `origin/main`, play each landed build on their
+next refresh.
 
 `AI_LOOP_TRIAGE_STORE` is what makes several QA worktrees work without syncing anything:
 triage is pure over the corpus, so the dev loop re-derives the queue itself at cycle

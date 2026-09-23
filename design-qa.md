@@ -1,14 +1,19 @@
 # Night Watch web UI design QA
 
-Source reference:
-`C:\Users\micha\.codex\generated_images\019ff3ec-305c-7af1-bb10-3c4aa77363c9\exec-c4c3a391-94b9-4ce7-a233-496e2ee1bc9d.png`
+None of the images below is in the repository. The source reference was a generated
+image in the original author's local Codex image cache, and the captures were written
+to the gitignored `ai-runs/`, so on any other checkout these paths name nothing; they
+are kept as a record of what was compared.
 
-Final implementation captures:
+Source reference (the author's local Codex cache, outside the repo):
+`generated_images/019ff3ec-305c-7af1-bb10-3c4aa77363c9/exec-c4c3a391-94b9-4ce7-a233-496e2ee1bc9d.png`
+
+Final implementation captures (repo-relative, gitignored):
 
 - Desktop, 1487 × 1058, Wolf-Winter Byre-Yard root dialogue:
-  `C:\dev\zork-unlimited\ai-runs\night-watch-design-qa\implementation-1487x1058-v5.png`
+  `ai-runs/night-watch-design-qa/implementation-1487x1058-v5.png`
 - Mobile, 360 × 800, same authored state:
-  `C:\dev\zork-unlimited\ai-runs\night-watch-design-qa\mobile-quest-360x800-v4.png`
+  `ai-runs/night-watch-design-qa/mobile-quest-360x800-v4.png`
 
 Comparison history:
 

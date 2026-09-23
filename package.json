@@ -58,7 +58,6 @@
     "submit": "tsx bin/submit.ts",
     "work": "tsx bin/work.ts",
     "intake:sync": "tsx scripts/sync-intake-github.ts",
-    "intake:sync-linear": "tsx scripts/sync-intake-linear.ts",
     "intake:sync:linear": "tsx scripts/sync-intake-linear.ts",
     "fleet": "node blind-tester/fleet.mjs",
     "fleet:mock": "node blind-tester/fleet.mjs --mock",

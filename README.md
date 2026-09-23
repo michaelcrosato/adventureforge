@@ -216,7 +216,8 @@ opening/navigation/closure, unchanged services, legal-action listings,
 persistence operations, rejections, technical quest foldback, and the
 continue/end retention choice do not.
 
-The initial goal is to find one local lead in Albany and see it through. Goals
+The initial goal is “Complete Wolf-Winter in Albany.” (`INITIAL_JOURNEY_GOAL` in
+`src/world/journey_contract.ts`). Goals
 are now versioned and ordered: completing one appends it to goal history and
 offers a continue/end choice bound to that exact goal, at once if completion is
 before the next fixed checkpoint. If the player continues after Wolf-Winter,

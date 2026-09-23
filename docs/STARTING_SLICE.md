@@ -50,10 +50,12 @@ A typical blind completion of the first Albany goal must remain at or below 45
 meaningful decisions. Optionality, interaction, and consequences create depth;
 mandatory length does not.
 
-The proof-hashed opening goal remains “Find one local lead in Albany and see it
-through.” Shared player guidance states the mechanical boundary separately:
-completing Albany's Wolf-Winter quest satisfies the goal, while jobs, events,
-and sites may reveal leads but do not finish it themselves.
+The proof-hashed opening goal is “Complete Wolf-Winter in Albany.”
+(`INITIAL_JOURNEY_GOAL` in `src/world/journey_contract.ts`). Shared player
+guidance states the chapter boundary separately: finishing The Wolf-Winter
+completes the opening, which ends the opening chapter, and the player then
+chooses End to stop there or Continue to carry its results into the optional
+Gallowmere chapter.
 
 ## Local canon and player role
 
@@ -1395,9 +1397,12 @@ fleets. It does not change the current `active_unproven` status by itself.
 
 Each increment must create one reusable or player-visible causal improvement,
 update the matrix truthfully, preserve unrelated work, pass the repository's
-gates, produce a fresh pure report, and prepend a terse result to
-`AI_LOOP_STATE.md`. Green increments may be committed locally on a short-lived
-branch; they are not pushed or proposed for merge without explicit instruction.
+gates, and complete its terse `## AFK Cycle` entry in `AI_LOOP_STATE.md`. Under the
+two-loop model (`AGENTS.md`, `docs/two_loop_workflow.md`) a dev increment does not
+play the game: fresh pure reports come from the playtest loop against the landed
+build and reach later increments through the intake queue. A green increment lands
+the way every change does — `npm run ship`, a short-lived branch squash-merged into
+`main` behind the required `verify` check — never by a direct push.
 
 The milestone is complete only when current evidence proves every contract item.
 Until then, the next move is the highest-leverage missing foundation inside this
