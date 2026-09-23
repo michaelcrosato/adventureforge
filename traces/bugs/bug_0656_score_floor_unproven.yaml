@@ -1,0 +1,42 @@
+id: bug_0656
+title: No proof kept any shipped pack's score from going negative, although a negative score makes a save unloadable
+reported_by: intake/queue audit P1-audit-cacc2a4fd3e86c8d (re-confirmed by the 2026-09-22 audit)
+severity: S2
+
+symptom: >
+  Nothing bounds the score var from below. dec_var has no zero floor in
+  src/core/effects.ts, and the score-economy proof only checked the CEILING — that the
+  reachable maximum equals meta.max_score — never the floor. A pack whose penalty can
+  fire before enough points were earned would let a player reach a negative score, and a
+  save taken in that state is refused on restore (assertRpgStateReferences), so the run
+  can never be resumed. Tide Mill already ships a score penalty (pocketing the coin-bag
+  after the sea-gate opens costs 5), so the class is live in shipped content, not
+  hypothetical.
+
+cause: >
+  tests/regression/rpg_score_economy_sound.test.ts's maxReachableScore walked the COMPLETE
+  reachable region of every shipped pack under the best/worst-roll bracket but recorded
+  only the maximum score. The minimum was observed on every state and thrown away.
+
+reproduction: >
+  The new planted BELOW-ZERO case in tests/regression/rpg_score_economy_sound.test.ts: a
+  pack whose gem awards +10 and whose bucket kick costs 5 from the start. Its reachable
+  maximum equals max_score (the ceiling check alone passes it), while a kick-first player
+  holds score -5.
+
+fix: >
+  maxReachableScore also records the minimum over the same exhaustive pass, and every
+  shipped pack's case asserts it is >= 0 — a proof, over the complete reachable region
+  under both roll regimes, that no shipped pack can reach a negative score. The planted
+  case pins that the floor check sees the penalty-first state. This closes the shipped-
+  content half of the intake item; a STATIC validator bound for unshipped packs (loaded
+  through load_quest) is still open there. The generator (src/gen/rpg_generator.ts) emits
+  only score awards, never a decrement, so generated packs cannot trip it.
+
+production: []
+regression:
+  - tests/regression/rpg_score_economy_sound.test.ts
+verification:
+  - The planted BELOW-ZERO case asserts max 10 and min -5 on its pack.
+  - Every shipped pack's per-pack case now asserts min >= 0, run in the exhaustive
+    (census) lane.
