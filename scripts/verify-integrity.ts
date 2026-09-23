@@ -276,19 +276,25 @@ export const APPROVED_D10_COMPLETION_RECORD = "docs/EXTERNAL_REVIEW_COMPLETION.m
 // this raise repeats the same maintenance. The decay is structural: the corpus grows
 // every cycle and these constants do not. Whenever an audit re-measures, re-raise to
 // ~80% of the fresh numbers — and treat a gap wider than ~5 points as overdue.
+//
+// Re-measured 2026-09-22 over 509 files, with this file's own counters (listTestFiles +
+// countTestCases / countAssertions / countStrongAssertions): 4,017 cases / 24,489
+// assertions / 23,388 strong. The 08-30 floors had decayed to 74.1% / 76.4% / 76.5% —
+// the case floor past the overdue line above. Re-raised to ~80% again (79.7% / 79.6% /
+// 80.0%); raising only, and the drift ratchet still owns single-cycle drops.
 
 /** Never drop below this many test cases (a mass-deletion tripwire). */
-export const MIN_TEST_CASES = 2975;
+export const MIN_TEST_CASES = 3200;
 
 /** Never drop below this many `expect()` assertions (the assertion-gutting tripwire,
  *  parallel to MIN_TEST_CASES), while the drift ASSERTION_COUNT_REGRESSION guards the
  *  precise per-cycle drop. */
-export const MIN_ASSERTIONS = 18700;
+export const MIN_ASSERTIONS = 19500;
 
 /** Never drop below this many STRONG (value-pinning) matchers — the strict→loose-swap
  *  tripwire, parallel to MIN_ASSERTIONS, while the drift STRONG_ASSERTION_REGRESSION
  *  guards the precise per-cycle drop. */
-export const MIN_STRONG_ASSERTIONS = 17900;
+export const MIN_STRONG_ASSERTIONS = 18700;
 
 /** Any chain of vitest modifiers sitting between the runner name and the terminal
  *  modifier — `.concurrent`, `.sequential`, `.each(...)`, `.for(...)`, `.extend(...)`.
