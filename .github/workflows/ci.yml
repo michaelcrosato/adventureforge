@@ -102,8 +102,10 @@ jobs:
 
   # The FAST lane only. The exhaustive whole-state-space census proofs moved to
   # deep-audit.yml: they were ~79 of the ~103 minutes of measured body time in this
-  # matrix, and they read only src/core, src/rpg, src/validate, src/world and content/,
-  # so nothing else a PR can touch is able to move their verdict. The trade is stated
+  # matrix, and they read only the scopes in CENSUS_PROOF_SOURCE_SCOPES
+  # (scripts/test-lanes.ts, the source of truth — deliberately not repeated here, where a
+  # copy drifted to five of its twelve entries), so nothing else a PR can touch is able to
+  # move their verdict. The trade is stated
   # plainly: a content or engine regression that ONLY a census proof catches can now sit
   # on main until the nightly deep audit goes red, instead of blocking the PR.
   test-shards:
@@ -208,4 +210,4 @@ jobs:
       - name: Validate every shipped quest
         run: npm run validate
       - name: Path-sensitive CLI tests
-        run: npx vitest run tests/unit/doctor_cli.test.ts tests/unit/record_playtest_session_cli.test.ts tests/unit/qa_triage_cli.test.ts
+        run: npx vitest run tests/unit/doctor_cli.test.ts tests/unit/record_playtest_session_cli.test.ts tests/unit/qa_triage_cli.test.ts tests/unit/seal_feedback_acceptance.test.ts

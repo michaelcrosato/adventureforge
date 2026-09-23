@@ -1,0 +1,41 @@
+id: bug_0635
+title: npm run ship started on main chose its bar without the unpushed commits it would carry
+reported_by: repo audit at c17192f9 (2026-09-22)
+severity: S2
+
+symptom: >
+  Started on `main` with a docs-only dirty tree on top of an unpushed commit that touched
+  the engine or a shipped pack, `npm run ship` picked `health:fast`, carried that commit
+  into its new ship branch and PR, and landed it without the census proofs the charter
+  says such a change requires. With a clean tree it instead printed "Nothing to ship"
+  while local commits sat unshipped. A missing origin/main tracking ref likewise read as
+  "no commits" and chose the fast bar.
+
+cause: >
+  changedPaths in scripts/ship.ts added the committed diff (`origin/main...HEAD`) only when
+  the starting branch was NOT main, and swallowed any failure to read it as an empty
+  list. But `git checkout -b` carries local main's commits into the ship branch, so on
+  main the bar was chosen off the working tree alone.
+
+reproduction: >
+  tests/unit/ship.test.ts "ship weighs every commit the landing carries (bug_0635)": a
+  fake git reporting ` M docs/afk_loop.md` in the tree and `src/core/engine.ts` ahead of
+  origin/main must yield the full bar; before the fix the committed half was never asked
+  for on main.
+
+fix: >
+  changedPaths became the exported shipDiff(runGit), which always reads
+  `origin/main...HEAD` (empty when nothing is ahead) and reports committedUnreadable when
+  it cannot, instead of pretending the list is empty. The new pure chooseShipBar picks the
+  full bar for a census-scope diff, for --full, and for an unreadable committed diff, with
+  the reason printed in the plan. "Nothing to ship" now also requires that no commits are
+  ahead. The bar logic in scripts/test-lanes.ts is unchanged.
+
+production:
+  - scripts/ship.ts
+regression:
+  - tests/unit/ship.test.ts
+verification:
+  - Three new cases cover commits ahead of origin/main escalating on main, a fast diff
+    staying fast (and --full still forcing full), and an unreadable committed diff taking
+    the full bar; the existing ship and ship_checks cases stay green.

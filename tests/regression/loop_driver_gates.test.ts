@@ -5,7 +5,15 @@
  * layer, so the test suite has to lock it directly.
  */
 import { describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -93,7 +101,7 @@ describe("loop.sh verification gates", () => {
   it("keeps the provisional and final commits in the exact-clean evidence order", () => {
     const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
     const ordered = [
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
       "refresh_intake_queue",
       "report_qa_bucket",
       "npm run ai:loop",
@@ -126,8 +134,12 @@ describe("loop.sh verification gates", () => {
     // tests — and was discarded at the last step. The check therefore has to sit right
     // after the commit and BEFORE anything expensive.
     const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    const gate = sectionBetween(
+      "require_selection_attestation() {",
+      "\n}\n\nrequire_final_ledger_only()",
+    );
     const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');
-    const attestation = runCycle.indexOf("--check-attestation", provisional);
+    const attestation = runCycle.indexOf("require_selection_attestation ||", provisional);
     const rotate = runCycle.indexOf("loop:rotate-state", attestation);
     const bar = runCycle.indexOf('npm run "$health_script"', attestation);
 
@@ -139,8 +151,64 @@ describe("loop.sh verification gates", () => {
     expect(runCycle).toContain('_reject_cycle "attestation"');
     // It asks the SEAL rather than re-parsing the marker in bash: a check that drifts from
     // the gate it stands in for would fail cycles the seal would have accepted.
-    expect(runCycle).toContain("loop:seal-feedback -- --check-attestation");
+    expect(gate).toContain(
+      "npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json",
+    );
     expect(runCycle).not.toMatch(/feedback_cycle_selection[^\n]*grep/u);
+    expect(gate).not.toMatch(/feedback_cycle_selection[^\n]*grep/u);
+  });
+
+  it("asks for the attestation in commit mode only (bug_0630)", () => {
+    // The attestation lives in the provisional commit's ledger scaffold, which ai-loop.ts
+    // writes only when AI_LOOP_COMMIT=1. Asked unconditionally, the check exited 1 on
+    // every evidence-only cycle (HEAD is the untouched cycle start) and _reject_cycle
+    // hard-reset it, so the default mode could never succeed. The guard sits BEFORE the
+    // seal call, the same shape require_provisional_commit and safe_commit_if_enabled use.
+    const gate = `${sectionBetween(
+      "require_selection_attestation() {",
+      "\n}\n\nrequire_final_ledger_only()",
+    )}\n}`;
+    expect(gate.indexOf('[[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0')).toBeGreaterThan(0);
+    expect(gate.indexOf('[[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0')).toBeLessThan(
+      gate.indexOf("npm run --silent loop:seal-feedback"),
+    );
+
+    // Behaviourally: a stub `npm` records whether the seal was asked and answers with
+    // the status the case needs.
+    const stub = (sealStatus: number): string =>
+      ["npm() {", '  printf "SEAL-ASKED %s\\n" "$*"', `  return ${sealStatus}`, "}", gate].join(
+        "\n",
+      );
+
+    const evidenceOnly = runGateHarness(
+      stub(1),
+      { AI_LOOP_COMMIT: "0" },
+      "require_selection_attestation",
+    );
+    expect(evidenceOnly.status, evidenceOnly.output).toBe(0);
+    expect(evidenceOnly.output).not.toContain("SEAL-ASKED");
+
+    const unsetMode = runGateHarness(stub(1), {}, "require_selection_attestation");
+    expect(unsetMode.status, unsetMode.output).toBe(0);
+    expect(unsetMode.output).not.toContain("SEAL-ASKED");
+
+    const commitUnattested = runGateHarness(
+      stub(1),
+      { AI_LOOP_COMMIT: "1" },
+      "require_selection_attestation",
+    );
+    expect(commitUnattested.status).toBe(1);
+    expect(commitUnattested.output).toContain(
+      "SEAL-ASKED run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json",
+    );
+
+    const commitAttested = runGateHarness(
+      stub(0),
+      { AI_LOOP_COMMIT: "1" },
+      "require_selection_attestation",
+    );
+    expect(commitAttested.status, commitAttested.output).toBe(0);
+    expect(commitAttested.output).toContain("SEAL-ASKED");
   });
 
   it("rotates completed loop state in both modes before post-change verification", () => {
@@ -163,6 +231,17 @@ describe("loop.sh verification gates", () => {
     expect(rotationBlock).toContain(
       '_reject_cycle "loop-state-rotation" "deterministic final loop-state rotation failed"',
     );
+    // Between the provisional commit and the rotation, the ONLY commit-mode-gated step is
+    // the attestation check, and it is gated inside its own function (bug_0630) — so the
+    // rotation itself stays unconditional and runs in both modes. Pinned both ways: the
+    // attestation function carries the guard, and nothing inline in run_cycle between the
+    // two steps does, so a guard cannot creep over the rotation.
+    const attestationGate = sectionBetween(
+      "require_selection_attestation() {",
+      "\n}\n\nrequire_final_ledger_only()",
+    );
+    expect(attestationGate).toContain('[[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0');
+    expect(runCycle.slice(provisional, rotation)).toContain("require_selection_attestation ||");
     expect(runCycle.slice(provisional, rotation)).not.toContain("AI_LOOP_COMMIT");
     expect(scripts["loop:rotate-state"]).toBe("tsx scripts/rotate-loop-state.ts");
   });
@@ -288,7 +367,7 @@ describe("loop.sh latest_prompt (bug_0613)", () => {
 
 describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
   const cleanEvidence = `${sectionBetween(
-    "require_clean_evidence_cycle_start() {",
+    "require_clean_cycle_start() {",
     "\n}\n\nremove_new_untracked_since_cycle_start()",
   )}\n}`;
   const cleanup = `${sectionBetween(
@@ -300,7 +379,7 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
     const clean = runGateHarness(
       [initRepo, cleanEvidence].join("\n"),
       { AI_LOOP_COMMIT: "0", AI_LOOP_ALLOW_DIRTY: "1" },
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
     );
     expect(clean.status, clean.output).toBe(0);
 
@@ -309,7 +388,7 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
         "\n",
       ),
       { AI_LOOP_COMMIT: "0", AI_LOOP_ALLOW_DIRTY: "1" },
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
     );
     expect(dirty.status).toBe(1);
     expect(dirty.output).toContain("exact-clean worktree at cycle start");
@@ -318,9 +397,37 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
     const explicitRisk = runGateHarness(
       [initRepo, "printf '%s\\n' pending > pending.md", cleanEvidence].join("\n"),
       { AI_LOOP_COMMIT: "1", AI_LOOP_ALLOW_DIRTY: "1" },
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
     );
     expect(explicitRisk.status, explicitRisk.output).toBe(0);
+  });
+
+  it("rechecks a commit-mode cycle boundary too, unless the dirty override was given (bug_0633)", () => {
+    // The startup guard refuses a dirty tree because a red gate hard-resets it; before
+    // bug_0633 the per-cycle recheck returned early in commit mode, so only the FIRST
+    // cycle had that protection and a tree dirtied mid-run was reset or committed over.
+    const clean = runGateHarness(
+      [initRepo, cleanEvidence].join("\n"),
+      { AI_LOOP_COMMIT: "1" },
+      "require_clean_cycle_start",
+    );
+    expect(clean.status, clean.output).toBe(0);
+
+    const trackedEdit = runGateHarness(
+      [initRepo, "printf '%s\\n' external >> AI_LOOP_STATE.md", cleanEvidence].join("\n"),
+      { AI_LOOP_COMMIT: "1" },
+      "require_clean_cycle_start",
+    );
+    expect(trackedEdit.status).toBe(1);
+    expect(trackedEdit.output).toContain("Commit-mode cycle refuses to start on a dirty worktree");
+
+    const untracked = runGateHarness(
+      [initRepo, "printf '%s\\n' stray > stray.md", cleanEvidence].join("\n"),
+      { AI_LOOP_COMMIT: "1", AI_LOOP_ALLOW_DIRTY: "0" },
+      "require_clean_cycle_start",
+    );
+    expect(untracked.status).toBe(1);
+    expect(untracked.output).toContain("AI_LOOP_ALLOW_DIRTY=1");
   });
 
   it("removes only cycle-created untracked paths across the repo", () => {
@@ -402,7 +509,7 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
 describe("loop.sh provisional/final commit contracts", () => {
   const provisional = `${sectionBetween(
     "require_provisional_commit() {",
-    "\n}\n\nrequire_final_ledger_only()",
+    "\n}\n\nrequire_selection_attestation()",
   )}\n}`;
   const ledgerOnly = `${sectionBetween(
     "require_final_ledger_only() {",
@@ -459,7 +566,8 @@ describe("loop.sh provisional/final commit contracts", () => {
 });
 
 describe("loop.sh agent selection", () => {
-  const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\nrun_agent()")}\n}`;
+  const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\n# Run one resolved agent")}\n}`;
+  const launchAgent = `${sectionBetween("launch_agent() {", "\n}\n\nrun_agent()")}\n}`;
   // The whole registry block, not two functions picked out of it: the ids and the
   // per-agent fields now come from dev-agents.json (which bin/doctor.ts also reads), so
   // dev_agent_binary and dev_agent_command are no longer self-contained case statements.
@@ -499,7 +607,9 @@ describe("loop.sh agent selection", () => {
   it("auto-detects any supported agent, not one privileged vendor", () => {
     const codexOnly = resolve(["unset AI_AGENT AI_AGENT_CMD AI_CODEX_SANDBOX", "codex() { :; }"]);
     expect(codexOnly.status, codexOnly.stderr).toBe(0);
-    expect(codexOnly.stdout).toContain("codex -a never exec --sandbox workspace-write --cd ");
+    // The placeholders resolve to quoted positional references, not spliced values
+    // (bug_0632): launch_agent supplies the cwd as $1 and the sandbox as $2.
+    expect(codexOnly.stdout).toBe('codex -a never exec --sandbox "$2" --cd "$1" -');
 
     // With no codex installed the loop still runs — on whatever IS installed.
     const claudeOnly = resolve(["unset AI_AGENT AI_AGENT_CMD", "claude() { :; }"]);
@@ -551,6 +661,71 @@ describe("loop.sh agent selection", () => {
   it("emits nothing when no agent is available, so the cycle degrades to evidence-only", () => {
     const result = resolve(["unset AI_AGENT AI_AGENT_CMD"]);
     expect(result.stdout.trim()).toBe("");
+  });
+
+  it("launches a registry agent without re-parsing the cwd or sandbox as shell (bug_0632)", () => {
+    // intake cdae46f8: {CWD} used to be spliced into the string launch_agent hands to
+    // `bash -c`, so a checkout path with a space split --cd, and one containing `;` or
+    // `$(...)` executed. Drive the REAL registry entry through the REAL launch line from a
+    // hostile directory and a hostile sandbox value; the stub agent records its argv.
+    const root = mkdtempSync(join(tmpdir(), "loop-launch-"));
+    const hostile = "repo dir;touch PWNED_SEMI;$(touch PWNED_SUB)";
+    const sandbox = "workspace-write;touch PWNED_SANDBOX";
+    try {
+      mkdirSync(join(root, "stub"));
+      mkdirSync(join(root, hostile));
+      writeFileSync(
+        join(root, "stub", "codex"),
+        '#!/usr/bin/env bash\nfor a in "$@"; do printf "%s\\n" "$a"; done > "$ARGS_OUT"\n',
+        { mode: 0o755 },
+      );
+      writeFileSync(join(root, hostile, "prompt.md"), "prompt\n");
+      const script = [
+        "set -uo pipefail",
+        `AI_LOOP_NODE_CMD=${JSON.stringify(process.execPath)}`,
+        registry,
+        `DEV_AGENT_REGISTRY=${JSON.stringify(`${BASH_REPO_ROOT}/dev-agents.json`)}`,
+        agentCommand,
+        launchAgent,
+        "AGENT_PID_FILE=unused.pid",
+        'timeout() { shift 2; "$@"; }',
+        "write_process_record() { :; }",
+        "export -f write_process_record",
+        'export ARGS_OUT="$PWD/args.txt"',
+        'PATH="$PWD/stub:$PATH"',
+        `cd ${JSON.stringify(hostile).replaceAll("$", "\\$")}`,
+        `AI_CODEX_SANDBOX=${JSON.stringify(sandbox)}`,
+        'cmd="$(dev_agent_command codex)"',
+        'launch_agent "$cmd" 60 prompt.md',
+        'printf "rc=%s\\n" "$?"',
+        'printf "cwd=%s\\n" "$PWD"',
+      ].join("\n");
+      const result = spawnSync("bash", ["-s"], {
+        cwd: root,
+        env: process.env,
+        input: script,
+        encoding: "utf8",
+      });
+      const output = `${result.stdout}\n${result.stderr}`;
+      expect(result.status, output).toBe(0);
+      expect(result.stdout).toContain("rc=0");
+      const bashCwd = /cwd=(.*)/u.exec(result.stdout)?.[1];
+      expect(bashCwd, output).toBeDefined();
+      expect(bashCwd!.endsWith(hostile)).toBe(true);
+
+      const argv = readFileSync(join(root, "args.txt"), "utf8").split("\n").slice(0, -1);
+      expect(argv).toEqual(["-a", "never", "exec", "--sandbox", sandbox, "--cd", bashCwd, "-"]);
+      for (const marker of ["PWNED_SEMI", "PWNED_SUB", "PWNED_SANDBOX"]) {
+        expect(existsSync(join(root, marker)), marker).toBe(false);
+        expect(existsSync(join(root, hostile, marker)), marker).toBe(false);
+      }
+    } finally {
+      try {
+        rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      } catch {
+        // Git Bash can briefly retain its cwd handle on Windows; the temp dir is harmless.
+      }
+    }
   });
 });
 

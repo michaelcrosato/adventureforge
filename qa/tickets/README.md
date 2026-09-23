@@ -9,8 +9,11 @@ only exists on the QA machine is a ticket it cannot act on. Keeping tickets here
 also puts a finding's whole life — filed, worked, fixed — next to the commits
 that closed it.
 
-One JSON file per ticket, named `<severity>-<kind>-<id>.json`, so a plain `ls` is
-already a triaged queue and two people editing different tickets never conflict.
+One JSON file per ticket, named `<severity>-<kind>-<id>.json`, so a plain `ls` groups
+tickets by severity and two people editing different tickets never conflict. Mind the
+direction: severity is ASCENDING (S0 is the mildest, S4 the most severe — the reverse of
+the usual S1-is-critical scale), so `ls` lists the mildest first; `ls -r` puts the worst
+on top, and `npm run qa:bucket` is the real triaged view.
 
 An empty bucket is normal. It means the fleet has not yet corroborated anything
 new, and the dev loop proceeds on the assessor's own candidates — it never stalls

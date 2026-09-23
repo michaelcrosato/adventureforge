@@ -177,6 +177,8 @@ The exhaustive lane is the six whole-state-space census proofs
 shipped pack; `scripts/ci-test-groups.ts` measured them at ~79 minutes of CI body
 time together, and `vitest.config.ts` deliberately serializes them one or two
 workers wide, so most of that is a single-threaded tail with the other cores idle.
+The current nightly measure is `deep-audit.yml`'s `exhaustive-proofs` job: the whole
+lane in ~18.6 minutes of wall clock on one runner (2026-09-22).
 
 What licenses deferring them, and it is the ONLY thing that does: they import
 only the engine scopes listed in `CENSUS_PROOF_SOURCE_SCOPES`

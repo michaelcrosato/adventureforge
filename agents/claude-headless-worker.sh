@@ -5,7 +5,14 @@
 # `claude -p` it adds what an unattended run turned out to need:
 #   - an explicit tool allowlist instead of a blanket permission bypass, and the scheduling /
 #     subagent / messaging tool families disallowed outright (a one-turn worker has no use
-#     for them, and they were the source of every "ended its turn expecting a wake-up" loss)
+#     for them, and they were the source of every "ended its turn expecting a wake-up" loss).
+#     The allowlist is a GUARDRAIL, NOT A SANDBOX, and should be read that way: a dev cycle
+#     must run the repo's own tooling, and `node`/`npx`/`npm` (and `find -exec`, `awk`,
+#     `sed`, `timeout`) can each still execute an arbitrary program. What the list does do
+#     is keep the obvious doors shut: no generic command runners (`bash`, `env`, `xargs`,
+#     `command`, `python3` were removed — bug_0637), git only through the subcommands a
+#     cycle uses, and `git push` / remote-mutating git on the disallowed list, which wins
+#     over any allow rule. Isolation, if you need it, is the checkout and the OS account.
 #   - a minimal environment (env -i) so nothing leaks in from the operator's own session
 #   - a fresh session id with no persistence, so the worker never writes into anyone else's
 #     transcript and the CLI's session registry cannot kill a finished run at the last step
@@ -32,18 +39,31 @@ ERR="$RUN_DIR/$STAMP-$SESSION_ID.stderr"
 echo "dev-agent: model=$DEV_AGENT_MODEL effort=$DEV_AGENT_EFFORT budget_usd=$DEV_AGENT_MAX_BUDGET_USD session=$SESSION_ID cwd=$PWD record=$OUT"
 ALLOWED=(
   "Edit" "Write" "MultiEdit" "Read" "Glob" "Grep" "LS" "NotebookEdit" "TodoWrite" "WebFetch"
-  "Bash(npm:*)" "Bash(npx:*)" "Bash(node:*)" "Bash(tsx:*)" "Bash(git:*)" "Bash(cd:*)"
+  "Bash(npm:*)" "Bash(npx:*)" "Bash(node:*)" "Bash(tsx:*)" "Bash(cd:*)"
+  # git: only what a cycle does — read the tree, stage, make and amend the provisional
+  # commit, restore/move/remove paths, and stash (workers prove a regression red-before by
+  # stashing the fix and re-running). No push, fetch, reset, checkout, or config.
+  "Bash(git status:*)" "Bash(git diff:*)" "Bash(git add:*)" "Bash(git commit:*)" "Bash(git log:*)"
+  "Bash(git show:*)" "Bash(git rev-parse:*)" "Bash(git ls-files:*)" "Bash(git grep:*)"
+  "Bash(git restore:*)" "Bash(git rm:*)" "Bash(git mv:*)" "Bash(git blame:*)" "Bash(git stash:*)"
+  "Bash(git branch --show-current)"
   "Bash(rg:*)" "Bash(grep:*)" "Bash(ls:*)" "Bash(cat:*)" "Bash(head:*)" "Bash(tail:*)" "Bash(sed:*)"
   "Bash(awk:*)" "Bash(wc:*)" "Bash(find:*)" "Bash(diff:*)" "Bash(sort:*)" "Bash(uniq:*)" "Bash(cut:*)"
-  "Bash(tr:*)" "Bash(xargs:*)" "Bash(jq:*)" "Bash(echo:*)" "Bash(printf:*)" "Bash(test:*)" "Bash(true:*)"
+  "Bash(tr:*)" "Bash(jq:*)" "Bash(echo:*)" "Bash(printf:*)" "Bash(test:*)" "Bash(true:*)"
   "Bash(false:*)" "Bash(date:*)" "Bash(pwd:*)" "Bash(mkdir:*)" "Bash(cp:*)" "Bash(mv:*)" "Bash(rm:*)"
-  "Bash(touch:*)" "Bash(chmod:*)" "Bash(timeout:*)" "Bash(env:*)" "Bash(which:*)" "Bash(stat:*)"
+  "Bash(touch:*)" "Bash(chmod:*)" "Bash(timeout:*)" "Bash(which:*)" "Bash(stat:*)"
   "Bash(sha256sum:*)" "Bash(nproc:*)" "Bash(free:*)" "Bash(df:*)" "Bash(du:*)" "Bash(ps:*)" "Bash(sleep:*)"
   "Bash(tee:*)" "Bash(comm:*)" "Bash(basename:*)" "Bash(dirname:*)" "Bash(realpath:*)" "Bash(readlink:*)"
-  "Bash(prettier:*)" "Bash(eslint:*)" "Bash(tsc:*)" "Bash(vitest:*)" "Bash(bash:*)"
-  "Bash(for:*)" "Bash(while:*)" "Bash(if:*)" "Bash(jobs:*)" "Bash(export:*)" "Bash(set:*)" "Bash(command:*)"
+  "Bash(prettier:*)" "Bash(eslint:*)" "Bash(tsc:*)" "Bash(vitest:*)"
+  "Bash(for:*)" "Bash(while:*)" "Bash(if:*)" "Bash(jobs:*)" "Bash(export:*)" "Bash(set:*)"
   "Bash(type:*)" "Bash(seq:*)" "Bash(read:*)" "Bash(exit:*)" "Bash(pgrep:*)" "Bash(kill:*)" "Bash(wait:*)"
-  "Bash(python3:*)" "Bash(less:*)" "Bash(more:*)" "Bash(cd:*)" "Bash(whoami:*)" "Bash(hostname:*)" "Bash(id:*)" "Bash(uname:*)"
+  "Bash(less:*)" "Bash(more:*)" "Bash(whoami:*)" "Bash(hostname:*)" "Bash(id:*)" "Bash(uname:*)"
+)
+# Remote-mutating git is DENIED outright. A deny rule beats every allow rule, so this holds
+# even if someone re-widens the git allowances above. The driver owns pushing (AI_LOOP_PUSH).
+DISALLOWED_BASH=(
+  "Bash(git push:*)" "Bash(git remote:*)" "Bash(git send-email:*)" "Bash(git request-pull:*)"
+  "Bash(git config:*)" "Bash(git -c:*)" "Bash(gh:*)"
 )
 # HEADLESS CONTRACT. A `claude -p` run is ONE non-interactive turn: when the model ends its
 # turn the process exits and nothing resumes it. Cycle 2026-09-05T22-57-25 was lost exactly
@@ -99,7 +119,7 @@ exec 3<&0
 env -i "${MINIMAL_ENV[@]}" \
   setsid claude -p --model "$DEV_AGENT_MODEL" --effort "$DEV_AGENT_EFFORT" \
   --append-system-prompt "$HEADLESS_CONTRACT" \
-  --disallowedTools "Agent" "Task" "TaskCreate" "TaskGet" "TaskList" "TaskOutput" "TaskStop" "TaskUpdate" "CronCreate" "CronDelete" "CronList" "ScheduleWakeup" "PushNotification" "RemoteTrigger" "SendMessage" "Monitor" "ListAgents" "EnterWorktree" "ExitWorktree" \
+  --disallowedTools "Agent" "Task" "TaskCreate" "TaskGet" "TaskList" "TaskOutput" "TaskStop" "TaskUpdate" "CronCreate" "CronDelete" "CronList" "ScheduleWakeup" "PushNotification" "RemoteTrigger" "SendMessage" "Monitor" "ListAgents" "EnterWorktree" "ExitWorktree" "${DISALLOWED_BASH[@]}" \
   --permission-mode acceptEdits --session-id "$SESSION_ID" --setting-sources project \
   --allowedTools "${ALLOWED[@]}" \
   --max-budget-usd "$DEV_AGENT_MAX_BUDGET_USD" \

@@ -1,7 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parsePorcelainPaths, parseShipArguments, shipBranchName } from "../../scripts/ship.js";
+import {
+  chooseShipBar,
+  parsePorcelainPaths,
+  parseShipArguments,
+  shipBranchName,
+  shipDiff,
+} from "../../scripts/ship.js";
 import {
   barForChangedFiles,
   CENSUS_PROOF_SOURCE_SCOPES,
@@ -115,5 +121,63 @@ describe("ship", () => {
   it("declares no scope it does not need", () => {
     for (const scope of CENSUS_PROOF_SOURCE_SCOPES)
       expect(touchesCensusProofScope(scope.endsWith("/") ? `${scope}x.ts` : scope)).toBe(true);
+  });
+});
+
+describe("ship weighs every commit the landing carries (bug_0635)", () => {
+  /** A fake git: porcelain for the working tree, and the commits-ahead diff (or a throw). */
+  function fakeGit(porcelainZ: string, ahead: string[] | Error) {
+    const calls: string[][] = [];
+    const runGit = (args: string[]): string => {
+      calls.push(args);
+      if (args[0] === "status") return porcelainZ;
+      if (args[0] === "diff") {
+        if (ahead instanceof Error) throw ahead;
+        return ahead
+          .map(
+            (path) => `${path}
+`,
+          )
+          .join("");
+      }
+      throw new Error(`unexpected git ${args.join(" ")}`);
+    };
+    return { runGit, calls };
+  }
+
+  it("counts unpushed commits even when the ship starts on main", () => {
+    // Pre-fix: on main the commits-ahead diff was never read, so a docs-only tree on top of
+    // an unpushed engine commit picked health:fast and shipped that commit unproven.
+    const { runGit, calls } = fakeGit(" M docs/afk_loop.md\0", ["src/core/engine.ts"]);
+    const diff = shipDiff(runGit);
+    expect(diff).toEqual({
+      paths: ["docs/afk_loop.md", "src/core/engine.ts"],
+      committedUnreadable: false,
+    });
+    expect(calls).toContainEqual(["diff", "--name-only", "--no-renames", "origin/main...HEAD"]);
+    expect(chooseShipBar(diff, false).bar).toBe("full");
+    expect(chooseShipBar(diff, false).reason).toContain("census proofs read");
+  });
+
+  it("stays on the fast bar when neither the tree nor the commits reach a census scope", () => {
+    const diff = shipDiff(fakeGit(" M README.md\0?? notes.md\0", ["scripts/ship.ts"]).runGit);
+    expect(diff.paths).toEqual(["README.md", "notes.md", "scripts/ship.ts"]);
+    expect(chooseShipBar(diff, false)).toEqual({
+      bar: "fast",
+      reason: "the diff touches nothing the census proofs read",
+    });
+    expect(chooseShipBar(diff, true)).toEqual({ bar: "full", reason: "--full was requested" });
+    // Nothing anywhere is still "nothing to ship", not an unreadable diff.
+    expect(shipDiff(fakeGit("", []).runGit)).toEqual({ paths: [], committedUnreadable: false });
+  });
+
+  it("takes the full bar when the commits ahead of origin/main cannot be read", () => {
+    // Unknown is not empty: a missing tracking ref used to read as "no commits" and choose
+    // the fast bar for whatever those commits held.
+    const diff = shipDiff(fakeGit(" M README.md\0", new Error("unknown revision")).runGit);
+    expect(diff).toEqual({ paths: ["README.md"], committedUnreadable: true });
+    const choice = chooseShipBar(diff, false);
+    expect(choice.bar).toBe("full");
+    expect(choice.reason).toContain("could not be read");
   });
 });

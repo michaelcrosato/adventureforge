@@ -150,10 +150,11 @@ Required patterns:
 ## Verification Bar
 
 `npm run health` is the bar for anything that lands (see `AGENTS.md`, the single
-authoritative description). It chains verifier integrity, typecheck, lint, format
-check, the full test suite (`npm test`), UI typecheck, and quest validation
-(`npm run validate`) — so do not run those again on top of health; the granular
-scripts are for fast iteration only.
+authoritative description). It chains nine steps, in this order (package.json's
+`health` script): verifier integrity, bug-trace integrity, the opening-density budget,
+typecheck, lint, format check, UI typecheck, quest validation (`npm run validate`), and
+finally the full test suite (`npm test`) — so do not run those again on top of health;
+the granular scripts are for fast iteration only.
 
 Do not weaken tests, validators, protected assets, or `scripts/verify-integrity.ts`
 to make a change pass.

@@ -36,8 +36,10 @@
 > audits Grok's complete offered client tool surface. All three therefore remain
 > `operator_attested`: kept in full and counted toward bug corroboration, but
 > excluded from experience metrics. One consequence is worth stating plainly:
-> every headline retention and clarity number in this repo is currently a
-> measurement of Codex specifically rather than of players in general.
+> every headline retention and clarity number in this repo measures only the
+> runner-enforced vendors — Codex and Claude Code — rather than players in
+> general, so check which provider and model a figure came from before
+> generalizing it.
 >
 > `npm run doctor` reports what the generic hardened runner can launch;
 > `npm run playtest:grok-wave -- --plan-only` reports the dedicated Grok plan. See
@@ -48,8 +50,10 @@ Tier 2 of `docs/testing_pyramid.md`: a fresh reasoning agent has no repository,
 content, solution, authoring, or diagnostic access and plays only through the
 player-facing AdventureForge MCP surface.
 
-A normal cycle uses one player (`npm run blind`). A milestone or feedback
-harvest uses 100 independent players (`npm run fleet -- --count 100`).
+The dev loop plays nothing (`docs/two_loop_workflow.md`): routine play is the
+playtest loop (`playtest-loop.sh`) running cohorts against each landed build, a
+single ad-hoc run is `npm run blind`, and a milestone or feedback harvest uses 100
+independent players (`npm run fleet -- --count 100`).
 
 The alternative Grok batch is explicit and never part of the dev gate:
 
@@ -126,12 +130,13 @@ The game owns session length. Current contract version 3 has this initial goal,
 rendered
 identically in UI and MCP:
 
-> Find one local lead in Albany and see it through.
+> Complete Wolf-Winter in Albany.
 
-The proof-hashed goal text stays exactly that short. Its shared terminal/UI/MCP
-`goalGuidance` explains the completion rule separately: completing Albany's
-Wolf-Winter quest satisfies the goal; jobs, events, and sites may reveal leads,
-but do not finish the goal themselves.
+The proof-hashed goal text stays exactly that short (`INITIAL_JOURNEY_GOAL` in
+`src/world/journey_contract.ts`). Its shared terminal/UI/MCP `goalGuidance`
+explains the chapter boundary separately: finishing The Wolf-Winter completes the
+opening and ends the opening chapter, after which the player chooses End or
+Continue into the optional Gallowmere chapter.
 
 The baseline is 40 meaningful accepted gameplay decisions. Fixed checkpoint
 thresholds remain 40, 80, 120, 160, and every additional 40. The game offers
@@ -189,8 +194,11 @@ exit reason.
 ## One pure run
 
 1. Run the deterministic pre-crawl gate: `npm run crawl:smoke`.
-2. Start `npm run blind --seed=<fresh>` with a fresh seed. The default is the
-   built-in hardened Codex Spark path. It launches MCP in `pure` mode and supplies
+2. Start `npm run blind --seed=<fresh>` with a fresh seed. With no provider or
+   model given it uses the registry's first provider (`codex`) and that provider's
+   catalog default (`"default": true` in `blind-tester/catalogs/codex.json`, currently
+   `gpt-5.6-luna`); Spark (`gpt-5.3-codex-spark`) is the cheap volume model and must
+   be asked for with `--model`. It launches MCP in `pure` mode and supplies
    a private JSONL evidence path. The runner does not permit an arbitrary
    `BLIND_AGENT_CMD` to claim pure evidence.
 3. The player calls `start_overworld` once and plays independently. It follows

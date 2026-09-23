@@ -323,6 +323,18 @@ describe("both prompts state the headless single-turn contract", () => {
     }
   });
 
+  it("states the bar loop.sh actually runs, not an unconditional full health", () => {
+    // The hard-constraints line used to say "`npm run health` must pass", while loop.sh
+    // picks health OR health:fast off the diff via `npm run loop:bar`. A prompt that
+    // overstates the gate invites a worker to run the full bar itself "to be sure".
+    for (const prompt of [standard(), ultraplan()]) {
+      expect(prompt).toContain("npm run loop:bar");
+      expect(prompt).toMatch(/health:fast/u);
+      expect(prompt).not.toContain("`npm run health` must pass");
+      expect(prompt).not.toContain("`npm run health` and verify:integrity must pass");
+    }
+  });
+
   it("uses ONE contract for both prompts so they cannot drift apart", () => {
     // Two hand-maintained copies of a safety contract is how one of them goes stale.
     for (const line of [...HEADLESS_TURN_CONTRACT, ...FOCUSED_CHECKS_CONTRACT]) {

@@ -38,6 +38,7 @@
 #   AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES=N   retained durable failure records [100]
 #   AI_LOOP_ALLOW_DIRTY=1            allow risky dirty commit-mode start; never waives clean evidence [0]
 #   AI_LOOP_ALLOW_VERIFIER_EDITS=1   acknowledge a deliberate verifier change [0]
+#   PLAYTEST_ALLOW_SHARED_CHECKOUT=1 start beside a live playtest-loop.sh in this checkout [0]
 #   AI_LOOP_COMMIT_MESSAGE="..."     final ledger commit message override
 #
 # Companions: npm run loop:status / loop:stop (project-scoped, pid-file based).
@@ -103,35 +104,17 @@ clear_stop_request() {
 # worker pid. scripts/loop-status.sh and scripts/loop-stop.sh act ONLY on these pids.
 LOOP_PID_FILE="ai-runs/loop.pid"
 AGENT_PID_FILE="ai-runs/agent.pid"
+# The QA loop's record (playtest-loop.sh writes it). Read here, never written.
+PLAYTEST_PID_FILE="ai-runs/playtest-loop.pid"
 AFK_PROC_ROOT="/proc"
 
-# A pid alone is not an identity: after a crash leaves a stale file, the kernel may
-# reuse that number for an unrelated process. Linux exposes a process's immutable
-# start tick in /proc/<pid>/stat field 22. Record both values and require both before
-# status/stop trusts the record. Systems without a compatible /proc fail closed: the
-# unattended loop refuses to start rather than creating a record that cannot be
-# authenticated later.
-process_start_time() {
-  local pid="$1" stat tail start
-  [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 1
-  [[ -r "$AFK_PROC_ROOT/$pid/stat" ]] || return 1
-  stat="$(<"$AFK_PROC_ROOT/$pid/stat")" || return 1
-  [[ "$stat" == *") "* ]] || return 1
-  # The comm field is parenthesized and may contain spaces. Strip through its LAST
-  # closing ") "; the remaining token 20 is original field 22 (starttime).
-  tail="${stat##*) }"
-  set -- $tail
-  [[ "$#" -ge 20 ]] || return 1
-  start="${20:-}"
-  [[ "$start" =~ ^[0-9]+$ ]] || return 1
-  printf '%s\n' "$start"
-}
-
-write_process_record() {
-  local path="$1" pid="$2" start
-  start="$(process_start_time "$pid")" || return 1
-  printf '%s %s\n' "$pid" "$start" > "$path"
-}
+# process_start_time / write_process_record / live_process_record: one copy, shared with
+# playtest-loop.sh so the two drivers authenticate each other's records the same way.
+# Record pid AND start tick, and require both before anything trusts the record. Systems
+# without a compatible /proc fail closed: the unattended loop refuses to start rather
+# than creating a record that cannot be authenticated later.
+# shellcheck source=scripts/process-record.sh
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/process-record.sh"
 
 cleanup_pid_records() {
   rm -f "$LOOP_PID_FILE" "$AGENT_PID_FILE" 2>/dev/null || true
@@ -144,15 +127,27 @@ cleanup_pid_records() {
 # by a crash (dead pid, or pid reused by an unrelated process) — stale records are
 # overwritten as before; only an authenticated live holder refuses startup.
 refuse_if_live_loop() {
-  local path="$1" pid recorded_start start rest
-  [[ -f "$path" ]] || return 0
-  read -r pid recorded_start rest < "$path" 2>/dev/null || return 0
-  [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 0
-  start="$(process_start_time "$pid")" || return 0
-  [[ "$start" == "$recorded_start" ]] || return 0
-  echo "Refusing to start: $path names a live loop (pid $pid, start tick $start)."
+  local path="$1" holder
+  holder="$(live_process_record "$path")" || return 0
+  echo "Refusing to start: $path names a live loop (pid ${holder% *}, start tick ${holder#* })."
   echo "Two dev loops in one checkout destroy each other's cycles. Stop the running"
   echo "one with 'npm run loop:stop', or run this lane in its own git worktree."
+  return 1
+}
+
+# The other direction of playtest-loop.sh's own guard (bug_0634, intake 14e1722c). A red
+# gate here hard-resets the tree, which changes the build out from under a player the QA
+# loop has mid-run — and sessions get stamped with a commit whose content already moved.
+# playtest-loop.sh refuses to start beside a live dev loop; this refuses to start beside a
+# live QA loop, authenticated the same way, so a stale record blocks neither.
+# PLAYTEST_ALLOW_SHARED_CHECKOUT=1 is the same deliberate opt-in from either side.
+refuse_if_live_playtest_loop() {
+  local path="$1" holder
+  [[ "${PLAYTEST_ALLOW_SHARED_CHECKOUT:-0}" != "1" ]] || return 0
+  holder="$(live_process_record "$path")" || return 0
+  echo "Refusing to start: $path names a live playtest loop (pid ${holder% *})."
+  echo "A failed dev cycle's hard reset would change the build under its players mid-run."
+  echo "Run the dev loop in its own git worktree, or set PLAYTEST_ALLOW_SHARED_CHECKOUT=1."
   return 1
 }
 
@@ -165,6 +160,7 @@ on_loop_signal() {
 
 mkdir -p ai-runs
 refuse_if_live_loop "$LOOP_PID_FILE" || exit 1
+refuse_if_live_playtest_loop "$PLAYTEST_PID_FILE" || exit 1
 if ! write_process_record "$LOOP_PID_FILE" "$$"; then
   rm -f "$LOOP_PID_FILE" 2>/dev/null || true
   echo "Refusing to start: cannot authenticate this process through /proc/<pid>/stat."
@@ -190,11 +186,29 @@ if [[ ! -d ui/node_modules ]]; then
   npm --prefix ui install
 fi
 
-require_clean_evidence_cycle_start() {
-  # Pure evidence must name one exact revision. The startup guard runs only once,
-  # so enforce this again at EVERY evidence-only cycle boundary; in particular,
-  # do not let continuous mode call a prior cycle's dirty tree another success.
-  [[ "${AI_LOOP_COMMIT:-0}" != "1" ]] || return 0
+require_clean_cycle_start() {
+  # The startup guard runs only once, so enforce cleanliness again at EVERY cycle
+  # boundary, in both modes (bug_0633).
+  #
+  # Commit mode: the same reset-safety the startup guard exists for. A red gate
+  # hard-resets to the cycle-start ref, so anything that dirtied the tree between
+  # cycles — another process writing into this checkout, or cleanup that could not
+  # remove every cycle-created path — would be destroyed or swept into the next
+  # provisional commit. This used to return early for commit mode, so only the FIRST
+  # cycle was protected. AI_LOOP_ALLOW_DIRTY=1 still opts out here, exactly as it does
+  # at startup: the operator has accepted that risk for the whole run.
+  if [[ "${AI_LOOP_COMMIT:-0}" == "1" ]]; then
+    [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] || return 0
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "Commit-mode cycle refuses to start on a dirty worktree: a failed cycle would"
+      echo "hard-reset tracked edits it did not make. Commit, stash, or discard them first,"
+      echo "or relaunch with AI_LOOP_ALLOW_DIRTY=1 to accept that risk."
+      return 1
+    fi
+    return 0
+  fi
+  # Evidence-only: pure evidence must name one exact revision, so do not let
+  # continuous mode call a prior cycle's dirty tree another success.
   if [[ -n "$(git status --porcelain)" ]]; then
     echo "Evidence-only cycle requires an exact-clean worktree at cycle start."
     echo "Commit, stash, or discard the pending work before collecting another baseline;"
@@ -324,10 +338,14 @@ dev_agent_binary() {
 dev_agent_command() {
   local template
   template="$(dev_agent_field "$1" command)" || return 1
-  # Exact token replacement only — never eval — so a path with a space or a shell
-  # metacharacter cannot expand into extra arguments.
-  template="${template//\{SANDBOX\}/${AI_CODEX_SANDBOX:-workspace-write}}"
-  template="${template//\{CWD\}/$PWD}"
+  # Placeholders become QUOTED POSITIONAL REFERENCES, never the values themselves
+  # (bug_0632, intake cdae46f8). run_agent executes this string with `bash -c`, so a value
+  # spliced in here would be re-parsed as shell: a repo path with a space split `--cd`
+  # into two words, and one containing `;` or `$(...)` ran as a command. launch_agent
+  # passes the values as $1 (cwd) and $2 (sandbox), which bash expands as single words
+  # and never parses again.
+  template="${template//\{CWD\}/\"\$1\"}"
+  template="${template//\{SANDBOX\}/\"\$2\"}"
   printf '%s' "$template"
 }
 
@@ -369,6 +387,20 @@ agent_cmd() {
   done
 }
 
+# Run one resolved agent command under the hang-kill budget with the prompt on STDIN.
+# Record the ACTUAL worker identity: the bash -c writes its pid + immutable start tick,
+# then `exec`s the agent (exec preserves both), so loop-stop cannot mistake a later
+# process that reused the pid for this worker. The command string is shell-parsed by
+# that bash -c — a registry template is a tracked repo file and AI_AGENT_CMD is the
+# operator's own command — but the VALUES a template names are not spliced into it:
+# the cwd and sandbox arrive as positional $1 and $2 (see dev_agent_command, bug_0632).
+launch_agent() {
+  local cmd="$1" budget="$2" prompt="$3"
+  AFK_AGENT_PID_FILE="$AGENT_PID_FILE" timeout --kill-after=30 "$budget" bash -c \
+    'write_process_record "$AFK_AGENT_PID_FILE" "$$" || { echo "Cannot authenticate worker process identity." >&2; exit 125; }; exec '"$cmd" \
+    bash "$PWD" "${AI_CODEX_SANDBOX:-workspace-write}" < "$prompt"
+}
+
 run_agent() {
   local prompt cmd
   AGENTLESS_CYCLE=0
@@ -397,18 +429,14 @@ run_agent() {
   local override
   override="$(node -e 'try{const t=JSON.parse(require("node:fs").readFileSync("ai-runs/latest-cycle.json","utf8")).agentTimeoutSeconds;if(typeof t==="number"&&t>0)process.stdout.write(String(t))}catch{}' 2>/dev/null || true)"
   [[ -n "$override" ]] && budget="$override"
-  echo "Agent: $cmd   (prompt: $prompt, timeout: ${budget}s)"
+  echo "Agent: $cmd   (prompt: $prompt, timeout: ${budget}s, \$1=$PWD, \$2=${AI_CODEX_SANDBOX:-workspace-write})"
   # Bound the agent turn. The loop has NO other recovery for an agent that never
   # returns (a hung headless agent once wedged the loop for ~9h: the circuit breaker
   # only counts COMPLETED no-progress cycles, so it can't catch a stuck turn). On
   # timeout, SIGTERM then SIGKILL after a 30s grace. A nonzero agent result fails
   # the cycle: partial output is not evidence that the requested work completed.
   local rc=0
-  # Record the ACTUAL worker identity: the bash -c writes its pid + immutable start
-  # tick, then `exec`s the agent (exec preserves both). loop-stop therefore cannot
-  # mistake a later process that reused the pid for this worker.
-  AFK_AGENT_PID_FILE="$AGENT_PID_FILE" timeout --kill-after=30 "$budget" bash -c \
-    'write_process_record "$AFK_AGENT_PID_FILE" "$$" || { echo "Cannot authenticate worker process identity." >&2; exit 125; }; exec '"$cmd" < "$prompt" || rc=$?
+  launch_agent "$cmd" "$budget" "$prompt" || rc=$?
   rm -f "$AGENT_PID_FILE" 2>/dev/null || true
   if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
     echo "⏱ Agent exceeded ${budget}s and was terminated — failing this cycle."
@@ -437,6 +465,25 @@ require_provisional_commit() {
     return 1
   fi
   echo "✓ local provisional revision present: $current_ref"
+}
+
+require_selection_attestation() {
+  # Fail fast on the seal's OWN precondition. A provisional commit whose ledger entry
+  # carries no actual-selection attestation is already dead — loop:seal-feedback will
+  # refuse it at the end of the cycle no matter how green the gates are — and one such
+  # cycle spent seventy minutes proving a full bar (4771 tests) before being thrown away
+  # at the last step. Asking the seal itself, in --check-attestation mode, rather than
+  # re-parsing the marker here: a check that drifts from the gate it stands in for is
+  # worse than none, because it would fail cycles the seal would have accepted.
+  #
+  # Commit mode only, exactly like require_provisional_commit and safe_commit_if_enabled
+  # (bug_0630). The attestation lives in the PROVISIONAL COMMIT's ledger scaffold, which
+  # ai-loop.ts writes only when AI_LOOP_COMMIT=1; an evidence-only cycle has no such
+  # commit, is never sealed, and so has nothing to attest. Running the check there asked
+  # HEAD — the untouched cycle start — for a marker it could not carry, so every
+  # evidence-only cycle failed here and was hard-reset, whatever its agent did.
+  [[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0
+  npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json
 }
 
 require_final_ledger_only() {
@@ -603,8 +650,8 @@ run_cycle() {
   cycle_failure_reason="cycle returned without a classified gate failure"
   cycle_failure_start_ref=""
   cycle_failure_run_id=""
-  require_clean_evidence_cycle_start || {
-    mark_cycle_failure "clean-start" "evidence-only cycle started with a dirty worktree"
+  require_clean_cycle_start || {
+    mark_cycle_failure "clean-start" "cycle started with a dirty worktree"
     return 1
   }
   local start_ref untracked_snapshot
@@ -685,14 +732,9 @@ run_cycle() {
     _reject_cycle "provisional-commit" "required provisional implementation commit is absent or invalid"
     return 1
   }
-  # Fail fast on the seal's OWN precondition. A provisional commit whose ledger entry
-  # carries no actual-selection attestation is already dead — loop:seal-feedback will
-  # refuse it at the end of the cycle no matter how green the gates are — and one such
-  # cycle spent seventy minutes proving a full bar (4771 tests) before being thrown away
-  # at the last step. Asking the seal itself, in --check-attestation mode, rather than
-  # re-parsing the marker here: a check that drifts from the gate it stands in for is
-  # worse than none, because it would fail cycles the seal would have accepted.
-  npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json || {
+  # Fail fast on the seal's own precondition, right after the provisional commit and
+  # before anything expensive (see require_selection_attestation; commit mode only).
+  require_selection_attestation || {
     _reject_cycle "attestation" "provisional commit carries no actual-selection attestation; the seal would reject it"
     return 1
   }

@@ -1,0 +1,48 @@
+id: bug_0638
+title: Blind-pass attendance recency read the whole ledger as newest-first, so the newest appended AFK entry looked stalest
+reported_by: lane/tooling follow-up to bug_0631 (flagged 2026-09-22, assigned by the lane coordinator)
+severity: S2
+
+symptom: >
+  The assessor ranks quest reviews by least-recent attendance so it does not re-nominate
+  the pack it just attended. On the live AI_LOOP_STATE.md, a pack named only in the newest
+  "## AFK Cycle" entry got the LARGEST offset in the file, i.e. it read as the least
+  recently attended, so the rotation could nominate exactly that pack again — the
+  cold_forge lock-in that bug_0128, bug_0235 and bug_0293 each cured for another cause.
+
+cause: >
+  parseAttendanceOffsets in src/afk/assessor.ts took the first regex match in raw file
+  order as the most recent, on the premise that "every cycle PREPENDS its entry". Since
+  the 2026-08-29 two-loop migration src/ai-loop.ts APPENDS each cycle's "## AFK Cycle"
+  entry at the end, so the ledger is legacy "### Cycle result" entries newest-first
+  followed by AFK entries OLDEST-first; the premise held only for the top section.
+
+reproduction: >
+  tests/regression/assessor_blind_pass_rotation.test.ts "bug_0638 — recency is
+  chronological across BOTH ledger entry shapes": a live-shaped ledger whose newest
+  (last) AFK entry is the only one naming dawn_beacon. With the raw file-order scan
+  dawn_beacon had the largest offset and three of the new cases fail.
+
+fix: >
+  src/afk/loop_state.ts now exports loopStateEntriesOldestFirst — the chronology rotation
+  already used (legacy reversed, then AFK in append order) — as the single definition of
+  the ledger's order. The new attendanceScanText in the assessor lays the entries out
+  newest-first (that list reversed) with the intro last, since the intro is contract
+  prose rather than a cycle, and parseAttendanceOffsets scans that text instead of the
+  raw file. The regex, the capture, packStem normalisation, first-match-wins and the
+  "smaller offset = more recent" contract are unchanged, and text with no entry headings
+  is scanned exactly as before.
+
+production:
+  - src/afk/assessor.ts
+  - src/afk/loop_state.ts
+regression:
+  - tests/regression/assessor_blind_pass_rotation.test.ts
+verification:
+  - Five new cases check the full newest-to-oldest order across both shapes, that the
+    rotation sorts the pack attended in the newest AFK entry last, that the newest mention
+    wins over an old legacy one, that an intro mention cannot outrank an entry while
+    heading-free text is unchanged, and a real-repo guard that the newest AFK entry holds
+    the freshest attendance when it names one.
+  - Every pre-existing case in the file, the assessor and ai_loop unit tests, and the
+    loop_state_rotation regression stay green.
