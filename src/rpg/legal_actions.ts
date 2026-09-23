@@ -720,7 +720,8 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   }
 
   // Objects visible in the room.
-  for (const oid of visibleObjectIds(index, state, here)) {
+  const roomVisible = visibleObjectIds(index, state, here);
+  for (const oid of roomVisible) {
     const o = index.objects.get(oid);
     if (!o) continue;
     const oName = objectName(o, state);
@@ -762,11 +763,23 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   // A self-targeted USE (item === target) is the "consume this thing" pattern —
   // drink the phial, eat the bread — and reads as `use <obj>`, not the nonsensical
   // `use <obj> on <obj>`.
+  //
+  // A present target and a held item are exactly what the USE resolver demands before
+  // anything else (`resolveRpgActionCore`'s USE case: `present(target)`, then the item in
+  // inventory), so a row failing either can never become an option. Test both against one
+  // presence set — `present()` is inventory plus this same room-visible list — before
+  // paying for the projection (name lookups, command formatting) and a full resolve of a
+  // row that cannot be offered. Every check here is a filter, so the rows kept, and their
+  // order, are unchanged.
+  const presentIds = new Set(state.inventory);
+  for (const oid of roomVisible) presentIds.add(oid);
   for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
+      if (it.verb !== "USE" || it.target === undefined || !presentIds.has(it.target)) continue;
+      if (it.item !== undefined && !state.inventory.includes(it.item)) continue;
+      if (!evalConditions(it.conditions, state)) continue;
       const projection = projectUseAction(index, state, it);
       if (!projection || projection.action.type !== "USE") continue;
-      if (!evalConditions(it.conditions, state)) continue;
       // Several authored rows may share one (item, target) pair, and the id is derived
       // from that pair alone — so they all mint the SAME action id. Only one of them can
       // ever run: `useInteraction`, and with it every id-addressed surface, takes the
