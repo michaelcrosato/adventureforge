@@ -11,7 +11,12 @@ import { sha256Hex } from "./sha256.js";
 
 /** Deterministic JSON: object keys sorted; arrays preserved; no whitespace. */
 export function canonicalize(value: unknown): string {
-  return JSON.stringify(sortDeep(value));
+  try {
+    return JSON.stringify(sortDeep(value));
+  } catch (error) {
+    if (error instanceof RejectedValue) throw error.toTypeError();
+    throw error;
+  }
 }
 
 /**
@@ -33,39 +38,104 @@ const REJECTED_OBJECT_KINDS: ReadonlyArray<readonly [string, (value: object) => 
 ];
 
 function rejectedObjectKind(value: object): string | null {
+  // A plain object literal, a JSON.parse result or an Object.create(null) record cannot
+  // be any rejected kind: `instanceof K` is true only when K.prototype is on the
+  // prototype chain, and the chain of such an object is [Object.prototype] or []. This is
+  // exactly the answer the loop below gives, reached without six `instanceof` walks on
+  // nearly every node of a state. It reads the prototype, never `value.constructor`: an
+  // OWN `constructor` key is ordinary data (a Map can carry `constructor: Object`), so a
+  // constructor test would wave that Map through as `{}` — the bug_0607 collision again.
+  const proto: unknown = Object.getPrototypeOf(value);
+  if (proto === Object.prototype || proto === null) return null;
   for (const [name, test] of REJECTED_OBJECT_KINDS) if (test(value)) return name;
   return null;
 }
 
-function sortDeep(value: unknown, path = "$"): unknown {
+/**
+ * A rejected value found during `sortDeep`, carrying the path back to the root.
+ *
+ * The error message names where the value sits (`vars.seen`, `$[1]`). Building that path
+ * string on the way DOWN cost a template-literal allocation at every node of every state
+ * hashed, to serve an error that essentially never happens. Instead each level records
+ * its own step (a key or an index) only while this unwinds, and `toTypeError` replays the
+ * steps through the exact formula the eager version used — including its quirks, such as
+ * a top-level key spelled `$` or `""` — so the message is byte-identical.
+ */
+class RejectedValue extends Error {
+  /** Innermost step first: the order the stack unwinds in. */
+  readonly steps: (string | number)[] = [];
+
+  constructor(readonly kind: string) {
+    super(kind);
+  }
+
+  toTypeError(): TypeError {
+    let path = "$";
+    for (let i = this.steps.length - 1; i >= 0; i--) {
+      const step = this.steps[i]!;
+      path =
+        typeof step === "number" ? `${path}[${step}]` : path === "$" ? step : `${path}.${step}`;
+    }
+    return new TypeError(
+      `canonicalize: a ${this.kind} at ${path} has no JSON-visible keys and would collapse to "{}"; convert it to a plain object or array first (bug_0607).`,
+    );
+  }
+}
+
+/**
+ * The prototype of every object `sortDeep` builds: frozen, empty, and itself
+ * null-prototype. What serialization can observe of an accumulator is its own keys plus
+ * whatever its chain answers to `toJSON` and to a property write, and this chain answers
+ * nothing — exactly like the `Object.create(null)` accumulator it replaces: no
+ * `__proto__` setter to swallow a key, and no polluted `Object.prototype` `toJSON` or
+ * setter that could reach the canonical form. The difference is V8's: an
+ * `Object.create(null)` object is born in dictionary mode (a hash table), so every key
+ * insert and the whole JSON.stringify pass took the slow path. An object with an
+ * ordinary prototype is a fast-mode object, and that alone is about a third of the time
+ * `canonicalize` spends on a realistic state (scripts/bench-engine-hot-paths.ts).
+ */
+const ACCUMULATOR_PROTOTYPE: object = Object.freeze(Object.create(null) as object);
+
+function sortDeep(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
   if (Array.isArray(value)) {
-    return value.map((item, index) => sortDeep(item, `${path}[${index}]`));
+    // `map`, not a counted loop: it keeps an Array subclass's species (and so a subclass
+    // `toJSON`) and skips holes exactly as the canonical form always has.
+    return value.map((item: unknown, index) => {
+      try {
+        return sortDeep(item);
+      } catch (error) {
+        if (error instanceof RejectedValue) error.steps.push(index);
+        throw error;
+      }
+    });
   }
-  if (value !== null && typeof value === "object") {
-    const kind = rejectedObjectKind(value);
-    if (kind !== null) {
-      throw new TypeError(
-        `canonicalize: a ${kind} at ${path} has no JSON-visible keys and would collapse to "{}"; convert it to a plain object or array first (bug_0607).`,
-      );
+  const kind = rejectedObjectKind(value);
+  if (kind !== null) throw new RejectedValue(kind);
+  const obj = value as Record<string, unknown>;
+  // An accumulator with NO Object.prototype on its chain (see ACCUMULATOR_PROTOTYPE) so a
+  // key literally named "__proto__" is stored as an own data property. With a normal
+  // `{}`, `out["__proto__"] = v` hits Object's
+  // `__proto__` SETTER: a primitive v is silently dropped, and an object v re-points
+  // the accumulator's prototype instead of becoming a key — JSON.stringify then omits
+  // it either way. That would canonicalize a state carrying a "__proto__" key to a
+  // string COLLIDING with the same state lacking it, breaking the §8.6 "equal hash ⇒
+  // equal state" invariant (and the save-integrity check that rests on it). Such a key
+  // is reachable off the untrusted-save boundary (JSON.parse makes "__proto__" an own
+  // enumerable property — the load-integrity threat model, cf. bug_0190). Normal states
+  // carry no such key, so every existing hash is byte-identical.
+  const out = Object.create(ACCUMULATOR_PROTOTYPE) as Record<string, unknown>;
+  const keys = Object.keys(obj);
+  if (keys.length > 1) keys.sort();
+  for (const key of keys) {
+    try {
+      out[key] = sortDeep(obj[key]);
+    } catch (error) {
+      if (error instanceof RejectedValue) error.steps.push(key);
+      throw error;
     }
-    const obj = value as Record<string, unknown>;
-    // A NULL-PROTOTYPE accumulator so a key literally named "__proto__" is stored as
-    // an own data property. With a normal `{}`, `out["__proto__"] = v` hits Object's
-    // `__proto__` SETTER: a primitive v is silently dropped, and an object v re-points
-    // the accumulator's prototype instead of becoming a key — JSON.stringify then omits
-    // it either way. That would canonicalize a state carrying a "__proto__" key to a
-    // string COLLIDING with the same state lacking it, breaking the §8.6 "equal hash ⇒
-    // equal state" invariant (and the save-integrity check that rests on it). Such a key
-    // is reachable off the untrusted-save boundary (JSON.parse makes "__proto__" an own
-    // enumerable property — the load-integrity threat model, cf. bug_0190). Normal states
-    // carry no such key, so every existing hash is byte-identical.
-    const out = Object.create(null) as Record<string, unknown>;
-    for (const key of Object.keys(obj).sort()) {
-      out[key] = sortDeep(obj[key], path === "$" ? key : `${path}.${key}`);
-    }
-    return out;
   }
-  return value;
+  return out;
 }
 
 /** Full SHA-256 hex of the canonical form — used for save integrity. */

@@ -234,3 +234,115 @@ describe("canonicalize — non-plain collections are REJECTED, never collapsed t
     expect(canonicalize({ s: {} })).toBe('{"s":{}}');
   });
 });
+
+describe("canonicalize — the fast paths change no byte and no error (bug_0607, Bolt #376/#378/#379/#387)", () => {
+  // The canonicalizer skips its rejected-kind walk for plain and null-prototype objects,
+  // records an error's key path only while unwinding, and builds its sorted copies on a
+  // frozen null-prototype prototype instead of Object.create(null). None of that may move
+  // a byte of output or a character of an error. Every expected value below was frozen
+  // from the implementation that preceded those changes.
+  const rejected = (kind: string, path: string): string =>
+    `canonicalize: a ${kind} at ${path} has no JSON-visible keys and would collapse to "{}"; convert it to a plain object or array first (bug_0607).`;
+
+  it("an OWN `constructor` key is data: a Map stored under it is still rejected", () => {
+    expect(() => canonicalize({ constructor: new Map([["a", 1]]) })).toThrow(
+      rejected("Map", "constructor"),
+    );
+  });
+
+  it("a Map carrying an own `constructor: Object` is still a Map (the constructor-check hole)", () => {
+    // A fast path keyed on `value.constructor === Object` would wave this through as "{}".
+    const disguised = Object.assign(new Map([["a", 1]]), { constructor: Object });
+    expect(() => canonicalize(disguised)).toThrow(rejected("Map", "$"));
+    expect(() => canonicalize({ s: { t: disguised } })).toThrow(rejected("Map", "s.t"));
+    class SubMap extends Map {}
+    expect(() => canonicalize({ m: new SubMap() })).toThrow(rejected("Map", "m"));
+  });
+
+  it("Object.create(null) records canonicalize exactly as before", () => {
+    const record = Object.assign(Object.create(null) as Record<string, unknown>, {
+      b: 1,
+      a: Object.assign(Object.create(null) as Record<string, unknown>, { d: 1, c: 2 }),
+    });
+    expect(canonicalize(record)).toBe('{"a":{"c":2,"d":1},"b":1}');
+  });
+
+  it("class instances serialize as their own enumerable data, as before", () => {
+    class Point {
+      x = 1;
+      a = 2;
+      get g(): number {
+        return 3;
+      }
+      toJSON(): string {
+        return "never consulted: the sorted copy does not inherit it";
+      }
+    }
+    expect(canonicalize(new Point())).toBe('{"a":2,"x":1}');
+    expect(canonicalize({ p: [new Point()] })).toBe('{"p":[{"a":2,"x":1}]}');
+  });
+
+  it("arrays keep their species and holes, as before", () => {
+    class Tagged extends Array<number> {
+      toJSON(): string {
+        return "tagged";
+      }
+    }
+    expect(canonicalize({ s: Tagged.from([1, 2]) })).toBe('{"s":"tagged"}');
+    // eslint-disable-next-line no-sparse-arrays
+    expect(canonicalize([1, , 3])).toBe("[1,null,3]");
+  });
+
+  it("error paths are character-for-character unchanged, including the historical quirks", () => {
+    expect(() => canonicalize([{ a: { b: [0, 1, new Date(0)] } }])).toThrow(
+      rejected("Date", "$[0].a.b[2]"),
+    );
+    expect(() => canonicalize(new WeakMap())).toThrow(rejected("WeakMap", "$"));
+    // The first offender in sorted-key depth-first order is the one named.
+    expect(() => canonicalize({ b: new Set(), a: [1, new Map()] })).toThrow(
+      rejected("Map", "a[1]"),
+    );
+    // A top-level key spelled "$" or "" was always rendered by the same formula.
+    expect(() => canonicalize({ $: { x: new Map() } })).toThrow(rejected("Map", "x"));
+    expect(() => canonicalize({ "": { b: new WeakSet() } })).toThrow(rejected("WeakSet", ".b"));
+    const proto = JSON.parse('{"__proto__":{"k":1}}') as Record<string, Record<string, unknown>>;
+    proto["__proto__"]!.k = new Map();
+    expect(() => canonicalize(proto)).toThrow(rejected("Map", "__proto__.k"));
+    // A rejected kind is found before JSON.stringify ever meets a sibling BigInt.
+    expect(() => canonicalize({ a: BigInt(1), b: new Map() })).toThrow(rejected("Map", "b"));
+  });
+
+  it("a cyclic value still throws RangeError (there is no cycle detection to change)", () => {
+    const cyclic: Record<string, unknown> = { a: 1 };
+    cyclic.self = cyclic;
+    expect(() => canonicalize(cyclic)).toThrow(RangeError);
+    const loop: unknown[] = [];
+    loop.push(loop);
+    expect(() => canonicalize(loop)).toThrow(RangeError);
+  });
+
+  it("a polluted Object.prototype cannot reach the canonical form", () => {
+    const proto = Object.prototype as Record<string, unknown>;
+    Object.defineProperty(proto, "toJSON", {
+      value: () => "polluted",
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(proto, "swallowed", {
+      set: () => undefined,
+      configurable: true,
+    });
+    try {
+      expect(canonicalize({ b: 1, a: { swallowed: 2 } })).toBe('{"a":{"swallowed":2},"b":1}');
+    } finally {
+      delete proto.toJSON;
+      delete proto.swallowed;
+    }
+  });
+
+  it("a known-answer hash is unchanged", () => {
+    expect(hashState({ b: 1, a: [1, { d: 2, c: null }] })).toBe(
+      "ca51f74adb4c801453d34b2fff0ebe79c0b55517a77671a0b0c63305d1e0a48a",
+    );
+  });
+});

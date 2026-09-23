@@ -720,7 +720,8 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   }
 
   // Objects visible in the room.
-  for (const oid of visibleObjectIds(index, state, here)) {
+  const roomVisible = visibleObjectIds(index, state, here);
+  for (const oid of roomVisible) {
     const o = index.objects.get(oid);
     if (!o) continue;
     const oName = objectName(o, state);
@@ -762,11 +763,23 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   // A self-targeted USE (item === target) is the "consume this thing" pattern —
   // drink the phial, eat the bread — and reads as `use <obj>`, not the nonsensical
   // `use <obj> on <obj>`.
+  //
+  // A present target and a held item are exactly what the USE resolver demands before
+  // anything else (`resolveRpgActionCore`'s USE case: `present(target)`, then the item in
+  // inventory), so a row failing either can never become an option. Test both against one
+  // presence set — `present()` is inventory plus this same room-visible list — before
+  // paying for the projection (name lookups, command formatting) and a full resolve of a
+  // row that cannot be offered. Every check here is a filter, so the rows kept, and their
+  // order, are unchanged.
+  const presentIds = new Set(state.inventory);
+  for (const oid of roomVisible) presentIds.add(oid);
   for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
+      if (it.verb !== "USE" || it.target === undefined || !presentIds.has(it.target)) continue;
+      if (it.item !== undefined && !state.inventory.includes(it.item)) continue;
+      if (!evalConditions(it.conditions, state)) continue;
       const projection = projectUseAction(index, state, it);
       if (!projection || projection.action.type !== "USE") continue;
-      if (!evalConditions(it.conditions, state)) continue;
       // Several authored rows may share one (item, target) pair, and the id is derived
       // from that pair alone — so they all mint the SAME action id. Only one of them can
       // ever run: `useInteraction`, and with it every id-addressed surface, takes the
@@ -837,14 +850,26 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
  * Enumerate authored USE affordances that are visible and structurally possible,
  * but whose gameplay conditions do not currently hold. This is a derived display
  * projection only: blocked rows are never mixed into the executable legal set.
+ *
+ * A row is suppressed when a legal BASE row already carries its id. `legalActions` lets a
+ * caller that has just enumerated this same state (the observation does) hand that list
+ * over instead of paying for `enumerateRpgBaseActions` twice. Either this state's
+ * `enumerateRpgBaseActions` or its `enumerateRpgActions` result is accepted: the latter is
+ * the base list with combat ATTACK/MANEUVER rows appended, and those are skipped here, so
+ * both yield exactly the id set this function would enumerate itself.
  */
 export function enumerateRpgBlockedActions(
   index: RpgModelIndex,
   state: GameState,
+  legalActions?: readonly RpgActionOption[],
 ): RpgBlockedActionOption[] {
   if (state.ended) return [];
 
-  const legalIds = new Set(enumerateRpgBaseActions(index, state).map((option) => option.id));
+  const legalIds = new Set<string>();
+  for (const option of legalActions ?? enumerateRpgBaseActions(index, state)) {
+    if (option.action.type === "ATTACK" || option.action.type === "MANEUVER") continue;
+    legalIds.add(option.id);
+  }
   const emitted = new Set<string>();
   const out: RpgBlockedActionOption[] = [];
 
@@ -852,10 +877,14 @@ export function enumerateRpgBlockedActions(
     for (const interaction of object.interactions) {
       const hint = interaction.blocked_hint;
       if (!hint) continue;
-      const projection = projectUseAction(index, state, interaction);
-      if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
+      // Every test below is a pure filter, so their order cannot change the result; the
+      // two condition checks go first because they reject almost every row, and the
+      // projection (name lookups, command formatting) and presence scan (a walk over
+      // every object's location) are then paid only for a row that is really blocked.
       if (!evalConditions(hint.visible_when, state)) continue;
       if (evalConditions(interaction.conditions, state)) continue;
+      const projection = projectUseAction(index, state, interaction);
+      if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
       if (legalIds.has(projection.id) || emitted.has(projection.id)) continue;
 
       emitted.add(projection.id);
