@@ -58,7 +58,7 @@ export const SubmissionKindSchema = z.enum([
   "docs",
   "research",
 ]);
-export type SubmissionKind = z.infer<typeof SubmissionKindSchema>;
+type SubmissionKind = z.infer<typeof SubmissionKindSchema>;
 
 /**
  * Priority, kept separate from severity on purpose.
@@ -82,7 +82,7 @@ export const SubmissionStatusSchema = z.enum([
   "in_progress",
   "done",
   "declined",
-  /** Aged out — see the playtest staleness rule. Kept, never deleted, revivable. */
+  /** Aged out — see the playtest staleness rule. Revivable by a fresh report. */
   "stale",
 ]);
 export type SubmissionStatus = z.infer<typeof SubmissionStatusSchema>;
@@ -107,7 +107,6 @@ export const SubmissionEvidenceSchema = z
     observations: z.number().int().positive().default(1),
   })
   .strict();
-export type SubmissionEvidence = z.infer<typeof SubmissionEvidenceSchema>;
 
 /** Where this lives in an external tracker, once synced. */
 const GitHubExternalSchema = z
@@ -133,15 +132,14 @@ const LinearMirrorSchema = z
   .strict();
 
 /** The legacy `external` field remains the GitHub pointer for compatibility. */
-export const SubmissionExternalSchema = GitHubExternalSchema;
-export type SubmissionExternal = z.infer<typeof SubmissionExternalSchema>;
+const SubmissionExternalSchema = GitHubExternalSchema;
 
 /** References used by either the legacy primary pointer or additional mirrors. */
-export const SubmissionMirrorSchema = z.discriminatedUnion("provider", [
+const SubmissionMirrorSchema = z.discriminatedUnion("provider", [
   GitHubExternalSchema,
   LinearMirrorSchema,
 ]);
-export type SubmissionMirror = z.infer<typeof SubmissionMirrorSchema>;
+type SubmissionMirror = z.infer<typeof SubmissionMirrorSchema>;
 
 export const SubmissionSchema = z
   .object({

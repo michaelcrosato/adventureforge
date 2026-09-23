@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import { JourneyExitReceiptSchema } from "./exit_interview.js";
 import { parseJsonRejectingDuplicateKeys } from "./strict_json.js";
 
-export const FreshStartRunEvidenceSchema = z
+const FreshStartRunEvidenceSchema = z
   .object({
     schema_version: z.literal(1),
     play_mode: z.literal("pure"),
@@ -13,7 +13,7 @@ export const FreshStartRunEvidenceSchema = z
   })
   .strict();
 
-export const JourneyExitRunEvidenceSchema = z
+const JourneyExitRunEvidenceSchema = z
   .object({
     schema_version: z.literal(1),
     play_mode: z.literal("pure"),
@@ -82,7 +82,7 @@ export const RunEvidenceEventSchema = z.union([
   JourneyExitRunEvidenceV2Schema,
 ]);
 
-export const PureBlindRunSidecarV1Schema = z
+const PureBlindRunSidecarV1Schema = z
   .object({
     schema_version: z.literal(1),
     report_schema_version: z.literal(2),
@@ -95,7 +95,7 @@ export const PureBlindRunSidecarV1Schema = z
   })
   .strict();
 
-export const PureBlindRunSidecarV2Schema = z
+const PureBlindRunSidecarV2Schema = z
   .object({
     schema_version: z.literal(2),
     report_schema_version: z.literal(2),
@@ -138,7 +138,7 @@ export type PureBlindRunSidecar = z.infer<typeof PureBlindRunSidecarSchema>;
 export type StructuralBlindRunSidecar = z.infer<typeof StructuralBlindRunSidecarSchema>;
 export type BlindRunSidecar = z.infer<typeof BlindRunSidecarSchema>;
 
-export type RunEvidenceParseResult =
+type RunEvidenceParseResult =
   | { ok: true; sidecar: PureBlindRunSidecar }
   | { ok: false; reason: string };
 

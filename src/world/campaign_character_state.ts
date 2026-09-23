@@ -16,7 +16,7 @@ export const CAMPAIGN_CHARACTER_MAX_ID_LENGTH = 96 as const;
  * Stable content ids are deliberately namespaced. This prevents a quest-local
  * `cade` or `spear` from silently colliding with another pack's persistent state.
  */
-export const CAMPAIGN_CHARACTER_ID_PATTERN = /^[a-z][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)+$/;
+const CAMPAIGN_CHARACTER_ID_PATTERN = /^[a-z][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)+$/;
 
 export const CampaignCharacterIdSchema = z
   .string()
@@ -28,14 +28,14 @@ const RANK = z.number().int().min(1).max(CAMPAIGN_CHARACTER_MAX_RANK);
 const SCORE = z.number().int().min(CAMPAIGN_CHARACTER_MIN_SCORE).max(CAMPAIGN_CHARACTER_MAX_SCORE);
 const OWED = z.number().int().min(0).max(CAMPAIGN_CHARACTER_MAX_OWED);
 
-export const CampaignCharacterSkillSchema = z
+const CampaignCharacterSkillSchema = z
   .object({
     skillId: CampaignCharacterIdSchema,
     rank: RANK,
   })
   .strict();
 
-export const CampaignCharacterValueSchema = z
+const CampaignCharacterValueSchema = z
   .object({
     valueId: CampaignCharacterIdSchema,
     strength: RANK,
@@ -60,7 +60,7 @@ export const CampaignCharacterHealthSchema = z
 
 export const CampaignWoundTreatmentSchema = z.enum(["untreated", "stabilized", "treated"]);
 
-export const CampaignCharacterWoundSchema = z
+const CampaignCharacterWoundSchema = z
   .object({
     woundId: CampaignCharacterIdSchema,
     severity: RANK,
@@ -73,7 +73,7 @@ export const CampaignCharacterWoundSchema = z
  * identifies its authored kind, so two damaged spears remain two distinct
  * possessions instead of collapsing into one inventory flag.
  */
-export const CampaignCharacterEquipmentSchema = z
+const CampaignCharacterEquipmentSchema = z
   .object({
     equipmentId: CampaignCharacterIdSchema,
     itemId: CampaignCharacterIdSchema,
@@ -85,7 +85,7 @@ export const CampaignCharacterEquipmentSchema = z
 
 export const CampaignPromiseStatusSchema = z.enum(["active", "kept", "broken", "released"]);
 
-export const CampaignCharacterPromiseSchema = z
+const CampaignCharacterPromiseSchema = z
   .object({
     promiseId: CampaignCharacterIdSchema,
     recipientId: CampaignCharacterIdSchema,
@@ -95,7 +95,7 @@ export const CampaignCharacterPromiseSchema = z
 
 export const CampaignCrimeStatusSchema = z.enum(["hidden", "suspected", "known", "resolved"]);
 
-export const CampaignCharacterCrimeSchema = z
+const CampaignCharacterCrimeSchema = z
   .object({
     crimeId: CampaignCharacterIdSchema,
     jurisdictionId: CampaignCharacterIdSchema,
@@ -104,7 +104,7 @@ export const CampaignCharacterCrimeSchema = z
   })
   .strict();
 
-export const CampaignCharacterRelationshipSchema = z
+const CampaignCharacterRelationshipSchema = z
   .object({
     npcId: CampaignCharacterIdSchema,
     trust: SCORE,
@@ -115,7 +115,7 @@ export const CampaignCharacterRelationshipSchema = z
   })
   .strict();
 
-export const CampaignCharacterFactionStandingSchema = z
+const CampaignCharacterFactionStandingSchema = z
   .object({
     factionId: CampaignCharacterIdSchema,
     standing: SCORE.refine((standing) => standing !== 0, {

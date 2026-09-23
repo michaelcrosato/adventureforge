@@ -10,11 +10,11 @@ import {
   applyCampaignConsequences,
 } from "./campaign_consequences.js";
 
-export const OPENING_ALLY_VERSION = 1 as const;
-export const OPENING_ALLY_MIN_OPTIONS = 3 as const;
-export const OPENING_ALLY_MAX_OPTIONS = 4 as const;
+const OPENING_ALLY_VERSION = 1 as const;
+const OPENING_ALLY_MIN_OPTIONS = 3 as const;
+const OPENING_ALLY_MAX_OPTIONS = 4 as const;
 /** Every opening ally offer begins with the standard substantive contact. */
-export const OPENING_ALLY_CONTACT_MINUTES = 15 as const;
+const OPENING_ALLY_CONTACT_MINUTES = 15 as const;
 
 const AUTHORED_TEXT = z
   .string()
@@ -209,7 +209,7 @@ export type OpeningAllyTerms = z.infer<typeof OpeningAllyTermsSchema>;
 export type OpeningAllyOption = z.infer<typeof OpeningAllyOptionSchema>;
 export type OpeningAlly = z.infer<typeof OpeningAllySchema>;
 
-export type OpeningAllyApplication = Readonly<{
+type OpeningAllyApplication = Readonly<{
   characterAfter: CampaignCharacterState;
   option: OpeningAllyOption;
   terms: OpeningAllyTerms;

@@ -24,7 +24,6 @@ import {
   useInteraction,
   withRpgDialogueInterruption,
   type RpgActionOption,
-  type RpgBlockedActionOption,
 } from "./legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
@@ -39,10 +38,7 @@ import { maneuverPhase, maneuverSequenceConditions } from "./maneuver_sequence.j
 import type { CampaignCharacterImportInput } from "./campaign_character_import.js";
 import type { EmbeddedLaunchOverlay } from "../core/embedded_launch_overlay_receipt.js";
 
-export type { CampaignCharacterImportInput } from "./campaign_character_import.js";
-
 export { enumerateRpgBlockedActions };
-export type { RpgBlockedActionOption };
 
 export type RpgIndex = RpgModelIndex & {
   enemies: Map<string, Enemy>;
@@ -262,7 +258,7 @@ export function buildRpgRules(
       return ending ? terminalRpgEffects(index, state, ending) : [];
     },
 
-    // Zork-style score feedback derived from the RPG `score` var.
+    // classic text-adventure score feedback derived from the RPG `score` var.
     decorateEvents(events: GameEvent[]): GameEvent[] {
       return decorateRpgScoreEvents(events, index.pack.meta.max_score);
     },

@@ -66,7 +66,7 @@ already exists; the sync creates any label it is missing.
 
 1. Create a personal API key in Linear: **linear.app → Settings → Security &
    access → Personal API keys → New API key** (label it something like
-   `zork-unlimited sync`). Copy the key when it is shown.
+   `adventureforge sync`). Copy the key when it is shown.
 2. In the repo root, create a file named `.env` containing one line:
    `LINEAR_API_KEY=<the key>`. `.env` is gitignored, the sync loads it itself
    (real environment variables win over the file), and the key is sent only to
@@ -94,7 +94,5 @@ Closing the issue in Linear never closes the repo item — agents close work wit
 
 Reprioritize, assign to a lane (set the `lane:*` label or assignee), and comment
 context. Agents pull work from the repo queue; the sync carries priority changes
-into queue files and prints claim suggestions for assignees. The GitHub Issues
-mirror (`scripts/sync-intake-github.ts`) remains available and marker-idempotent;
-Linear is the human project surface for this workflow, not the local source of
-truth.
+into queue files and prints claim suggestions for assignees. Linear is the human
+project surface for this workflow, not the local source of truth.

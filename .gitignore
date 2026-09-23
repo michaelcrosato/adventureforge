@@ -14,7 +14,6 @@ ui/.vite-dev*.log
 ai-runs/
 .tmp/
 saves/*.json
-transcripts/*.md
 coverage/
 # Rotated tail of the AFK loop log (git history preserves old AI_LOOP_STATE.md versions)
 AI_LOOP_STATE_ARCHIVE.md
@@ -28,16 +27,12 @@ AI_LOOP_STATE_ARCHIVE.md
 *.tsbuildinfo
 
 # Local interactive-agent/browser scratch (never durable test evidence)
-/.aider.chat.history.md
 /.playwright-mcp/
 
 # Blind-tester run outputs (regenerable; not source)
 blind-tester/reports/*
 !blind-tester/reports/.gitkeep
 
-# Agent metadata and requests
-.agents/
-ORIGINAL_REQUEST.md
 
 # Secrets — never commit. This is a public repo and the engine needs no API keys;
 # any local credentials stay in an ignored env file.

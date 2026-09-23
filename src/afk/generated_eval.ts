@@ -74,7 +74,7 @@ export function generatorRpgDriftCandidate(
     target: "src/gen/rpg_generator.ts",
     title: `The RPG pack generator minted ${bad.length} pack(s) the verifier rejects — the evolving RPG eval distribution has drifted from the shipped bar`,
     rationale:
-      "Evolving the RPG eval distribution only works if every minted pack clears the SAME zero-findings bar the curated RPG packs do — which for RPG includes COMBAT winnability and SCORE-economy soundness (docs/CURRENT_PLAN.md). A generated RPG pack the production validateRpg flags is a real defect: either the generator emits an unclean/unwinnable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the RPG generator a trustworthy moving target instead of a source of false signal.",
+      "Evolving the RPG eval distribution only works if every minted pack clears the SAME zero-findings bar the curated RPG packs do — which for RPG includes COMBAT winnability and SCORE-economy soundness. A generated RPG pack the production validateRpg flags is a real defect: either the generator emits an unclean/unwinnable/score-unreachable shape, or the fresh distribution has surfaced a verifier gap. Fixing it keeps the RPG generator a trustworthy moving target instead of a source of false signal.",
     evidence: bad.map(
       (c) =>
         `seed ${c.seed}: ${c.report.findings.map((f) => `${f.severity}:${f.code}`).join(", ")}`,

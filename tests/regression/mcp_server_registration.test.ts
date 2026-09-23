@@ -282,10 +282,10 @@ describe("MCP server registration", () => {
     );
     const lifecycleArgs = sourceBlock(
       "src/mcp/rpg_session_lifecycle.ts",
-      "export type RpgNewGameToolArgs",
+      "type RpgNewGameToolArgs",
       "export type RpgWorldQuestStartPayload",
     );
-    const toolApiArgs = toolApiSourceBlock("type RpgNewGameArgs", "type AdaptStoryArgs");
+    const toolApiArgs = toolApiSourceBlock("type RpgNewGameArgs", "type InspectTraceStepSummary");
 
     for (const block of [sourceArgs, lifecycleArgs, toolApiArgs]) {
       expect(block).not.toContain("pack_path?: never");
@@ -343,7 +343,6 @@ describe("MCP server registration", () => {
   it("keeps authoring and fix ToolSearch schema source terse", () => {
     const authoringFixSchemaSource = [
       registeredToolBlock("generate_rpg_pack"),
-      registeredToolBlock("adapt_story"),
       registeredToolBlock("apply_content_patch"),
     ].join("\n");
 

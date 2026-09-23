@@ -12,6 +12,7 @@ import { spawnSync } from "node:child_process";
 
 const statusScript = readFileSync("scripts/loop-status.sh", "utf8");
 const stopScript = readFileSync("scripts/loop-stop.sh", "utf8");
+const processRecordScript = readFileSync("scripts/process-record.sh", "utf8");
 const loopScript = readFileSync("loop.sh", "utf8");
 const packageScripts = (
   JSON.parse(readFileSync("package.json", "utf8")) as {
@@ -37,6 +38,8 @@ const RECORD_PROCESS_IDENTITY = [
 
 function withTempRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "loop-process-"));
+  // loop-status.sh / loop-stop.sh source the shared helper from beside themselves.
+  writeFileSync(join(root, "process-record.sh"), processRecordScript);
   try {
     run(root);
   } finally {

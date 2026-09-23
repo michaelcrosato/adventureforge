@@ -1,7 +1,7 @@
 import type { OpeningDepartureRecap } from "../world/opening_departure_recap.js";
 import type { OverworldQuestView } from "../world/session.js";
 
-export const EMBEDDED_QUEST_LAUNCH_HANDOFF_VERSION = 1 as const;
+const EMBEDDED_QUEST_LAUNCH_HANDOFF_VERSION = 1 as const;
 
 /** A small, player-facing bridge from campaign planning into actionable quest state. */
 export type WolfWinterEmbeddedQuestLaunchHandoff = Readonly<{

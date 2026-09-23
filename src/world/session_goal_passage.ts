@@ -21,7 +21,7 @@ export type OverworldGoalPassageResult = {
   travelConditionAfter: string;
 };
 
-export type GoalPassageJourneyAction = Readonly<{
+type GoalPassageJourneyAction = Readonly<{
   goalId: string;
   edgeIds: readonly string[];
 }>;

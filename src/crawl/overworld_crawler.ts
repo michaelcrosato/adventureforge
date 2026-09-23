@@ -61,7 +61,7 @@ import { prepareShippedQuest } from "./prepare.js";
 import { describeSolveToEndingFailure, solveToEnding } from "./quest_solver.js";
 import { describeError } from "./step_oracles.js";
 
-export type OverworldCrawlOptions = {
+type OverworldCrawlOptions = {
   root: string;
   seed: number;
   commit: string;
@@ -73,7 +73,7 @@ export type OverworldCrawlOptions = {
   maxLocalActionsPerTown: number;
 };
 
-export type OverworldCrawlResult = {
+type OverworldCrawlResult = {
   findings: CrawlFinding[];
   coverage: OverworldCoverageSummary;
   questRoundTrips: { questId: string; endingId: string | null }[];

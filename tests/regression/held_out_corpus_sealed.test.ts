@@ -7,8 +7,7 @@
  * the top-level `corpus/` dir (NEVER under content/rpg/quests, so it adds no blind-playtest
  * obligation and keeps all_packs_validated_by_bar.test.ts's discovery on curated packs). This is
  * the contamination-control substrate the benchmark thesis requires: a
- * sealed, timestamped, held-out split (docs/CURRENT_PLAN.md "HELD-OUT CORPUS PERSISTENCE";
- * docs/ULTRAPLAN-2026-06-02.md).
+ * sealed, timestamped, held-out split (bug_0163).
  *
  * This guard is the STANDING re-mint-and-verify check that keeps the corpus honest. Mirroring
  * all_packs_validated_by_bar.test.ts's discovery/zero-error pattern, for EVERY corpus/manifest.json

@@ -10,7 +10,7 @@ import {
   applyCampaignConsequences,
 } from "./campaign_consequences.js";
 
-export const OPENING_RELIEF_OATH_VERSION = 1 as const;
+const OPENING_RELIEF_OATH_VERSION = 1 as const;
 export const OPENING_RELIEF_OATH_OPTION_COUNT = 3 as const;
 
 const RELIEF_OATH_KINDS = ["official", "limited", "unaffiliated"] as const;
@@ -224,12 +224,11 @@ export const OpeningReliefOathSchema = z
     }
   });
 
-export type OpeningReliefOathKind = (typeof RELIEF_OATH_KINDS)[number];
 export type OpeningReliefOathTerms = z.infer<typeof OpeningReliefOathTermsSchema>;
 export type OpeningReliefOathOption = z.infer<typeof OpeningReliefOathOptionSchema>;
 export type OpeningReliefOath = z.infer<typeof OpeningReliefOathSchema>;
 
-export type OpeningReliefOathApplication = Readonly<{
+type OpeningReliefOathApplication = Readonly<{
   characterAfter: CampaignCharacterState;
   option: OpeningReliefOathOption;
   terms: OpeningReliefOathTerms;

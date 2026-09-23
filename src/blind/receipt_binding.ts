@@ -103,9 +103,9 @@ export const PureReceiptBindingMetadataSchema = z
   })
   .strict();
 
-export type PureReceiptBindingMetadata = z.infer<typeof PureReceiptBindingMetadataSchema>;
+type PureReceiptBindingMetadata = z.infer<typeof PureReceiptBindingMetadataSchema>;
 
-export interface PureReceiptBindingInput {
+interface PureReceiptBindingInput {
   playMode: string;
   provider: string;
   agentExitStatus: number;
@@ -126,7 +126,7 @@ export interface PureReceiptBindingInput {
   allowHistoricalMismatch?: boolean;
 }
 
-export type PureReceiptBindingResult =
+type PureReceiptBindingResult =
   | {
       ok: true;
       metadata: PureReceiptBindingMetadata;
@@ -134,7 +134,7 @@ export type PureReceiptBindingResult =
     }
   | { ok: false; reason: string };
 
-export interface ReproducePureReceiptBindingInput {
+interface ReproducePureReceiptBindingInput {
   primaryEnvelopeBytes: Uint8Array;
   originalReportBytes: Uint8Array;
   runEvidenceBytes: Uint8Array;

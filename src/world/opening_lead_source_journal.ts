@@ -20,8 +20,8 @@ import type {
   OverworldJournalEntry,
 } from "./session_snapshot.js";
 
-export const OPENING_LEAD_SOURCE_JOURNAL_PREFIX = "lead_source:" as const;
-export const OPENING_LEAD_SOURCE_OFFER_JOURNAL_PREFIX = "lead_source_offer:" as const;
+const OPENING_LEAD_SOURCE_JOURNAL_PREFIX = "lead_source:" as const;
+const OPENING_LEAD_SOURCE_OFFER_JOURNAL_PREFIX = "lead_source_offer:" as const;
 
 export type OpeningLeadSourceJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">

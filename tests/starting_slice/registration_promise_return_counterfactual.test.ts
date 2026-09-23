@@ -17,7 +17,6 @@ import { OverworldSession } from "../../src/world/session.js";
 import {
   applyOverworldQuestCompletion,
   planOverworldQuestCompletion,
-  replayQuestCampaignConsequences,
 } from "../../src/world/session_quests.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
@@ -168,7 +167,7 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
     }
   });
 
-  it("keeps the obligation active before foldback and through unrelated quest replay", () => {
+  it("keeps the obligation active before foldback", () => {
     for (const profile of REGISTRATION.profiles) {
       const promiseId = BACKGROUND_PROMISES.get(profile.id)!;
       const boundary = wolfBoundary(profile.id);
@@ -177,14 +176,6 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
         boundary.journalEntries.some((entry) => entry.text.includes("Registration complete.")),
         profile.id,
       ).toBe(false);
-
-      const unrelated = replayQuestCampaignConsequences({
-        character: boundary.character,
-        questsById: QUESTS,
-        questOutcomeIds: new Map([[GALLOWMERE.id, "ending_butchered"]]),
-      }).characterAfter;
-      expect(promiseStatus(unrelated, promiseId), profile.id).toBe("active");
-      expect(unrelated.promises).toEqual(boundary.character.promises);
     }
   });
 

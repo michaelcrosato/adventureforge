@@ -199,7 +199,7 @@ export function cloneOpeningRegistration(registration: OpeningRegistration): Ope
 }
 
 /** Resolve a profile by id and return a detached package (null when absent). */
-export function openingRegistrationProfileById(
+export function getOpeningRegistrationProfile(
   registration: OpeningRegistration,
   profileId: string,
 ): OpeningRegistrationProfile | null {
@@ -207,9 +207,6 @@ export function openingRegistrationProfileById(
   const profile = parsed.profiles.find((entry) => entry.id === profileId);
   return profile === undefined ? null : OpeningRegistrationProfileSchema.parse(profile);
 }
-
-/** Alias with conventional getter naming for presentation/runtime callers. */
-export const getOpeningRegistrationProfile = openingRegistrationProfileById;
 
 const DEFAULT_CHARACTER_SERIALIZED = serializeCampaignCharacterState(
   createInitialCampaignCharacterState(),

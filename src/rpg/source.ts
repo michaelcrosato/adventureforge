@@ -13,7 +13,7 @@ export type CompiledRpgSource = {
   contentHash: string;
 };
 
-export type RpgSourceCompileResult =
+type RpgSourceCompileResult =
   | { ok: true; compiled: CompiledRpgSource }
   | { ok: false; error: z.ZodError };
 

@@ -18,7 +18,7 @@ import type { GameState } from "../core/state.js";
 import type { Resolution } from "../core/engine.js";
 import { HP_VAR, ATTACK_VAR, DEFENSE_VAR, enemyHpVar, type Enemy } from "./schema.js";
 
-export type CombatRoundModifiers = {
+type CombatRoundModifiers = {
   attackBonus?: number;
   defenseBonus?: number;
 };

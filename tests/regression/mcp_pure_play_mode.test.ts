@@ -1191,10 +1191,9 @@ describe("MCP pure play mode", () => {
       // embedded_quest property and export_overworld_session's description says to pass
       // it back — a snapshot exported mid-quest is not restorable without its child.
       // Neither tool is in the pure catalogue, whose pins are unchanged.
-      // +87 on 2026-09-22: adapt_story stopped promising a pack "from a story premise";
-      // its only provider is a canned author that returns the same Lighthouse pack for
-      // any premise, and the description and premise argument now say so.
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(40_013);
+      // -442 on 2026-09-23: the canned-author adapt_story tool was deleted with the mock
+      // authoring pipeline. Neither change touched the pure catalogue.
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_571);
       expect(fullRead?.description).toBe(
         "Read current context without acting. Station support uses the exact board[5] id.",
       );

@@ -7,11 +7,8 @@ cycle. Development and playtesting run as **two independent loops**, either of
 which any model can drive
 ([`docs/two_loop_workflow.md`](./docs/two_loop_workflow.md)). The why lives in [`docs/VISION.md`](./docs/VISION.md); what's next in
 [`docs/ROADMAP.md`](./docs/ROADMAP.md); the standing architecture contract is
-[`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md). Process choices
-made while closing the external review are recorded in
-[`docs/EXTERNAL_REVIEW_PROCESS_DECISIONS.md`](./docs/EXTERNAL_REVIEW_PROCESS_DECISIONS.md),
-with the finding-by-finding evidence map in
-[`docs/EXTERNAL_REVIEW_COMPLETION.md`](./docs/EXTERNAL_REVIEW_COMPLETION.md).
+[`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md); settled decisions
+live in [`docs/DECISION_LOG.md`](./docs/DECISION_LOG.md).
 
 > **Trust, but verify.** The coding agent has free rein over all game code — no
 > human-approval gate, no §14 engine-extension ceremony; it decides _what_ to
@@ -93,15 +90,9 @@ npm run play -- sunken_barrow                    # play a shipped world quest
 npm run overworld                                # play the full game: overworld map -> quests
 npm run inspect -- sunken_barrow                 # summarize a world quest
 npm run replay                                   # replay the committed RPG smoke trace
-npm run author -- "your one-line premise here"   # exercise the deterministic mock author/validator loop
 npm run test:coverage                            # report standard-suite V8 coverage
 npm run ui:dev                                   # web UI (after: npm --prefix ui install)
 ```
-
-`npm run author` is an offline pipeline fixture: its mock provider always drafts
-the fixed **The Lighthouse** story, then exercises adapter rejection/revision until
-the RPG pack validates. The supplied premise does not currently drive generated
-story content; no live authoring model is bundled.
 
 Non-interactive play (scriptable / CI): add
 `--commands "go north; take rope; attack wight; ..."`. Use
@@ -162,8 +153,7 @@ because for those the proofs are the ground truth. `--full` forces the full bar,
 
 Because each ship squash-merges, `main` gains exactly one commit per landing with a PR
 beside it, so rolling back a change is reverting a single commit. Shipping small and often
-is what makes that useful. Requires the GitHub CLI (`gh`), already used by
-`npm run intake:sync`.
+is what makes that useful. Requires the GitHub CLI (`gh`).
 
 ## MCP server — how an agent plays
 
@@ -172,7 +162,7 @@ any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
 calls over the structured observation/action loop — never a raw parser. The
 repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
-**43 tools**, in four groups:
+**42 tools**, in four groups:
 
 - **World catalog** (1): `list_overworld` — the overworld is both the world and
   the quest registry.
@@ -191,8 +181,7 @@ repo ships `.mcp.json`, so an MCP client opened here connects automatically.
   `get_observation` / `list_legal_actions` → `step_action`, repeated until the
   session ends; plus `get_state`, `get_transcript`, `save_game`, `load_game`,
   `validate_quest`, `load_quest`, and `generate_rpg_pack`.
-- **Authoring & repair** (4): `adapt_story`, `apply_content_patch`,
-  `replay_trace`, `inspect_trace`.
+- **Repair & traces** (3): `apply_content_patch`, `replay_trace`, `inspect_trace`.
 
 Observations are **compact and self-describing**: session-creating responses
 carry an initial `legend` for the positional fields used there, later responses
@@ -240,188 +229,59 @@ harness supplies neither route nor recommendation.
 
 Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
 
-- **Tier 0 — dev tests** (full knowledge, specific assertions): the vitest
-  unit/property/regression suite, the validators, exhaustive shipped-pack proofs,
-  bug-trace integrity, and the opening-density budget — all inside
-  `npm run health`. Rejection-direction witnesses live in the
-  negative-fixture corpus (`content/broken-fixtures/`, 48 files, mostly
-  `foundation_*.yaml`). Both validators are held to the same data-driven,
-  self-tightening pin: each corpus test parses the emit sites out of its own
-  validator's source and requires a rejection witness for every code it finds, with
-  the exceptions in an explicit allowlist — 3 for the foundation validator, 25 for
-  `rpg_validator`, whose entries carry witnesses elsewhere in the suite. Adding a
-  finding code fails the suite until it is fixtured or consciously listed, so a new
-  code can no longer arrive unwitnessed and green.
-- **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
-  engine in-process across every shipped quest plus a full overworld sweep,
-  checking nine finding codes every step — eight invariants (crash, integrity,
-  desync, persistence, legality, softlock, render defects, world coverage) plus
-  `ORPHAN`, which is coverage bookkeeping rather than a violation — and emitting
-  deduped, zod-validated findings. Repros are minimized and replayable for the
-  five codes `REPRODUCIBLE_CODES` admits (crash, integrity, render, persistence,
-  softlock); desync, legality, world and orphan findings carry an unminimized
-  repro. `npm run crawl:smoke` is the loop's gate (every cycle, deterministic,
-  6,000 steps; ~20-35s wall on a fast machine and longer under load — not the
-  ~10s this line used to claim);
-  `npm run crawl:deep` is a longer soak run nightly and on manual dispatch by
-  `.github/workflows/deep-audit.yml`.
+- **Tier 0 — dev tests**: the vitest unit/property/regression suite, the
+  validators, exhaustive shipped-pack proofs, bug-trace integrity, and the
+  opening-density budget — all inside `npm run health`. Every validator finding
+  code needs a rejection witness in `content/broken-fixtures/` (or an explicit
+  allowlist entry), so a new code cannot arrive unwitnessed and green.
+- **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure engine
+  across every shipped quest plus a full overworld sweep and emits deduped,
+  replayable findings. `npm run crawl:smoke` is the loop's gate; `npm run crawl:deep`
+  soaks nightly in `.github/workflows/deep-audit.yml`.
 - **Tier 2 — pure blind LLM playtest**: a fresh agent with NO repo access plays
-  through an enforced player-only MCP surface (harness in `blind-tester/`,
-  protocol in
-  [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)).
-  `npm run blind` and every live `npm run fleet` member default to
-  `play_mode: pure` and `start_surface: fresh_overworld`, on whichever provider
-  the registry resolves: the game supplies the
-  tutorial, goals, state, legal and authored story choices,
-  decision/checkpoint rhythm, and consequences; the harness supplies transport
-  syntax only. It interviews
-  after a game-confirmed exit, never after a test-only call budget. Structural
-  direct-quest/crawler/smoke/mock modes require explicit flags and are not pure
-  retention evidence. Milestone fleets run 100 seed/model variants of the same
-  neutral player contract; `fleet:mock` is a zero-token structural CI stand-in.
-  Current Codex runs authenticate the selected model-specific transport, and
-  WHICH transport a model uses is catalog data rather than code: an entry in
-  `blind-tester/catalogs/<provider>.json` may declare a `transport` block naming
-  its contract, the exact client version it requires, and its prompt, player
-  catalog and fragment components. Certifying a model is likewise a catalog edit
-  (`certified: true`) and not a code change — subject to its provider deriving
-  `runner_enforced`, so the strongest label still arrives only alongside the
-  reader that can witness it. Spark
-  uses direct-MCP capture receipt v4 (`spark-direct-mcp-v1`) and Terra uses
+  through a player-only MCP surface (`blind-tester/`, protocol in
+  [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)) and ends
+  with a structured exit interview the verifier cross-checks against server
+  evidence. Which transport a model uses is catalog data in
+  `blind-tester/catalogs/`: Spark uses direct-MCP capture receipt v4
+  (`spark-direct-mcp-v1`) and Terra uses
   game-direct capture receipt v5 (`game-direct-mcp-v1`); each direct model is
-  launched through its own tracked game-only model catalog. Terra direct pins a
-  disabled multi-agent topology and API-request reasoning-summary mode `none`;
-  its exact 0.146 rollout records the compatibility-only `summary: "auto"`
-  sentinel. Historical strict Terra remains v2. Sol and Luna use strict
-  code-mode receipt v3 (`strict-code-mode-v2`). Fleet attestation v9 binds the
-  exact provider, model, transport, CLI, rollout, and receipt. Older receipt and
-  attestation schemas, including immutable v8 strict-Terra evidence, remain
-  historical readers only and cannot satisfy a current run or resume.
-- **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
-  findings and verified Tier-2 reports into `hotspots.{json,md}`
-  (`npm run feedback:compile`), writes a separate `retention.json` that admits
-  only sidecar-verified pure exits and groups their decision/checkpoint curves
-  by journey-contract version (historical v1/v2 and current v3 are never pooled),
-  excludes deterministic structural mocks from product hot spots and experience
-  metrics, tracks trend (improved/regressed/new/flat), and feeds the assessor's
-  ranking.
-
-Every pure playtest MUST end through the game's journey choice and then provide
-a V2 **structured exit interview**. The fenced `json exit-interview` block
-contains clarity/enjoyment, severity-tagged findings, replay intent, and the
-exact game-returned journey receipt (schema in `src/blind/exit_interview.ts`).
-The verifier cross-checks it against server-authored fresh-start/exit evidence;
-legacy, structural, timed-out, or mismatched runs cannot count as pure retention
-evidence or resume a pure fleet member. A separate
-`npm run playtest:grok-wave` lane can launch 100 Grok Build players against the
-same pure server contract. It binds each report to private V2 server evidence,
-but remains `operator_attested` because this checkout cannot yet audit Grok's
-complete client tool surface; those reports corroborate bugs but do not move
-retention or clarity metrics.
+  launched through its own tracked game-only model catalog. Fleet attestation v9 binds
+  the exact provider, model, transport, CLI, rollout, and receipt; older schemas
+  are historical readers only.
+- **Tier 3 — feedback compiler** (`src/feedback/`): `npm run feedback:compile`
+  clusters crawler findings and verified reports into ranked hot spots and a
+  pure-exit retention summary that feeds the assessor.
 
 ```bash
 npm run crawl:smoke                               # Tier 1: mechanical gate, all quests + overworld
 npm run blind                                     # Tier 2 DEFAULT: canonical pure fresh-world player
 npm run blind:smoke                               # explicit structural harness check, no LLM/tokens
-bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # structural quest check, no LLM
 npm run fleet -- --count 100                      # milestone: 100 pure fresh-world players
-npm run playtest:grok-wave -- --plan-only         # inspect the dedicated Grok 4.6 instant-thinking plan
-npm run playtest:grok-wave -- --count 100 --concurrency 4 # operator-attested, evidence-bound Grok wave
 npm run fleet:mock -- --count 2                   # structural zero-token CI lane
 npm run feedback:compile                          # Tier 3: hot spots + pure retention summary
 ```
 
-The generic blind harness drives only providers for which this checkout has both
-a hardened launch path and an auditable capture reader. Provider privilege is
-derived from those capabilities rather than a vendor name. Other clients are
-recorded with `npm run playtest:ingest`, while Grok Build has the dedicated
-`npm run playtest:grok-wave` batch lane described above. Both paths stamp
-`operator_attested`, count toward bug corroboration, and remain excluded from
-experience metrics. Arbitrary
-`BLIND_AGENT_CMD` overrides are still rejected for pure runs because their
-blindness cannot be verified. Live play is
-NOT part of CI or the health bar (a structural mock fleet run is — see
-[`docs/testing_pyramid.md`](./docs/testing_pyramid.md)). Separately, the
-authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a
-deterministic, keyless `MockAuthorProvider` behind the small `Provider`
-interface (`agents/llm/`). The author fixture returns the same Lighthouse draft
-for every premise; what CI exercises is the real adapter → validator → revision
-loop, not open-ended prose generation. The engine and CI require no runtime LLM
-or third-party API key. Optional blind-playtest commands use the operator's
-installed subscription clients; credentials are never passed into the game or
-committed to the repository.
+Live play is NOT part of CI or the health bar; the engine and CI need no LLM or
+third-party API key. Optional blind playtests use the operator's installed
+subscription clients, and credentials never reach the game or the repository.
 
 ## The flywheel — two independent loops
 
 Full reference: [`docs/two_loop_workflow.md`](./docs/two_loop_workflow.md).
 
-**Dev loop** (`loop.sh`, protocol in [`docs/afk_loop.md`](./docs/afk_loop.md)):
-**assess** (`npm run ai:loop` — the QA bucket first, then `src/afk/assessor.ts`'s
-own candidates; an empty bucket is normal and never stalls the loop), **work**
-(one focused change), **verify** (`crawl:smoke`, the health bar, and an integrity
-check against the pre-cycle ref so the verifier itself can't be weakened). It
-does **not** play the game: there is no per-cycle playtest gate, which is what
-un-blocked the throughput the old single loop spent waiting on. The seal still
-verifies a cycle playtest in full if one was published — it simply no longer
-requires that one exists. A cycle is therefore vendor-neutral end to end: any agent
-that reads STDIN, edits files and exits nonzero can drive it, with no second vendor
-needed to land the work.
+- **Dev loop** (`loop.sh`, protocol in [`docs/afk_loop.md`](./docs/afk_loop.md)):
+  assess (`npm run ai:loop`), make one focused change, then verify with
+  `crawl:smoke`, the health bar, and an integrity check against the pre-cycle ref.
+  It does not play the game, and it runs on any agent listed in `dev-agents.json`.
+- **Playtest loop** (`playtest-loop.sh`): plays the latest published build in
+  parallel, records every session, and promotes corroborated findings.
+- **Intake** (`intake/queue/`, `npm run work` / `npm run submit`): the dev loop's
+  one inbox, shared by playtest triage, audits, research, the crawler, and people.
 
-**Playtest loop** (`playtest-loop.sh`): runs independently and in parallel,
-plays the most recently published build with as many cheap players as your
-quota allows plus a small expensive reference cohort, records every playthrough,
-and promotes corroborated or reproduced findings into the intake queue.
-
-**Intake** (`intake/queue/`, `npm run work` / `npm run submit`): the dev loop's
-one inbox. Playtest triage is a source, not the only one — an audit agent, a
-research proposal, the crawler, or a person all file the same submission, and
-`npm run intake:sync` mirrors the queue to GitHub Issues so people can file from
-anywhere.
-
-**The dev loop runs on any model.** It auto-detects an installed agent from
-`dev-agents.json` (`codex`, `claude`, `gemini` today; `AI_AGENT` selects,
-`AI_AGENT_CMD` overrides anything), and asking for an absent one fails loudly
-rather than silently substituting a vendor. That file is the single registry both
-`loop.sh` and `bin/doctor.ts` read, so the loop cannot auto-detect an agent the
-doctor does not report, or advertise one the loop would not launch.
-
-**The playtest loop's vendor privilege is derived, not declared.** Nothing in the
-gate names a vendor. A provider may produce a `runner_enforced` session only when
-this checkout can both PROVE its blindness (it declares a `capture` block whose
-reader module exists) and LAUNCH it (`blind-tester/run.sh` has a launch path for
-that reader, listed in `blind-tester/implemented-launch-paths.json`).
-`derivePlaytestIsolation` and `runnerCanDriveProvider` in `src/blind/providers.ts`
-are the single authority; the runner, `playtest-loop.sh`, `bin/doctor.ts` and the
-resolver all read it, so none can promise a lane another refuses. The registry's
-stored `isolation` is kept only as a second witness — disagree with the derivation
-and the registry fails to parse, so no vendor can be talked into the strong label by
-editing JSON. `bin/record-playtest-session.ts` likewise downgrades to
-`operator_attested`, loudly, rather than sealing a label this checkout cannot back;
-that path requires explicit `--attested-by` and `--method` values and fails before
-writing if either is absent.
-
-Adding a generic live provider is five mechanical steps and no gate edit: registry
-entry, capture block, reader module, launch branch, one line in the implemented
-list. Today Codex and Claude Code are both live there (the Claude Code lane pins
-its own `--session-id`, so `blind-tester/claude-session.mjs` reads exactly the one
-transcript the runner launched); Gemini remains ingest-only. Grok Build instead has a dedicated headless wave that isolates the
-pure game server and verifies its receipt/provenance while conservatively keeping
-the client `operator_attested`. Vendors without either lane are played in their own
-client and recorded with `npm run playtest:ingest`. Arbitrary `BLIND_AGENT_CMD`
-overrides are still rejected for pure runner-enforced runs because their blindness
-cannot be verified.
-
-`npm run doctor` reports which vendors the generic hardened runner can launch;
-`npm run playtest:grok-wave -- --plan-only` reports the dedicated Grok plan.
-
-Agent errors fail a dev cycle; a bounded durable failure ledger is shown by
-`npm run loop:status`. `npm run loop:status` / `npm run loop:stop` manage a
-running loop; `npm run assess` previews the ranking.
-
-That shell driver defines and exercises the protocol; it is not a claim about
-the dominant execution path. Recent repository work may instead be orchestrated
-directly on short-lived PR branches, applying the same crawl, health, integrity,
-and evidence rules without launching `loop.sh`.
+`npm run doctor` reports which vendors this checkout can launch;
+`npm run loop:status` / `npm run loop:stop` manage a running loop, and
+`npm run assess` previews the ranking.
 
 ## How we got here
 
@@ -436,7 +296,7 @@ RPG quests is standing flywheel work. The parser-era negative fixtures were
 converted to the RPG-foundation corpus so no rejection direction lost its
 witness. Full rationale: the 2026-07-06 entry in
 [`docs/DECISION_LOG.md`](./docs/DECISION_LOG.md); stage-era plans and gate
-records are preserved under `docs/archive/`.
+records live in git history.
 
 ## License
 

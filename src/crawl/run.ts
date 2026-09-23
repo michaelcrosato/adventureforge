@@ -125,7 +125,7 @@ export class CrawlUsageError extends Error {}
  *  (`root`/`commit` are resolved outside argument parsing; `outDir` is only
  *  present when `--out` was given explicitly — the wall-clock default lives in
  *  `defaultOutDir`, never inside this pure parser). */
-export type ParsedCrawlArgs = Omit<CrawlRunOptions, "root" | "commit" | "outDir"> & {
+type ParsedCrawlArgs = Omit<CrawlRunOptions, "root" | "commit" | "outDir"> & {
   outDir?: string;
 };
 
@@ -408,7 +408,7 @@ function computeQuestTotals(prepared: PreparedQuest): {
  *  seeds/quests — NOT `FindingCollector.add` (that stamps its own base seed onto
  *  every finding, which would misattribute which seed a kept duplicate came
  *  from). Keeps the first occurrence in input order. */
-export function dedupeFindings(findings: readonly CrawlFinding[]): CrawlFinding[] {
+function dedupeFindings(findings: readonly CrawlFinding[]): CrawlFinding[] {
   const seen = new Set<string>();
   const out: CrawlFinding[] = [];
   for (const f of findings) {
@@ -670,10 +670,7 @@ export function sliceSeeds(seeds: readonly number[], workers: number): number[][
  * non-empty worker plans are returned (never spawn a worker with nothing to
  * do). Pure: same `(items, workers)` in ⇒ same plans out, no I/O.
  */
-export function buildWorkerPlans(
-  items: readonly CrawlPlanItem[],
-  workers: number,
-): CrawlPlanItem[][] {
+function buildWorkerPlans(items: readonly CrawlPlanItem[], workers: number): CrawlPlanItem[][] {
   const questItems = items.filter(
     (i): i is Extract<CrawlPlanItem, { kind: "quest" }> => i.kind === "quest",
   );

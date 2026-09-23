@@ -20,7 +20,7 @@ evidence:
 root_cause: >
   The authoring pipeline (agents/authoring) only ever produced CYOA packs: the adapter
   hard-coded validateCyoa + AdapterOutputSchema (CyoaPackSchema), and the mock author
-  emitted only a CYOA pack. So the Zork-style parser validator — the project's richest,
+  emitted only a CYOA pack. So the classic parser validator — the project's richest,
   with reference integrity, reachability, soft-lock, win-reachability and score-peak
   analysis — was never exercised by the authoring loop. The true goal (a contamination-
   free benchmark of a real model AUTHORING validated games) is undersold if authoring

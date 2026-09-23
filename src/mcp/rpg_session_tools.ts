@@ -47,7 +47,7 @@ import {
   type TranscriptResponse,
 } from "./transcript_projection.js";
 
-export type RpgGetObservationToolArgs = {
+type RpgGetObservationToolArgs = {
   session_id: string;
   hide_graph?: boolean;
   if_state_hash?: string;
@@ -65,7 +65,7 @@ type RpgObservationToolPayload<Args extends RpgGetObservationToolArgs> = {
 } & RpgViewField<Args> &
   RequestedCharacterContinuity<Args>;
 
-export type RpgObservationToolResponse<Args extends RpgGetObservationToolArgs> = Args extends {
+type RpgObservationToolResponse<Args extends RpgGetObservationToolArgs> = Args extends {
   include_character_continuity: true;
 }
   ? RpgObservationToolPayload<Args>
@@ -73,7 +73,7 @@ export type RpgObservationToolResponse<Args extends RpgGetObservationToolArgs> =
     ? RpgObservationToolPayload<Args> | RpgStateUnchanged
     : RpgObservationToolPayload<Args>;
 
-export type RpgLegalActionsToolArgs = {
+type RpgLegalActionsToolArgs = {
   session_id: string;
   if_state_hash?: string;
 } & RpgViewLegalActionsArgs;
@@ -84,13 +84,13 @@ type RpgLegalActionsToolPayload<Args extends RpgLegalActionsToolArgs> = {
   state_hash: string;
 };
 
-export type RpgLegalActionsToolResponse<Args extends RpgLegalActionsToolArgs> = Args extends {
+type RpgLegalActionsToolResponse<Args extends RpgLegalActionsToolArgs> = Args extends {
   if_state_hash: string;
 }
   ? RpgLegalActionsToolPayload<Args> | RpgStateUnchanged
   : RpgLegalActionsToolPayload<Args>;
 
-export type RpgGetStateToolArgs = {
+type RpgGetStateToolArgs = {
   session_id: string;
   include_state?: boolean;
   compact_state?: boolean;
@@ -118,13 +118,13 @@ type RpgStateToolPayloadFor<Args extends RpgGetStateToolArgs> = Args extends {
   : RpgStateHashToolPayload &
       (Args extends { compact_state: true } ? RpgCompactStateToolField : Record<string, never>);
 
-export type RpgStateToolResponse<Args extends RpgGetStateToolArgs> = Args extends {
+type RpgStateToolResponse<Args extends RpgGetStateToolArgs> = Args extends {
   if_state_hash: string;
 }
   ? RpgStateToolPayloadFor<Args> | RpgStateUnchanged
   : RpgStateToolPayloadFor<Args>;
 
-export type RpgSaveToolArgs = {
+type RpgSaveToolArgs = {
   session_id: string;
   expected_state_hash?: string;
   if_state_hash?: string;
@@ -162,7 +162,7 @@ type RpgSaveToolUnchanged<Args extends RpgSaveToolArgs> = Args extends {
   ? RpgStateUnchanged
   : never;
 
-export type RpgSaveToolResponse<Args extends RpgSaveToolArgs> =
+type RpgSaveToolResponse<Args extends RpgSaveToolArgs> =
   | RpgSaveToolSuccess<Args>
   | RpgSaveToolRejected<Args>
   | RpgSaveToolUnchanged<Args>;

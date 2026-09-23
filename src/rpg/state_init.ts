@@ -10,7 +10,7 @@ import {
 } from "./campaign_character_import.js";
 import type { RpgPack } from "./schema.js";
 
-export type InitRuntimeStateOptions = {
+type InitRuntimeStateOptions = {
   seed: number;
   start: string;
   varsInit?: Record<string, number> | undefined;

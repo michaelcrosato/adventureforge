@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildCampaignCharacterState,
-  createInitialCampaignCharacterState,
-} from "../../src/world/campaign_character_state.js";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import {
   OverworldQuestCampaignConditionalEffectsSchema,
   OverworldQuestCampaignExportSchema,
@@ -14,9 +11,8 @@ import {
   applyOverworldQuestCompletion,
   applyOverworldQuestStart,
   planOverworldQuestCompletion,
-  planOverworldQuestStart,
   questCompletionMinutes,
-  replayQuestCampaignConsequences,
+  type OverworldQuestStartPlan,
 } from "../../src/world/session_quests.js";
 
 function area(id: string, name = `${id} name`): OverworldArea {
@@ -85,92 +81,6 @@ function catalogedQuest(): OverworldQuest {
 }
 
 describe("overworld quest lifecycle planning", () => {
-  it("plans quest start entries without mutating lifecycle sets", () => {
-    const lead = quest();
-    const startedQuestIds = new Set<string>();
-
-    expect(
-      planOverworldQuestStart({
-        questId: lead.id,
-        questsById: new Map([[lead.id, lead]]),
-        areasById: new Map([[lead.area, area(lead.area, "Old Market")]]),
-        currentTownId: lead.home,
-        currentTownName: "Alden",
-        currentAreaId: lead.area,
-        discoveredQuestIds: new Set([lead.id]),
-        startedQuestIds,
-      }),
-    ).toEqual({
-      minutes: 0,
-      quest: {
-        id: lead.id,
-        title: lead.title,
-        home: lead.home,
-        area: lead.area,
-        discovery: lead.discovery,
-        visibility: lead.visibility,
-      },
-      entryDraft: {
-        id: `quest:${lead.id}`,
-        kind: "quest",
-        town: "Alden",
-        title: `Started ${lead.title}`,
-        text: `Lead: ${lead.discovery}`,
-      },
-    });
-    expect([...startedQuestIds]).toEqual([]);
-  });
-
-  it("rejects quest start attempts before the local lead is startable", () => {
-    const lead = quest();
-    const questsById = new Map([[lead.id, lead]]);
-    const areasById = new Map([[lead.area, area(lead.area, "Old Market")]]);
-    const startableState = {
-      questId: lead.id,
-      questsById,
-      areasById,
-      currentTownId: lead.home,
-      currentTownName: "Alden",
-      currentAreaId: lead.area,
-      discoveredQuestIds: new Set([lead.id]),
-      startedQuestIds: new Set<string>(),
-    };
-
-    expect(() => planOverworldQuestStart({ ...startableState, questId: "missing_quest" })).toThrow(
-      /not in this town/,
-    );
-    expect(() =>
-      planOverworldQuestStart({ ...startableState, discoveredQuestIds: new Set() }),
-    ).toThrow(/Discover that local quest lead/);
-    expect(() =>
-      planOverworldQuestStart({
-        ...startableState,
-        startedQuestIds: new Set([lead.id]),
-      }),
-    ).toThrow(/already active/);
-    expect(() =>
-      planOverworldQuestStart({ ...startableState, currentAreaId: "other_area" }),
-    ).toThrow(/Move to Old Market before starting/);
-  });
-
-  it("applies quest start into lifecycle state", () => {
-    const lead = quest();
-    const plan = planOverworldQuestStart({
-      questId: lead.id,
-      questsById: new Map([[lead.id, lead]]),
-      areasById: new Map([[lead.area, area(lead.area, "Old Market")]]),
-      currentTownId: lead.home,
-      currentTownName: "Alden",
-      currentAreaId: lead.area,
-      discoveredQuestIds: new Set([lead.id]),
-      startedQuestIds: new Set(),
-    });
-    const startedQuestIds = new Set<string>();
-
-    expect(applyOverworldQuestStart({ startedQuestIds }, plan)).toEqual({ questId: lead.id });
-    expect([...startedQuestIds]).toEqual([lead.id]);
-  });
-
   it("plans quest completion entries without mutating completion state", () => {
     const lead = quest("lost_letter", "market", "town_a");
     const startedQuestIds = new Set([lead.id]);
@@ -219,6 +129,15 @@ describe("overworld quest lifecycle planning", () => {
     });
     expect([...startedQuestIds]).toEqual([lead.id]);
     expect(minutes).toBe(140);
+  });
+
+  it("applies quest start into lifecycle state", () => {
+    const lead = quest();
+    const plan = { quest: { id: lead.id } } as OverworldQuestStartPlan;
+    const startedQuestIds = new Set<string>();
+
+    expect(applyOverworldQuestStart({ startedQuestIds }, plan)).toEqual({ questId: lead.id });
+    expect([...startedQuestIds]).toEqual([lead.id]);
   });
 
   it("applies quest completion into lifecycle state", () => {
@@ -367,70 +286,6 @@ describe("overworld quest lifecycle planning", () => {
         questOutcomeIds: new Map([[lead.id, state.outcome.endingId]]),
       }),
     ).not.toThrow();
-  });
-
-  it("selects reusable companion consequences and replays non-monotone effects chronologically", () => {
-    const departure: OverworldQuest = {
-      ...quest("departure"),
-      campaign_exports: [
-        {
-          ending_id: "ending_departed",
-          ending_title: "The Ally Departed",
-          effects: [],
-          conditional_effects: [
-            {
-              id: "test:ally_departure",
-              when: { requires_all_companions: ["npc:test_ally"] },
-              effects: [{ type: "remove_companion", npc_id: "npc:test_ally" }],
-            },
-          ],
-        },
-      ],
-    };
-    const reunion: OverworldQuest = {
-      ...quest("reunion"),
-      campaign_exports: [
-        {
-          ending_id: "ending_rejoined",
-          ending_title: "The Ally Rejoined",
-          effects: [{ type: "add_companion", npc_id: "npc:test_ally" }],
-        },
-      ],
-    };
-    const initial = buildCampaignCharacterState({ companions: ["npc:test_ally"] });
-    const questsById = new Map([
-      [departure.id, departure],
-      [reunion.id, reunion],
-    ]);
-    const outcomes = new Map([
-      [departure.id, "ending_departed"],
-      [reunion.id, "ending_rejoined"],
-    ]);
-
-    expect(
-      replayQuestCampaignConsequences({
-        character: initial,
-        questsById,
-        questOutcomeIds: outcomes,
-        questOutcomeOrder: [departure.id, reunion.id],
-      }).characterAfter.companions,
-    ).toEqual(["npc:test_ally"]);
-    expect(
-      replayQuestCampaignConsequences({
-        character: initial,
-        questsById,
-        questOutcomeIds: outcomes,
-        questOutcomeOrder: [reunion.id, departure.id],
-      }).characterAfter.companions,
-    ).toEqual([]);
-    expect(() =>
-      replayQuestCampaignConsequences({
-        character: initial,
-        questsById,
-        questOutcomeIds: outcomes,
-        questOutcomeOrder: [departure.id],
-      }),
-    ).toThrow(/every completed quest exactly once/i);
   });
 
   it("rejects empty, unconditional, or world-fact-only conditional effect groups", () => {

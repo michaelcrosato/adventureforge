@@ -1395,7 +1395,6 @@ export const READ_ONLY_TOOLS = new Set<string>([
   "generate_rpg_pack",
   "replay_trace",
   "inspect_trace",
-  "adapt_story",
   "apply_content_patch",
 ]);
 
@@ -2341,16 +2340,6 @@ tool(
     world_quest_id: z.string().optional().describe("World quest id."),
   },
   (a) => api.replay_trace(a),
-);
-
-tool(
-  "adapt_story",
-  "Run the offline demo authoring pipeline and return its report. Its canned author returns the same sample Lighthouse pack for any premise.",
-  {
-    premise: z.string().describe("Story premise (not used by the canned author)."),
-    include_pack: z.boolean().optional().describe("Echo the authored pack."),
-  },
-  (a) => api.adapt_story(a),
 );
 
 tool(

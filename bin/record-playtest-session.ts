@@ -161,7 +161,7 @@ function main(): void {
   //
   // The sidecar states it plainly (`play_mode: "structural"`, `evidence_status:
   // "not_applicable"`); the defect was only that this reader ignored it, while
-  // `src/blind/feedback_ledger.ts` has always applied the same rule. Skipping is not
+  // the retired feedback-ledger reader always applied the same rule. Skipping is not
   // discarding a playthrough — nothing played. Exits 0 so a wiring check driven through
   // playtest-loop.sh reports a clean skip instead of looking like a crash.
   if (parsedSidecar?.ok === true && parsedSidecar.sidecar.play_mode !== "pure") {

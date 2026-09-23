@@ -1772,7 +1772,7 @@ describe("Codex pure blind provider envelope", () => {
   it.each([
     [
       "a project-scoped header",
-      "# AGENTS.md instructions for C:\\dev\\zork-unlimited\n\n" +
+      "# AGENTS.md instructions for C:\\dev\\adventureforge\n\n" +
         "<INSTRUCTIONS>\n- Follow the project charter.\n</INSTRUCTIONS>",
     ],
     [

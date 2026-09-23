@@ -45,11 +45,11 @@ import {
 } from "./wolf_hill_route_presentation.js";
 import { compareCaseFoldedCodeUnits } from "./string_order.js";
 
-export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
-export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
+const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
+const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
 export const OVERWORLD_COMPACT_ROUTE_STEP_LIMIT = 12;
 export const OVERWORLD_COMPACT_MOVEMENT_LIMIT = 12;
-export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
+const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
 export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
 export const OVERWORLD_COMPACT_LOCAL_REF_LIMIT = 12;
 export const OVERWORLD_COMPACT_OPPORTUNITY_LEAD_LIMIT = 8;
@@ -91,7 +91,7 @@ export type OverworldCompactOpportunityLead = readonly [
   district: string,
   access: "here" | "mapped" | "route_unmapped",
 ];
-export type OverworldCompactEventSceneOption = readonly [
+type OverworldCompactEventSceneOption = readonly [
   optionId: string,
   title: string,
   minutes: number,
@@ -121,7 +121,7 @@ export type OverworldCompactJobLead = readonly [
   title: string,
   blockedReason: string,
 ];
-export type OverworldCompactJobSceneOption = readonly [
+type OverworldCompactJobSceneOption = readonly [
   optionId: string,
   title: string,
   minutes: number,
@@ -139,7 +139,7 @@ export type OverworldCompactJobScene = readonly [
   options: readonly OverworldCompactJobSceneOption[],
 ];
 export type OverworldCompactJobChoice = readonly [jobId: string, optionId: string];
-export type OverworldCompactQuestLaunchOption = readonly [
+type OverworldCompactQuestLaunchOption = readonly [
   id: string,
   title: string,
   minutes: number,
@@ -255,7 +255,7 @@ export type OverworldCompactTravelLogEntry = readonly [
   fatigueGained: number,
   roadEventId: string | null,
 ];
-export type OverworldCompactIdKey =
+type OverworldCompactIdKey =
   | "discovered_towns"
   | "discovered_areas"
   | "visited_areas"
@@ -268,7 +268,7 @@ export type OverworldCompactIdKey =
   | "completed_quests"
   | "resolved_events";
 
-export type OverworldCompactLocalRefKey =
+type OverworldCompactLocalRefKey =
   | "areas"
   | "poi"
   | "contacts"
@@ -303,13 +303,13 @@ const OVERWORLD_COMPACT_ID_KEYS: readonly OverworldCompactIdKey[] = [
   "resolved_events",
 ];
 
-export type OverworldCompactFullIdMap = Record<OverworldCompactIdKey, string[]>;
+type OverworldCompactFullIdMap = Record<OverworldCompactIdKey, string[]>;
 export type OverworldCompactIdMap = Partial<OverworldCompactFullIdMap>;
 export type OverworldCompactIdBucket = {
   ids: readonly string[];
   count: number;
 };
-export type OverworldCompactIdBuckets = Record<OverworldCompactIdKey, OverworldCompactIdBucket>;
+type OverworldCompactIdBuckets = Record<OverworldCompactIdKey, OverworldCompactIdBucket>;
 export type OverworldCompactIdCounts = readonly [
   discovered_towns: number,
   discovered_areas: number,
@@ -325,7 +325,7 @@ export type OverworldCompactIdCounts = readonly [
 ];
 export type OverworldCompactIdTruncation = OverworldCompactIdKey[];
 export type OverworldCompactLocalRefTruncation = OverworldCompactLocalRefKey[];
-export type OverworldCompactLocalRefCounts = Record<OverworldCompactLocalRefKey, number>;
+type OverworldCompactLocalRefCounts = Record<OverworldCompactLocalRefKey, number>;
 export type OverworldCompactIdPayload = {
   ids: OverworldCompactIdMap;
   id_counts: OverworldCompactIdCounts;
@@ -584,18 +584,15 @@ export function compactOverworldRisk(value: string): string {
   return compactText(value, OVERWORLD_COMPACT_RISK_CHAR_LIMIT);
 }
 
-export function compactOverworldRef(value: { id: string; name: string }): OverworldCompactRef {
+function compactOverworldRef(value: { id: string; name: string }): OverworldCompactRef {
   return [value.id, compactOverworldLabel(value.name)];
 }
 
-export function compactOverworldTitleRef(value: {
-  id: string;
-  title: string;
-}): OverworldCompactRef {
+function compactOverworldTitleRef(value: { id: string; title: string }): OverworldCompactRef {
   return [value.id, compactOverworldTitle(value.title)];
 }
 
-export function compactOverworldJobLeadRef(value: {
+function compactOverworldJobLeadRef(value: {
   id: string;
   title: string;
   area: string;
@@ -756,7 +753,7 @@ export function compactOverworldEventScenes(
   return scenes;
 }
 
-export type CompactOverworldBlockedEventLeadContext = {
+type CompactOverworldBlockedEventLeadContext = {
   eventChoices: readonly OverworldCompactEventChoice[];
   gameplayActionsPaused: boolean;
   journalEntryIds: ReadonlySet<string>;
@@ -1165,7 +1162,7 @@ export function compactPendingRoad(
   };
 }
 
-export function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTravelLogEntry {
+function compactTravelLogEntry(entry: TravelLogEntry): OverworldCompactTravelLogEntry {
   return [
     entry.edgeId,
     entry.fromId,
@@ -1223,7 +1220,7 @@ function cloneCompactIdMap(ids: OverworldCompactIdMap): OverworldCompactIdMap {
   return clone;
 }
 
-export function compactIdPayload(values: OverworldCompactFullIdMap): OverworldCompactIdPayload {
+function compactIdPayload(values: OverworldCompactFullIdMap): OverworldCompactIdPayload {
   return compactIdPayloadFromBuckets({
     discovered_towns: {
       ids: values.discovered_towns,

@@ -144,6 +144,13 @@ const CASES: NegativeCase[] = [
     },
   },
   {
+    code: "ENEMY_DEATH_ENDING_UNDECLARED",
+    why: "an enemy's death_ending names an ending the pack never declares",
+    mutate: (p) => {
+      firstEnemy(p).death_ending = "no_such_ending";
+    },
+  },
+  {
     code: "SKILL_CHECK_IMPOSSIBLE",
     why: "a skill check's difficulty exceeds d20 + the best reachable skill",
     mutate: (p) => {
@@ -262,8 +269,7 @@ describe("validateRpg finding-code coverage pin", () => {
    * witness elsewhere in the suite — the maneuver family in
    * tests/regression/rpg_enemy_maneuvers.test.ts, the combat bounds across
    * rpg_combat_guaranteed_optin / rpg_combat_winnability_semantics /
-   * dawn_beacon_guaranteed_gauntlet, ENEMY_DEATH_ENDING_UNDECLARED in
-   * rpg_authoring_loop.test.ts, and the pressure tracks in
+   * dawn_beacon_guaranteed_gauntlet, and the pressure tracks in
    * tests/unit/rpg_pressure_tracks.test.ts. The allowlist keeps the data-driven pin
    * honest without duplicating those already-strong probes, and the checks below stop
    * it from becoming a place to park an unwitnessed code. Sorted, to compare against
@@ -277,7 +283,6 @@ describe("validateRpg finding-code coverage pin", () => {
     "DUPLICATE_MANEUVER_COMMAND",
     "DUPLICATE_MANEUVER_ID",
     "DUPLICATE_MANEUVER_RESULT_FLAG",
-    "ENEMY_DEATH_ENDING_UNDECLARED",
     "MANEUVER_ACTION_ID_COLLISION",
     "MANEUVER_AFTER_CYCLE",
     "MANEUVER_AFTER_MISSING",

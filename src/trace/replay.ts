@@ -27,7 +27,7 @@ import {
   type TraceStepHashFields,
 } from "./integrity.js";
 
-export type ReplayResult = {
+type ReplayResult = {
   ok: boolean;
   finalHash: string;
   expectedFinalHash?: string;

@@ -25,7 +25,7 @@ export type PreparedQuest = {
   sourceRef: [string, string] | null;
 };
 
-export type PrepareOptions = {
+type PrepareOptions = {
   /** Verification seam: wrap the compiled rules (e.g. to plant a resolver fault). */
   wrapRules?: (rules: Rules<RpgAction>) => Rules<RpgAction>;
 };

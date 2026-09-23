@@ -158,17 +158,13 @@ export const CampaignConsequenceEffectSchema = z
     if (effect.type === "treat_wound") assertTreatmentAdvances(effect, ctx);
   });
 
-export type AddCompanionConsequence = z.infer<typeof AddCompanionConsequenceSchema>;
-export type AffirmValueConsequence = z.infer<typeof AffirmValueConsequenceSchema>;
-export type LearnKnowledgeConsequence = z.infer<typeof LearnKnowledgeConsequenceSchema>;
-export type RaiseFactionStandingConsequence = z.infer<typeof RaiseFactionStandingConsequenceSchema>;
-export type RecordPromiseConsequence = z.infer<typeof RecordPromiseConsequenceSchema>;
-export type RememberRelationshipConsequence = z.infer<typeof RememberRelationshipConsequenceSchema>;
-export type RemoveCompanionConsequence = z.infer<typeof RemoveCompanionConsequenceSchema>;
-export type ResolvePromiseConsequence = z.infer<typeof ResolvePromiseConsequenceSchema>;
-export type SetWorldFactConsequence = z.infer<typeof SetWorldFactConsequenceSchema>;
-export type SufferWoundConsequence = z.infer<typeof SufferWoundConsequenceSchema>;
-export type TreatWoundConsequence = z.infer<typeof TreatWoundConsequenceSchema>;
+type AffirmValueConsequence = z.infer<typeof AffirmValueConsequenceSchema>;
+type RaiseFactionStandingConsequence = z.infer<typeof RaiseFactionStandingConsequenceSchema>;
+type RecordPromiseConsequence = z.infer<typeof RecordPromiseConsequenceSchema>;
+type RememberRelationshipConsequence = z.infer<typeof RememberRelationshipConsequenceSchema>;
+type ResolvePromiseConsequence = z.infer<typeof ResolvePromiseConsequenceSchema>;
+type SufferWoundConsequence = z.infer<typeof SufferWoundConsequenceSchema>;
+type TreatWoundConsequence = z.infer<typeof TreatWoundConsequenceSchema>;
 export type CampaignConsequenceEffect = z.infer<typeof CampaignConsequenceEffectSchema>;
 
 export const CampaignCharacterConditionIdsSchema = z
@@ -188,7 +184,7 @@ export const CampaignCharacterConditionIdsSchema = z
     });
   });
 
-export const CampaignPromiseConditionSchema = z
+const CampaignPromiseConditionSchema = z
   .object({
     promise_id: CampaignCharacterIdSchema,
     status: CampaignPromiseStatusSchema,
@@ -212,14 +208,14 @@ export const CampaignPromiseConditionsSchema = z
     });
   });
 
-export const CampaignRelationshipMemoryConditionSchema = z
+const CampaignRelationshipMemoryConditionSchema = z
   .object({
     npc_id: CampaignCharacterIdSchema,
     memory_id: CampaignCharacterIdSchema,
   })
   .strict();
 
-export const CampaignRelationshipMemoryConditionsSchema = z
+const CampaignRelationshipMemoryConditionsSchema = z
   .array(CampaignRelationshipMemoryConditionSchema)
   .min(1)
   .superRefine((memories, ctx) => {
@@ -237,14 +233,14 @@ export const CampaignRelationshipMemoryConditionsSchema = z
     });
   });
 
-export const CampaignWoundConditionSchema = z
+const CampaignWoundConditionSchema = z
   .object({
     wound_id: CampaignCharacterIdSchema,
     treatment: CampaignWoundTreatmentSchema,
   })
   .strict();
 
-export const CampaignWoundConditionsSchema = z
+const CampaignWoundConditionsSchema = z
   .array(CampaignWoundConditionSchema)
   .min(1)
   .superRefine((wounds, ctx) => {
@@ -265,7 +261,7 @@ export const CampaignWoundConditionsSchema = z
     });
   });
 
-export const CampaignForbiddenWoundConditionsSchema = z
+const CampaignForbiddenWoundConditionsSchema = z
   .array(CampaignWoundConditionSchema)
   .min(1)
   .superRefine((wounds, ctx) => {
@@ -532,7 +528,7 @@ export const CampaignConsequenceEffectsSchema = z
 
 export type CampaignConsequenceEffects = z.infer<typeof CampaignConsequenceEffectsSchema>;
 
-export type CampaignConsequenceApplication = {
+type CampaignConsequenceApplication = {
   characterAfter: CampaignCharacterState;
   worldFactIds: string[];
 };

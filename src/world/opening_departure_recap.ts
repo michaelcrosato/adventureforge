@@ -96,7 +96,7 @@ export type OpeningCompactDepartureRecapTerms = readonly [
   terms: readonly (readonly [slot: OpeningDepartureRecapSlot, activeFieldTerm: string])[],
 ];
 
-export type OpeningDepartureRecapInputs = Readonly<{
+type OpeningDepartureRecapInputs = Readonly<{
   world: OverworldManifest;
   journalEntries: readonly OverworldJournalEntry[];
 }>;

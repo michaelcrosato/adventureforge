@@ -34,7 +34,7 @@ import {
   type EmbeddedQuestCharacterContinuityField,
 } from "./embedded_quest_character_continuity_projection.js";
 
-export type RpgRuntimeCacheEntry = {
+type RpgRuntimeCacheEntry = {
   readonly index: RpgIndex;
   readonly rules: Rules<RpgAction>;
   readonly step: RpgStep;
@@ -80,14 +80,14 @@ type RpgOpeningViewOptions = RpgViewOptions & {
   include_world_intro?: boolean;
 };
 
-export type RpgSessionSource = {
+type RpgSessionSource = {
   worldQuestId?: string | null;
   overworldSessionId?: string | null;
   generatedRpgSeed?: number | null;
   embeddedCharacterContinuity?: EmbeddedQuestCharacterContinuity | null;
 };
 
-export type RpgSessionStartOptions = RpgSessionSource & {
+type RpgSessionStartOptions = RpgSessionSource & {
   hideGraph?: boolean;
   seed?: number;
   /** Replay trail of a restored embedded child; see `Session.embeddedActionIds`. */
@@ -110,7 +110,7 @@ export function rpgRoomTitle(index: RpgIndex, state: GameState): string {
   return index.rooms.get(state.current)?.name ?? state.current;
 }
 
-export function rpgStateTitle(index: RpgIndex, state: GameState): string {
+function rpgStateTitle(index: RpgIndex, state: GameState): string {
   if (state.ended && state.endingId) {
     return (
       index.pack.endings.find((ending) => ending.id === state.endingId)?.title ?? state.endingId

@@ -38,7 +38,7 @@ export function cloneOverworldQuestView(quest: OverworldQuestView): OverworldQue
   };
 }
 
-export function cloneOverworldPendingRoadEncounter(
+function cloneOverworldPendingRoadEncounter(
   encounter: OverworldPendingRoadEncounter,
 ): OverworldPendingRoadEncounter {
   return {

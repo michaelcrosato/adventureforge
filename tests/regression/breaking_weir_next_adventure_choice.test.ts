@@ -17,7 +17,7 @@ import {
   journeyCampaignGoalDefinition,
   type RomePostWeirDispatchChoiceId,
 } from "../../src/world/journey_campaign.js";
-import { planOverworldRoute } from "../../src/world/overworld.js";
+import { planOverworldRoute } from "./support/overworld_queries.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";

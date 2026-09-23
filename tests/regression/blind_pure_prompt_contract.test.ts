@@ -456,10 +456,5 @@ describe("pure blind prompt + runner contract", () => {
     expect(runner.match(/--require-issue-consistency/g)).toHaveLength(3);
     expect(runner).toContain('rm -f "$PRIVATE_RUN_SIDECAR"');
     expect(runner).toContain("PURE_PUBLICATION_COMPLETE=1");
-    for (const persona of ["breaker", "casual", "explorer", "lore-reader", "speedrunner"]) {
-      expect(
-        readFileSync(join(ROOT, "blind-tester", "personas", `${persona}.md`), "utf8"),
-      ).toContain("structural mock persona only");
-    }
   });
 });

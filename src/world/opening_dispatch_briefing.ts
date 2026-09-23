@@ -17,7 +17,7 @@ type OpeningDispatchStage = Readonly<{
   kind: NonNullable<JourneyStoryChoicePrompt["kind"]>;
 }>;
 
-export type OpeningDispatchManifestChain = Readonly<{
+type OpeningDispatchManifestChain = Readonly<{
   quest: OverworldManifest["quests"][number];
   registration: NonNullable<OverworldManifest["opening_registration"]>;
   reliefOath: NonNullable<OverworldManifest["opening_relief_oath"]>;

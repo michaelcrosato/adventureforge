@@ -25,7 +25,7 @@ import type { Rules } from "../core/engine.js";
 import type { EngineAction } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
 
-export type LegalActionCache<A extends EngineAction> = WeakMap<GameState, A[]>;
+type LegalActionCache<A extends EngineAction> = WeakMap<GameState, A[]>;
 
 export function newLegalActionCache<A extends EngineAction>(): LegalActionCache<A> {
   return new WeakMap<GameState, A[]>();

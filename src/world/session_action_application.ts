@@ -30,7 +30,7 @@ export type OverworldActionResult = {
   discoveredQuests?: OverworldQuestView[];
 };
 
-export type OverworldSessionLocalAction = OverworldLocalActionDescriptor<OverworldLocalActionKind>;
+type OverworldSessionLocalAction = OverworldLocalActionDescriptor<OverworldLocalActionKind>;
 
 export type OverworldSessionActionApplication = {
   result: OverworldActionResult;
@@ -47,7 +47,7 @@ export type OverworldSessionServiceApplication = {
   stateChanged: boolean;
 };
 
-export function applyOverworldSessionRecordedAction(
+function applyOverworldSessionRecordedAction(
   recorded: OverworldRecordedActionResult,
 ): OverworldSessionActionApplication {
   return {

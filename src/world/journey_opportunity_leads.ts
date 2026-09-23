@@ -10,7 +10,7 @@ import type { OverworldArea, OverworldLocalEvent, OverworldLocalJob } from "./ov
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import { compareCaseFoldedCodeUnits, compareCodeUnits } from "./string_order.js";
 
-export type JourneyOpportunityProjectionState = Readonly<{
+type JourneyOpportunityProjectionState = Readonly<{
   currentAreaId: string | null;
   areasById: ReadonlyMap<string, OverworldArea>;
   events: readonly OverworldLocalEvent[];

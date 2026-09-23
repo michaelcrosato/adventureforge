@@ -41,7 +41,7 @@ export type Trace<A extends EngineAction = RpgAction> = {
   per_step_hashes?: string[];
 };
 
-export type RunResult = {
+type RunResult = {
   finalState: GameState;
   steps: StepResult[];
   /** Per-step state hash AFTER each action (used for divergence detection). */

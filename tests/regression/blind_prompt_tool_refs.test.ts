@@ -35,14 +35,9 @@ function effectivePrompt(file: string): string {
 
 describe("blind prompts reference only registered adventureforge tools", () => {
   it("finds the blind prompt files", () => {
-    // At least the quest-mode, overworld core-game, and load-test prompts.
+    // At least the quest-mode and overworld core-game prompts.
     expect(promptFiles).toEqual(
-      expect.arrayContaining([
-        "prompt-loadtest.md",
-        "prompt-overworld-spark.md",
-        "prompt-overworld.md",
-        "prompt.md",
-      ]),
+      expect.arrayContaining(["prompt-overworld-spark.md", "prompt-overworld.md", "prompt.md"]),
     );
   });
 

@@ -41,7 +41,7 @@ import {
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
   TANNERS_FEVER_ACCOUNTABILITY_ID,
 } from "../../src/world/journey_campaign.js";
-import { planOverworldRoute } from "../../src/world/overworld.js";
+import { planOverworldRoute } from "../regression/support/overworld_queries.js";
 import {
   INSPECT_OVERWORLD_SESSION_STORY_TOOL,
   OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,

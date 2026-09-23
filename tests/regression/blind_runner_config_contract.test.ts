@@ -2154,7 +2154,6 @@ exit 93
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const prompt = readFileSync(join(process.cwd(), "blind-tester", "prompt.md"), "utf8");
     const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");
-    const mcpHarness = readFileSync(join(process.cwd(), "scripts", "mcp_play.ts"), "utf8");
 
     // The smoke's quest leg keeps a fallback id, but the real-run default is
     // the overworld — no quest id is baked into the run itself.
@@ -2192,15 +2191,6 @@ exit 93
     expect(smoke).not.toContain('"new_game"');
     expect(smoke).not.toContain("pack_path");
     expect(smoke).not.toContain('"start_game"');
-    expect(mcpHarness).toContain("<world_quest_id>");
-    expect(mcpHarness).toContain('"start_world_quest"');
-    expect(mcpHarness).toContain("world_quest_id: questId");
-    expect(mcpHarness).toContain("compact_observation: true");
-    expect(mcpHarness).toContain("compact_events: true");
-    expect(mcpHarness).toContain("context: RpgCompactObservation");
-    expect(mcpHarness).not.toContain("observation: Obs");
-    expect(mcpHarness).not.toContain('"new_game"');
-    expect(mcpHarness).not.toContain("pack_path");
   });
 
   it("asks for replay intent without prefilling a boolean answer", () => {

@@ -30,7 +30,7 @@ import {
 import { PureRunBuildSchema } from "../blind/run_evidence.js";
 import { PlaytestIsolationSchema, PlaytestTierSchema } from "../blind/providers.js";
 
-export const PLAYTEST_SESSION_SCHEMA_VERSION = 1 as const;
+const PLAYTEST_SESSION_SCHEMA_VERSION = 1 as const;
 
 const SHA256 = z.string().regex(/^[0-9a-f]{64}$/);
 
@@ -82,7 +82,7 @@ const PlaytestTranscriptFilenameSchema = z
  * saying `persona: "cynical_veteran"` is uninterpretable: you cannot tell whether it
  * ran the persona you can read today. With it, drift is detectable.
  */
-export const PlaytestPersonaSchema = z
+const PlaytestPersonaSchema = z
   .object({
     id: z.string().min(1),
     /** Human-readable role, e.g. "20-year cynical gaming veteran". */
@@ -90,9 +90,8 @@ export const PlaytestPersonaSchema = z
     source_sha256: SHA256,
   })
   .strict();
-export type PlaytestPersona = z.infer<typeof PlaytestPersonaSchema>;
 
-export const PlaytestProviderStampSchema = z
+const PlaytestProviderStampSchema = z
   .object({
     id: z.string().min(1),
     vendor: z.string().min(1),
@@ -138,9 +137,8 @@ export const PlaytestProviderStampSchema = z
       });
     }
   });
-export type PlaytestProviderStamp = z.infer<typeof PlaytestProviderStampSchema>;
 
-export const PlaytestModelStampSchema = z
+const PlaytestModelStampSchema = z
   .object({
     id: z.string().min(1),
     tier: PlaytestTierSchema,
@@ -148,7 +146,6 @@ export const PlaytestModelStampSchema = z
     settings: z.record(z.union([z.string(), z.number(), z.boolean()])).default({}),
   })
   .strict();
-export type PlaytestModelStamp = z.infer<typeof PlaytestModelStampSchema>;
 
 /**
  * The playthrough log.
@@ -158,7 +155,7 @@ export type PlaytestModelStamp = z.infer<typeof PlaytestModelStampSchema>;
  * scan when the triage pass only needs the header. The hash keeps them bound — a
  * record whose transcript has been edited or truncated no longer verifies.
  */
-export const PlaytestLogSchema = z
+const PlaytestLogSchema = z
   .object({
     /** Game tool calls the player made. */
     turns: z.number().int().nonnegative(),
@@ -172,7 +169,6 @@ export const PlaytestLogSchema = z
     transcript_bytes: z.number().int().nonnegative(),
   })
   .strict();
-export type PlaytestLog = z.infer<typeof PlaytestLogSchema>;
 
 /**
  * The body's field set, kept as a bare strict object so the sealed record can EXTEND
@@ -253,11 +249,10 @@ function refinePlaytestSessionBody(
   }
 }
 
-export const PlaytestSessionBodySchema =
-  PlaytestSessionBodyObject.superRefine(refinePlaytestSessionBody);
+const PlaytestSessionBodySchema = PlaytestSessionBodyObject.superRefine(refinePlaytestSessionBody);
 export type PlaytestSessionBody = z.infer<typeof PlaytestSessionBodyObject>;
 
-export const PlaytestSessionRecordSchema = PlaytestSessionBodyObject.extend({
+const PlaytestSessionRecordSchema = PlaytestSessionBodyObject.extend({
   record_id: SHA256,
 }).superRefine(refinePlaytestSessionBody);
 export type PlaytestSessionRecord = PlaytestSessionBody & { record_id: string };
@@ -267,7 +262,7 @@ export type PlaytestSessionRecord = PlaytestSessionBody & { record_id: string };
  * function of the session's content and recomputing it is a verification, not a
  * restatement.
  */
-export function playtestRecordId(body: PlaytestSessionBody): string {
+function playtestRecordId(body: PlaytestSessionBody): string {
   return hashState(body);
 }
 

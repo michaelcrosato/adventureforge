@@ -28,7 +28,7 @@ const ROUTE_SUMMARY_MARKERS = Object.freeze([
   ROUTE_SUMMARIES.shelteredStockway,
 ]);
 
-export type WolfHillRouteTradeoffParts = Readonly<{
+type WolfHillRouteTradeoffParts = Readonly<{
   dispatchStatus: string | null;
   routeSummary: string;
 }>;
@@ -54,7 +54,7 @@ export function sharedWolfHillRouteDispatchStatus(summaries: readonly string[]):
   return first;
 }
 
-export type WolfHillRoutePresentation = Readonly<{
+type WolfHillRoutePresentation = Readonly<{
   tradeoffSummary: string;
 }>;
 

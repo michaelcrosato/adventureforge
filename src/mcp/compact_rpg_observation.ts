@@ -160,7 +160,7 @@ export const RPG_COMPACT_LEGEND = {
 
 export type RpgCompactLegend = typeof RPG_COMPACT_LEGEND;
 
-export type CompactRpgObservationOptions = {
+type CompactRpgObservationOptions = {
   includeActions?: boolean;
   includeVersion?: boolean;
 };

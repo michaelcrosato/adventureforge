@@ -692,7 +692,7 @@ function rpgRuntimeEffects(pack: RpgPack): Effect[] {
   ];
 }
 
-export type ValidateRpgOptions = {
+type ValidateRpgOptions = {
   /** Flags a trusted higher-level boundary can set before the first RPG turn. */
   extraSettableFlags?: readonly string[];
   /** Pack-local objects a trusted higher-level boundary can place in starting inventory. */

@@ -8,20 +8,6 @@ import { parseRunEvidenceJsonl, PureRunBuildSchema } from "./run_evidence.js";
 
 const ModelUsageSchema = z.record(z.unknown());
 
-const PrimaryClaudeEnvelopeSchema = z
-  .object({
-    type: z.literal("result"),
-    subtype: z.literal("success"),
-    is_error: z.literal(false),
-    session_id: z.string().uuid(),
-    result: z.string(),
-    stop_reason: z.literal("end_turn"),
-    terminal_reason: z.literal("completed"),
-    permission_denials: z.array(z.unknown()).length(0),
-    modelUsage: ModelUsageSchema,
-  })
-  .passthrough();
-
 const RecoveryClaudeEnvelopeSchema = z
   .object({
     type: z.literal("result"),
@@ -59,31 +45,6 @@ export const PureReportRecoveryMetadataSchema = z
 
 export type PureReportRecoveryMetadata = z.infer<typeof PureReportRecoveryMetadataSchema>;
 
-export interface PureReportRecoveryInput {
-  playMode: string;
-  agentExitStatus: number;
-  verifierExitStatus: number;
-  attempt: number;
-  requestedModel: string;
-  expectedRunSeed: number;
-  expectedGitCommit: string;
-  expectedTrackedWorktreeClean: boolean;
-  claudeEnvelopeBytes: Uint8Array;
-  runEvidenceBytes: Uint8Array;
-  reportBytes: Uint8Array;
-}
-
-export type PureReportRecoveryDecision =
-  | {
-      ok: true;
-      metadata: PureReportRecoveryMetadata;
-      prompt: string;
-    }
-  | {
-      ok: false;
-      reason: string;
-    };
-
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -110,176 +71,6 @@ function singletonModelUsageKey(
         ok: false,
         reason: `Claude modelUsage must contain exactly one model (found ${keys.length})`,
       };
-}
-
-function modelMatchesRequest(actual: string, requested: string): boolean {
-  const normalized = requested.toLowerCase();
-  if (["haiku", "sonnet", "opus"].includes(normalized)) {
-    return actual.toLowerCase().split("-").includes(normalized);
-  }
-  return actual === requested;
-}
-
-function parsePrimaryEnvelope(
-  text: string,
-  requestedModel: string,
-):
-  | {
-      ok: true;
-      envelope: z.infer<typeof PrimaryClaudeEnvelopeSchema>;
-      modelUsageKey: string;
-    }
-  | { ok: false; reason: string } {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    return { ok: false, reason: "primary Claude result envelope is not valid JSON" };
-  }
-  const parsed = PrimaryClaudeEnvelopeSchema.safeParse(raw);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    return {
-      ok: false,
-      reason: `primary Claude envelope is not a completed resumable turn: ${issue?.path.join(".") ?? "?"} — ${issue?.message ?? "schema mismatch"}`,
-    };
-  }
-  const model = singletonModelUsageKey(parsed.data.modelUsage);
-  if (!model.ok) return model;
-  if (!modelMatchesRequest(model.key, requestedModel)) {
-    return {
-      ok: false,
-      reason: `primary Claude model ${model.key} does not match requested model ${requestedModel}`,
-    };
-  }
-  return { ok: true, envelope: parsed.data, modelUsageKey: model.key };
-}
-
-function uniqueProseRating(
-  report: string,
-  label: "clarity" | "enjoyment",
-): { ok: true; value: number } | { ok: false; reason: string } {
-  const values = new Set<number>();
-  const patterns = [
-    new RegExp(`\\b${label}\\b[^\\r\\n.;]{0,80}?\\b([1-5])\\s*(?:\\/\\s*5)?\\b`, "gi"),
-    new RegExp(`\\b([1-5])\\s*\\/\\s*5\\b[^\\r\\n.;]{0,40}?\\b${label}\\b`, "gi"),
-  ];
-  for (const pattern of patterns) {
-    for (const match of report.matchAll(pattern)) values.add(Number(match[1]));
-  }
-  if (values.size !== 1) {
-    return {
-      ok: false,
-      reason: `report recovery requires exactly one unambiguous ${label} rating (found ${values.size})`,
-    };
-  }
-  return { ok: true, value: [...values][0]! };
-}
-
-export function isRecoverableBlindReportReason(reason: string): boolean {
-  return reason === "missing exit interview (a ```json exit-interview fenced block is mandatory)";
-}
-
-function recoveryPrompt(ratings: z.infer<typeof RatingSchema>): string {
-  return `REPORT-ONLY RECOVERY
-
-The gameplay journey in this same conversation has already ended. Runner-owned private evidence authenticated its exit, but your final Markdown omitted the mandatory structured exit interview.
-
-Do not call any tool. Do not continue, replay, revise, or invent gameplay. Return only one JSON object containing the subjective exit-interview fields listed below. Do not return Markdown and do not include journey_exit_receipt; the runner owns and injects the authenticated receipt. Extract these values faithfully from the report and gameplay already in this conversation.
-
-The report's unique prose ratings are binding: clarity must be ${ratings.clarity} and enjoyment must be ${ratings.enjoyment}.
-
-Required fields: clarity, enjoyment, goal_understood, got_stuck, confusions, bugs, best_moment, worst_moment, would_replay, verdict. Each bug must contain exactly where, severity (S0-S4), and note. Every severity-tagged finding anywhere in the original report prose must be covered by a bugs entry with the same severity and recognizable place or concern identity. Distinct concerns need distinct entries; repeated mentions of the same concern share one entry.
-`;
-}
-
-/** Authorize one narrowly scoped structured-interview repair. */
-export function preparePureReportRecovery(
-  input: PureReportRecoveryInput,
-): PureReportRecoveryDecision {
-  if (input.playMode !== "pure") {
-    return { ok: false, reason: "report recovery is available only for pure live runs" };
-  }
-  if (input.agentExitStatus !== 0) {
-    return {
-      ok: false,
-      reason: `report recovery requires a normally exited Claude run (exit ${input.agentExitStatus})`,
-    };
-  }
-  if (input.verifierExitStatus === 0) {
-    return { ok: false, reason: "report recovery requires an initial verifier failure" };
-  }
-  if (input.attempt !== 0) {
-    return { ok: false, reason: "only one report recovery attempt is permitted" };
-  }
-
-  const envelopeText = exactUtf8(input.claudeEnvelopeBytes, "primary Claude envelope");
-  if (!envelopeText.ok) return envelopeText;
-  const runEvidenceText = exactUtf8(input.runEvidenceBytes, "run evidence");
-  if (!runEvidenceText.ok) return runEvidenceText;
-  const reportText = exactUtf8(input.reportBytes, "original report");
-  if (!reportText.ok) return reportText;
-
-  const evidence = parseRunEvidenceJsonl(runEvidenceText.text);
-  if (!evidence.ok) {
-    return { ok: false, reason: `run evidence is not recovery-eligible: ${evidence.reason}` };
-  }
-  if (evidence.sidecar.schema_version !== 2) {
-    return { ok: false, reason: "report recovery requires current v2 run evidence" };
-  }
-  if (evidence.sidecar.run_seed !== input.expectedRunSeed) {
-    return { ok: false, reason: "run evidence seed does not match the runner launch" };
-  }
-  if (evidence.sidecar.build.git_commit !== input.expectedGitCommit) {
-    return { ok: false, reason: "run evidence commit does not match the runner launch" };
-  }
-  if (evidence.sidecar.build.tracked_worktree_clean !== input.expectedTrackedWorktreeClean) {
-    return { ok: false, reason: "run evidence cleanliness does not match the runner launch" };
-  }
-
-  const verification = verifyBlindReportText(reportText.text, {
-    requiredPlayMode: "pure",
-    runEvidenceText: runEvidenceText.text,
-  });
-  if (verification.ok) {
-    return { ok: false, reason: "the original report passes verification" };
-  }
-  if (!isRecoverableBlindReportReason(verification.reason)) {
-    return {
-      ok: false,
-      reason: `verifier failure is not the recoverable missing-interview case: ${verification.reason}`,
-    };
-  }
-
-  const clarity = uniqueProseRating(reportText.text, "clarity");
-  if (!clarity.ok) return clarity;
-  const enjoyment = uniqueProseRating(reportText.text, "enjoyment");
-  if (!enjoyment.ok) return enjoyment;
-
-  const envelope = parsePrimaryEnvelope(envelopeText.text, input.requestedModel);
-  if (!envelope.ok) return envelope;
-  if (envelope.envelope.result !== reportText.text) {
-    return { ok: false, reason: "primary envelope result does not exactly match report bytes" };
-  }
-
-  const ratings = { clarity: clarity.value, enjoyment: enjoyment.value };
-  return {
-    ok: true,
-    metadata: {
-      schema_version: 1,
-      recovery_count: 1,
-      claude_session_id: envelope.envelope.session_id,
-      requested_model: input.requestedModel,
-      model_usage_key: envelope.modelUsageKey,
-      run_seed: evidence.sidecar.run_seed,
-      build: evidence.sidecar.build,
-      ratings,
-      initial_report_sha256: sha256(input.reportBytes),
-      primary_envelope_sha256: sha256(input.claudeEnvelopeBytes),
-      run_evidence_sha256: sha256(input.runEvidenceBytes),
-    },
-    prompt: recoveryPrompt(ratings),
-  };
 }
 
 const SUBJECTIVE_KEYS = [
@@ -312,7 +103,7 @@ export function bytesMatchHash(bytes: Uint8Array, expectedSha256: string): boole
   return /^[0-9a-f]{64}$/.test(expectedSha256) && sha256(bytes) === expectedSha256;
 }
 
-export interface ExtractRecoveredReportInput {
+interface ExtractRecoveredReportInput {
   recoveryEnvelopeBytes: Uint8Array;
   primaryEnvelopeBytes: Uint8Array;
   originalReportBytes: Uint8Array;
@@ -320,9 +111,7 @@ export interface ExtractRecoveredReportInput {
   metadata: PureReportRecoveryMetadata;
 }
 
-export type RecoveryEnvelopeResult =
-  | { ok: true; reportBytes: Uint8Array }
-  | { ok: false; reason: string };
+type RecoveryEnvelopeResult = { ok: true; reportBytes: Uint8Array } | { ok: false; reason: string };
 
 /** Build a final report while preserving every original report byte as its prefix. */
 export function extractRecoveredReport(input: ExtractRecoveredReportInput): RecoveryEnvelopeResult {

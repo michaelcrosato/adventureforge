@@ -10,7 +10,7 @@ import {
   applyCampaignConsequences,
 } from "./campaign_consequences.js";
 
-export const OPENING_RELIEF_ALLOCATION_VERSION = 1 as const;
+const OPENING_RELIEF_ALLOCATION_VERSION = 1 as const;
 export const OPENING_RELIEF_ALLOCATION_OPTION_COUNT = 3 as const;
 
 const AUTHORED_TEXT = z
@@ -157,7 +157,7 @@ export type OpeningReliefAllocationTerms = z.infer<typeof OpeningReliefAllocatio
 export type OpeningReliefAllocationOption = z.infer<typeof OpeningReliefAllocationOptionSchema>;
 export type OpeningReliefAllocation = z.infer<typeof OpeningReliefAllocationSchema>;
 
-export type OpeningReliefAllocationApplication = Readonly<{
+type OpeningReliefAllocationApplication = Readonly<{
   characterAfter: CampaignCharacterState;
   option: OpeningReliefAllocationOption;
   terms: OpeningReliefAllocationTerms;

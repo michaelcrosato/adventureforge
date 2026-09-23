@@ -87,7 +87,7 @@ export function writeTickets(tickets: readonly QaTicket[], dir: string = DEFAULT
   }
 }
 
-export type BucketSummary = {
+type BucketSummary = {
   total: number;
   actionable: number;
   superseded: number;

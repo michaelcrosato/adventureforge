@@ -30,12 +30,12 @@ export function describeError(err: unknown): string {
 /** The finding fields a per-step oracle can produce, minus the base fields the
  *  caller's `FindingCollector` stamps on (seed/policy/commit/repro; severity
  *  defaults per-code when omitted). */
-export type OracleFindingInput = Omit<
+type OracleFindingInput = Omit<
   CrawlFinding,
   "seed" | "policy" | "commit" | "severity" | "repro"
 > & { severity?: CrawlSeverity };
 
-export type StepOracleParams = {
+type StepOracleParams = {
   prepared: PreparedQuest;
   step: (state: GameState, action: RpgAction) => StepResult;
   /** State BEFORE `action` is applied. */
@@ -51,7 +51,7 @@ export type StepOracleParams = {
   persistEvery: number;
 };
 
-export type StepOracleOutcome =
+type StepOracleOutcome =
   /** `step` itself threw (e.g. a planted resolver bomb) — state unchanged. */
   | { kind: "crashed"; findings: OracleFindingInput[] }
   /** `step` returned `ok:false` — state unchanged; the caller decides whether

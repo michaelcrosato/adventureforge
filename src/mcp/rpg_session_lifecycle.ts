@@ -17,7 +17,7 @@ import type { RpgSourceRuntime } from "./rpg_source_runtime.js";
 import type { SessionStore } from "./sessions.js";
 import { embeddedQuestCharacterContinuityField } from "./embedded_quest_character_continuity_projection.js";
 
-export type RpgNewGameToolArgs = {
+type RpgNewGameToolArgs = {
   generate_rpg_seed?: number;
   seed?: number;
   hide_graph?: boolean;
@@ -31,7 +31,7 @@ export type RpgStartWorldQuestToolArgs = {
   include_world_intro?: boolean;
 } & RpgViewOptions;
 
-export type RpgLoadGameToolArgs = {
+type RpgLoadGameToolArgs = {
   world_quest_id?: string;
   generate_rpg_seed?: number;
   save: string;

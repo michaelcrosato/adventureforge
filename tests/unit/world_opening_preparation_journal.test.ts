@@ -13,7 +13,6 @@ import {
   type OpeningPreparation,
 } from "../../src/world/opening_preparation.js";
 import {
-  allOpeningPreparationJournalDrafts,
   openingPreparationJournalEntry,
   openingPreparationJournalId,
   openingPreparationOfferJournalDraft,
@@ -260,25 +259,13 @@ describe("opening preparation journal proof", () => {
   it("creates canonical detached offer and paid-selection evidence", () => {
     const fixture = selectedFixture();
     const offer = openingPreparationOfferJournalDraft(fixture.scene);
-    const drafts = allOpeningPreparationJournalDrafts(fixture.scene, sourceCharacter());
-
     expect(offer).toEqual({
       id: "preparation_offer:albany:wolf_winter_preparation",
       kind: "preparation_offer",
       title: fixture.scene.title,
       text: fixture.scene.message,
     });
-    expect(drafts).toHaveLength(3);
-    expect(drafts[0]).toMatchObject({
-      id: openingPreparationJournalId(fixture.scene.id, "albany:prepare_civic_works"),
-      kind: "preparation",
-      title: "Prepared: Civic works survey",
-    });
-    expect(drafts[0]!.text).toContain(
-      "Actual cost: 5 minutes and $1. Your sponsorship expedites the survey.",
-    );
     expect(Object.isFrozen(offer)).toBe(true);
-    expect(Object.isFrozen(drafts)).toBe(true);
     expect(Object.isFrozen(fixture.entries[0])).toBe(true);
     expect(Object.isFrozen(fixture.entries[0]!.storyChoiceBoundary)).toBe(true);
   });

@@ -1,9 +1,9 @@
 import type { GameEvent } from "../core/events.js";
 import type { RpgCompactEvent } from "./compact_rpg_event.js";
 
-export type McpEvent = GameEvent | RpgCompactEvent;
+type McpEvent = GameEvent | RpgCompactEvent;
 
-export function cloneEventValue<T>(value: T): T {
+function cloneEventValue<T>(value: T): T {
   if (Array.isArray(value)) return value.map(cloneEventValue) as T;
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(

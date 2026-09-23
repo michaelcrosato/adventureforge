@@ -36,7 +36,7 @@ export type OverworldSessionLocalView = {
   hiddenQuestCount: number;
 };
 
-export type OverworldSessionLocalViewState = {
+type OverworldSessionLocalViewState = {
   localAreas: readonly OverworldArea[];
   currentAreaId: string;
   localJobs: readonly OverworldLocalJob[];

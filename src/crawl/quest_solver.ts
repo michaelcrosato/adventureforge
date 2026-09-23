@@ -56,9 +56,9 @@ const SKIPPED_ACTION_TYPES: ReadonlySet<string> = new Set([
  *  NOT prove the quest unwinnable, only that no route using the unrestricted
  *  actions exists; the restriction may be hiding a path that needs one of the
  *  skipped actions. */
-export type SolveToEndingFailureReason = "capped" | "exhausted-restricted";
+type SolveToEndingFailureReason = "capped" | "exhausted-restricted";
 
-export type SolveToEndingSuccess = {
+type SolveToEndingSuccess = {
   ok: true;
   actions: RpgAction[];
   endingId: string;
@@ -66,14 +66,14 @@ export type SolveToEndingSuccess = {
   death: boolean;
 };
 
-export type SolveToEndingFailure = {
+type SolveToEndingFailure = {
   ok: false;
   reason: SolveToEndingFailureReason;
 };
 
-export type SolveToEndingResult = SolveToEndingSuccess | SolveToEndingFailure;
+type SolveToEndingResult = SolveToEndingSuccess | SolveToEndingFailure;
 
-export type SolveToEndingOptions = {
+type SolveToEndingOptions = {
   /**
    * Optional trusted initial state for an embedded overworld launch. Direct
    * quest QA omits this and retains the pack's exact baseline initialization.

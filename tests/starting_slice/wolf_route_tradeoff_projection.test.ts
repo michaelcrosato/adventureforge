@@ -1,14 +1,10 @@
 /**
  * The route card keeps dispatch timing and the road's actual arrival tradeoff
  * visible without forecasting a strategy outcome before Cade discloses the
- * independent ground condition. Full, compact, browser, CLI, and MCP surfaces
+ * independent ground condition. Full, compact, CLI, and MCP surfaces
  * share that neutral projection and preserve the authored preview exactly.
  */
-import { createRequire } from "node:module";
-import { resolve } from "node:path";
-
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createServer, type ViteDevServer } from "vite";
+import { describe, expect, it } from "vitest";
 
 import { renderQuestLaunch } from "../../bin/overworld_play.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -401,43 +397,8 @@ function playForecastedCleanLure(
 }
 
 describe("Wolf-Winter conditional route tradeoff projection", () => {
-  let server: ViteDevServer;
-  let renderQuestNotice: (quest: OverworldQuestView) => string;
-
-  beforeAll(async () => {
-    const uiRoot = resolve(ROOT, "ui");
-    server = await createServer({
-      root: uiRoot,
-      configFile: resolve(uiRoot, "vite.config.ts"),
-      appType: "custom",
-      logLevel: "silent",
-      optimizeDeps: { noDiscovery: true },
-      server: { middlewareMode: true },
-    });
-    const module = (await server.ssrLoadModule("/src/App.tsx")) as { QuestNotice: unknown };
-    const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
-    const react = requireFromUi("react") as {
-      createElement: (type: unknown, props: Record<string, unknown>) => unknown;
-    };
-    const reactDomServer = requireFromUi("react-dom/server") as {
-      renderToStaticMarkup: (element: unknown) => string;
-    };
-    renderQuestNotice = (quest) =>
-      reactDomServer.renderToStaticMarkup(
-        react.createElement(module.QuestNotice, {
-          quest,
-          areaName: "Station Quarter",
-          onStart: () => undefined,
-        }),
-      );
-  }, 30_000);
-
-  afterAll(async () => {
-    await server.close();
-  });
-
   it.each(ROUTE_CARD_CASES)(
-    "keeps decisive full, compact, UI, and CLI terms exact $label",
+    "keeps decisive full, compact, and CLI terms exact $label",
     ({ oathId, reliefId, expected }) => {
       const { session, quest } = routeCard(oathId, reliefId);
       const briefing = dispatchBriefing(session);
@@ -480,13 +441,6 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         expect(summary.length).toBeLessThanOrEqual(WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT);
       }
 
-      const markup = renderQuestNotice(quest);
-      const normalizedMarkup = markup.replaceAll("&#x27;", "'");
-      expect(markup.match(/Tradeoff:/g)).toHaveLength(2);
-      expect(markup).toContain(expectedRidgeSummary);
-      expect(markup).toContain(expectedStockwaySummary);
-      expect(markup).not.toContain("...");
-
       const cli = renderQuestLaunch(quest);
       expect(cli.match(/Tradeoff:/g)).toHaveLength(2);
       expect(cli).toContain(expectedRidgeSummary);
@@ -506,11 +460,11 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       expect(mcpRidgePreview).toBe(AUTHORED_ROUTE_PREVIEWS[RIDGE_ID]);
       expect(stockwayPreview).toBe(AUTHORED_ROUTE_PREVIEWS[STOCKWAY_ID]);
       expect(mcpStockwayPreview).toBe(AUTHORED_ROUTE_PREVIEWS[STOCKWAY_ID]);
-      for (const surface of [ridgePreview, mcpRidgePreview, normalizedMarkup, cli]) {
+      for (const surface of [ridgePreview, mcpRidgePreview, cli]) {
         expect(surface).toContain(ROUTE_INDEPENDENCE_PREVIEW);
       }
       expect(compactPreview(session, RIDGE_ID)).toBeNull();
-      for (const surface of [stockwayPreview, mcpStockwayPreview, normalizedMarkup, cli]) {
+      for (const surface of [stockwayPreview, mcpStockwayPreview, cli]) {
         expect(surface).toContain(ROUTE_INDEPENDENCE_PREVIEW);
       }
       expect(compactPreview(session, STOCKWAY_ID)).toBeNull();
@@ -521,7 +475,6 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         stockwayPreview,
         mcpRidgePreview,
         mcpStockwayPreview,
-        normalizedMarkup,
         cli,
       ]) {
         expect(surface).not.toMatch(
@@ -531,7 +484,6 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       expect(full[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
       expect(compact[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
       expect(fullSummaries(mcpQuest)[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
-      expect(markup).toContain(RIDGE_ENTRY_TIMING);
       expect(cli).toContain(RIDGE_ENTRY_TIMING);
 
       const ridgeRuntime = playForecastedCleanLure(session, RIDGE_ID);
@@ -681,9 +633,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       applied_flag: "dispatch_opening_delayed",
     });
 
-    const markup = renderQuestNotice(quest);
     const cli = renderQuestLaunch(quest);
-    expect(markup.split(expectedBriefing)).toHaveLength(3);
     expect(cli.split(expectedBriefing)).toHaveLength(3);
   });
 
@@ -783,9 +733,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       }
     }
 
-    const pendingMarkup = renderQuestNotice(pendingQuest);
     const pendingCli = renderQuestLaunch(pendingQuest);
-    expect(pendingMarkup.match(/Start Wolf-Winter to skip it\./g)).toHaveLength(2);
     expect(pendingCli.split(pendingBriefing)).toHaveLength(3);
     const api = createToolApi({ root: ROOT });
     const restored = api.restore_overworld_session({

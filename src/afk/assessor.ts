@@ -65,7 +65,7 @@ export type Assessment = {
   top: ImprovementCandidate | null;
 };
 
-export type AssessmentFormatOptions = {
+type AssessmentFormatOptions = {
   /** Print every quest/candidate with full rationale. Default output is compact for loop handoff. */
   full?: boolean;
   /** Maximum ranked candidates to show in compact mode before summarizing routine rows. */
@@ -1072,10 +1072,3 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
 }
 
 /** Convenience used by tests/CLI; the CLI lives in bin/assess.ts. */
-export function isFile(p: string): boolean {
-  try {
-    return statSync(p).isFile();
-  } catch {
-    return false;
-  }
-}

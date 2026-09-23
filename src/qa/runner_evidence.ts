@@ -24,7 +24,7 @@ type RunnerEvidenceInput = {
   evidenceText: string | null;
 };
 
-export type RecordedRunnerEvidence =
+type RecordedRunnerEvidence =
   | { ok: true; clientEvidence: Record<string, string> }
   | { ok: false; reason: string };
 

@@ -121,7 +121,7 @@ export type OverworldView = {
   log: TravelLogEntry[];
 };
 
-export type OverworldSessionViewState = {
+type OverworldSessionViewState = {
   character: CampaignCharacterView;
   worldName: string;
   worldTownCount: number;

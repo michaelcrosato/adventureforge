@@ -19,7 +19,7 @@ import {
 } from "../world/campaign_character_state.js";
 import { HP_VAR, SCORE_VAR, type RpgPack } from "./schema.js";
 
-export const CAMPAIGN_CHARACTER_IMPORTS_VERSION = 1 as const;
+const CAMPAIGN_CHARACTER_IMPORTS_VERSION = 1 as const;
 
 const RuleId = CampaignCharacterIdSchema;
 
@@ -146,12 +146,12 @@ export const CampaignCharacterImportsSchema = z
 
 export type CampaignCharacterImports = z.infer<typeof CampaignCharacterImportsSchema>;
 
-export type CampaignCharacterImportVarRange = Readonly<{
+type CampaignCharacterImportVarRange = Readonly<{
   min: number;
   max: number;
 }>;
 
-export type CampaignCharacterImportPlayerStateContract = Readonly<{
+type CampaignCharacterImportPlayerStateContract = Readonly<{
   settableFlagIds: readonly string[];
   obtainableObjectIds: readonly string[];
   initialVarRanges: ReadonlyMap<string, CampaignCharacterImportVarRange>;
@@ -197,7 +197,7 @@ export type CampaignCharacterImportInput = {
   imports: CampaignCharacterImports;
 };
 
-export type CampaignCharacterImportTargetIssueCode =
+type CampaignCharacterImportTargetIssueCode =
   | "UNKNOWN_VAR"
   | "INVALID_HEALTH_TARGET"
   | "INVALID_SKILL_TARGET"
@@ -206,7 +206,7 @@ export type CampaignCharacterImportTargetIssueCode =
   | "UNKNOWN_OBJECT"
   | "INVALID_INVENTORY_TARGET";
 
-export type CampaignCharacterImportTargetIssue = {
+type CampaignCharacterImportTargetIssue = {
   code: CampaignCharacterImportTargetIssueCode;
   ruleId: string;
   path: (string | number)[];
@@ -490,7 +490,7 @@ function plannedEffect(
     : null;
 }
 
-export type CampaignCharacterImportProjection = {
+type CampaignCharacterImportProjection = {
   state: GameState;
   receipt: CampaignImportReceipt | null;
 };

@@ -51,16 +51,16 @@ export type TraceSourceArgs = {
   world_quest_id?: string;
 };
 
-export type SaveSourceArgs = {
+type SaveSourceArgs = {
   world_quest_id?: string;
   generate_rpg_seed?: number;
 };
 
-export type GameSourceArgs = {
+type GameSourceArgs = {
   generate_rpg_seed?: number;
 };
 
-export type SaveWorldSource = {
+type SaveWorldSource = {
   worldQuestId?: unknown;
   generatedRpgSeed?: unknown;
   source_ref?: unknown;
@@ -80,8 +80,8 @@ export type GameSource =
       generateRpgSeed: number;
     };
 
-export type GeneratedGameSource = Extract<GameSource, { kind: "generated" }>;
-export type TraceGameSource = GameSource;
+type GeneratedGameSource = Extract<GameSource, { kind: "generated" }>;
+type TraceGameSource = GameSource;
 export type WorldQuestSourceArgs = {
   world_quest_id?: string;
 };
@@ -107,8 +107,8 @@ const overworldManifestCache = new Map<string, OverworldManifest>();
  * Forging a marker requires write access to `ai-runs/`, which already implies write
  * access to the world file itself.
  */
-export type OverworldIntegrityCacheMode = "use" | "refresh" | "off";
-export type OverworldIntegrityCacheKey = Readonly<{ world: string; code: string | null }>;
+type OverworldIntegrityCacheMode = "use" | "refresh" | "off";
+type OverworldIntegrityCacheKey = Readonly<{ world: string; code: string | null }>;
 export const WORLD_INTEGRITY_CACHE_ENV = "ADVENTUREFORGE_WORLD_INTEGRITY_CACHE";
 const WORLD_INTEGRITY_CACHE_DIR = ["ai-runs", "world-integrity"] as const;
 

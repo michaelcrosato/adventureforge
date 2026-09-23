@@ -48,7 +48,7 @@ export type TicketKind = z.infer<typeof TicketKindSchema>;
  * How much independent support the ticket has. This is the promotion ladder, and only
  * the top two rungs are visible to the dev loop.
  */
-export const PromotionStateSchema = z.enum([
+const PromotionStateSchema = z.enum([
   /**
    * Confirmed by something that does not have an opinion — the deterministic crawler
    * reproduced it, or a maintainer did. One verified report outranks any amount of
@@ -67,18 +67,18 @@ export const PromotionStateSchema = z.enum([
    */
   "accumulating",
 ]);
-export type PromotionState = z.infer<typeof PromotionStateSchema>;
+type PromotionState = z.infer<typeof PromotionStateSchema>;
 
 /**
  * Workflow status, owned by whoever is acting on the ticket.
  *
  * `stale` is the state the split between the loops makes necessary. When playtests
  * floated free of the dev commit, findings acquired an age: a ticket last seen twelve
- * builds ago may describe something already fixed. Rather than delete it — nothing is
- * thrown away — it is marked stale and drops out of the dev loop's view until a fresh
- * report revives it.
+ * builds ago may describe something already fixed. It is marked stale and drops out of
+ * the dev loop's view until a fresh report revives it; a stale ticket nobody decided
+ * anything about later retires (`isRetireable`, qa/tickets/README.md "Retention").
  */
-export const TicketStatusSchema = z.enum([
+const TicketStatusSchema = z.enum([
   "open",
   "in_progress",
   "fixed",
@@ -86,7 +86,6 @@ export const TicketStatusSchema = z.enum([
   "wont_fix",
   "stale",
 ]);
-export type TicketStatus = z.infer<typeof TicketStatusSchema>;
 
 export const TicketEvidenceSchema = z
   .object({

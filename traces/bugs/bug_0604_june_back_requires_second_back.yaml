@@ -8,7 +8,7 @@ evidence:
   tested_commit: b7dd890e2edf65a9d127b26a0d0b52a3a2021587
   seed: 2026090504
   session_id: 5f7e4f70b182121cbbf36b01a791be411d8afb3023c971e192a240c082981fa4
-  published_record: "https://github.com/michaelcrosato/zork-unlimited/blob/026f5286c47b45906003fc459ae4bb7f51fad28f/20260905T085821Z__claude_code__claude-opus-5__5f7e4f70b182/session.json"
+  published_record: "https://github.com/michaelcrosato/adventureforge/blob/026f5286c47b45906003fc459ae4bb7f51fad28f/20260905T085821Z__claude_code__claude-opus-5__5f7e4f70b182/session.json"
   scope: "One reference-tier observation in the Claude lineage; not independent-vendor corroboration."
   deterministic_baseline: "Before the content fix, three updated navigation regressions failed and the other 28 tests passed."
 

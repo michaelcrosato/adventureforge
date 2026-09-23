@@ -19,7 +19,6 @@
  * a loop that runs continuously.
  */
 import {
-  defaultPriority,
   DEFAULT_QUEUE_DIR,
   SUBMISSION_SCHEMA_VERSION,
   submissionId,
@@ -196,4 +195,3 @@ export function reconcileTicketSubmissions(
 }
 
 /** Kept for callers that want the default without a ticket in hand. */
-export const PLAYTEST_DEFAULT_PRIORITY = defaultPriority("playtest", "bug");

@@ -12,9 +12,8 @@
 # record at all, so a dev loop started second in the same checkout was unguarded
 # (bug_0634). One copy of these helpers is what keeps the two answering alike.
 #
-# scripts/loop-status.sh and scripts/loop-stop.sh still carry their own copies of
-# process_start_time: they are exercised as stand-alone script bodies in temporary roots
-# (tests/regression/loop_process_scripts.test.ts), where a relative source cannot resolve.
+# scripts/loop-status.sh and scripts/loop-stop.sh source it too, from their own directory
+# (or the working directory when a test feeds a script body on stdin).
 
 AFK_PROC_ROOT="${AFK_PROC_ROOT:-/proc}"
 

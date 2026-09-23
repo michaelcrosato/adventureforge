@@ -322,7 +322,7 @@ type OverworldJourneyStoryInspectionResponse<Args extends OverworldResponseOptio
 type JourneyChoice = Parameters<OverworldSession["chooseJourney"]>[0];
 type JourneyChoiceResult = ReturnType<OverworldSession["chooseJourney"]>;
 
-export type OverworldToolHandlerDeps = {
+type OverworldToolHandlerDeps = {
   sessions: SessionStore;
   rpgRuntime: RpgMcpSessionRuntime;
   overworldSessions: OverworldMcpSessionStore;

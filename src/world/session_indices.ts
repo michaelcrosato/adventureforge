@@ -31,7 +31,7 @@ import {
 import type { OverworldRoutePlannerIndex } from "./session_routes.js";
 import { compareCaseFoldedCodeUnits } from "./string_order.js";
 
-export type OverworldSessionIndexes = {
+type OverworldSessionIndexes = {
   nodes: Map<string, OverworldNode>;
   roadExitsByTown: Map<string, OverworldExit[]>;
   roadExitsByTownAndId: Map<string, Map<string, OverworldExit>>;

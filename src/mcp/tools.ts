@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import type { RpgAction } from "../api/types.js";
 import { assertRuntimeSeed, type GameState } from "../core/state.js";
-import { hashState } from "../core/hash.js";
+import {} from "../core/hash.js";
 
 import type { CompiledRpgSource } from "../rpg/source.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
@@ -77,13 +77,8 @@ import {
   resolveWorldQuestSourceId,
 } from "../world/source.js";
 import { loadWorldQuestReport, validateWorldQuestReport } from "./world_quest_reports.js";
-import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
-import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
 import { applyContentPatch, type ContentPatchProposal } from "../../agents/fixer.js";
-
-export type ToolApi = ReturnType<typeof createToolApi>;
 
 type RpgViewOptions = {
   compact_actions?: boolean;
@@ -289,11 +284,6 @@ type ApplyContentPatchArgs = {
   world_quest_id?: string;
   include_pack?: boolean;
   proposal: ContentPatchProposal;
-};
-
-type AdaptStoryArgs = {
-  premise: string;
-  include_pack?: boolean;
 };
 
 type InspectTraceStepSummary = {
@@ -771,32 +761,6 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
         { root, sessions, rpgRuntime, rpgSources },
         responseOptions,
       ) as RpgSessionPayload<DefaultCompactRpgView<Args>>;
-    },
-
-    async adapt_story(args: AdaptStoryArgs) {
-      // Run the writer → adapter → validator loop (§12.1–3) using the deterministic,
-      // keyless MockAuthorProvider — so it runs fully offline with no API keys. That
-      // provider is the ONLY one wired here and it answers from canned JSON: the premise
-      // reaches the writer prompt, but every premise yields the same Lighthouse pack, and
-      // the tool description says so rather than promising authoring "from a premise".
-      // Mirrors bin/author.ts. Returns compact story/validation proof by default;
-      // callers opt into echoing the full authored pack. Never writes files.
-      if ((args as { mode?: unknown }).mode !== undefined) {
-        throw new Error("adapt_story is RPG-only; mode is no longer supported.");
-      }
-      const provider = new MockAuthorProvider();
-      const contract = loadEngineContract();
-      const story = await runWriter(provider, { premise: args.premise, contract });
-      const result = await runRpgAdapter(provider, { story, contract });
-      return {
-        ok: result.ok,
-        rounds: result.rounds,
-        story: { title: story.title, beats: story.beats.map((b) => b.id) },
-        classifications: result.classifications,
-        ...(result.ok ? { content_hash: hashState(result.pack) } : {}),
-        ...(args.include_pack === true && result.ok ? { pack: result.pack } : {}),
-        report: result.report,
-      };
     },
 
     replay_trace(args: { trace_path: string; world_quest_id?: string }) {

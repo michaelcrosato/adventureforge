@@ -22,8 +22,8 @@ import type {
   OverworldJournalEntry,
 } from "./session_snapshot.js";
 
-export const OPENING_RELIEF_ALLOCATION_JOURNAL_PREFIX = "relief_allocation:" as const;
-export const OPENING_RELIEF_ALLOCATION_OFFER_JOURNAL_PREFIX = "relief_allocation_offer:" as const;
+const OPENING_RELIEF_ALLOCATION_JOURNAL_PREFIX = "relief_allocation:" as const;
+const OPENING_RELIEF_ALLOCATION_OFFER_JOURNAL_PREFIX = "relief_allocation_offer:" as const;
 
 export type OpeningReliefAllocationJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -60,7 +60,7 @@ export function openingReliefAllocationOfferJournalDraft(
   });
 }
 
-export function openingReliefAllocationJournalDraft(args: {
+function openingReliefAllocationJournalDraft(args: {
   scene: OpeningReliefAllocation;
   character: CampaignCharacterState;
   optionId: string;
@@ -76,22 +76,6 @@ export function openingReliefAllocationJournalDraft(args: {
       `Protects: ${applied.option.protects} Leaves exposed: ${applied.option.leaves_exposed} ` +
       `Actual cost: ${formatOpeningReliefAllocationCost(applied.terms)}. ${applied.option.consequence}`,
   });
-}
-
-export function allOpeningReliefAllocationJournalDrafts(
-  scene: OpeningReliefAllocation,
-  character: CampaignCharacterState,
-): readonly OpeningReliefAllocationJournalDraft[] {
-  const parsed = parseOpeningReliefAllocation(scene);
-  return Object.freeze(
-    parsed.options.map((option) =>
-      openingReliefAllocationJournalDraft({
-        scene: parsed,
-        character,
-        optionId: option.id,
-      }),
-    ),
-  );
 }
 
 function freezeBoundary(

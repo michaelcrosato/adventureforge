@@ -54,7 +54,7 @@ export const OVERWORLD_REST_UNAVAILABLE_MESSAGE =
   "Rest is unavailable here. This town has no inn or healer.";
 export const OVERWORLD_RESUPPLY_UNAVAILABLE_MESSAGE =
   "Resupply is unavailable here. This town has no market, inn, or stable.";
-export const OVERWORLD_CARE_UNAVAILABLE_MESSAGE =
+const OVERWORLD_CARE_UNAVAILABLE_MESSAGE =
   "Wound care is unavailable here. No active care offer matches your condition.";
 
 function campaignServiceRule(
@@ -72,7 +72,7 @@ function authoredServiceText(summary: string, consequence: string): string {
   return `${summary.trim()} ${consequence}`;
 }
 
-export type CampaignServiceJournalCopy = Readonly<{
+type CampaignServiceJournalCopy = Readonly<{
   title: string;
   text: string;
 }>;

@@ -41,7 +41,6 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
  * rename or removal readable in the failure diff.
  */
 const EXPECTED_TOOL_SURFACE = [
-  "adapt_story",
   "apply_content_patch",
   "care_overworld_session",
   "choose_overworld_session_journey",
@@ -775,14 +774,13 @@ describe("compact legends", () => {
    * not, and the same group count drifted again. Pin the surface itself, so adding
    * or removing a tool fails here and the diff names it.
    *
-   * If you are updating README.md's "**43 tools**, in four groups" breakdown, the
-   * measured split is: World catalog 1 + Overworld sessions 26 + RPG quest sessions
-   * and authoring 16.
+   * If you are updating README.md's "**42 tools**" breakdown, the measured split is:
+   * World catalog 1 + Overworld sessions 26 + RPG quest sessions and tooling 15.
    */
   it("registers exactly the published tool surface", () => {
     const names = TOOL_REGISTRATIONS.map((registration) => registration.name);
     expect([...names].sort()).toEqual([...EXPECTED_TOOL_SURFACE].sort());
-    expect(names.length).toBe(43);
+    expect(names.length).toBe(42);
 
     // The one group whose count the README states and the audit found wrong. The
     // rule is objective — every session tool carries `overworld` in its name and

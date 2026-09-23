@@ -24,7 +24,7 @@ import {
   type TravelLogEntry,
 } from "./session_snapshot.js";
 
-export type OverworldSessionSnapshotBuildState = {
+type OverworldSessionSnapshotBuildState = {
   worldId: string;
   worldHash: string;
   character: CampaignCharacterState;

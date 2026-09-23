@@ -16,7 +16,7 @@ import {
 } from "./session_routes.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export type OverworldSessionRouteOptionCacheState = {
+type OverworldSessionRouteOptionCacheState = {
   caches: OverworldSessionCaches;
   routePlannerIndex: OverworldRoutePlannerIndex;
   current: OverworldNode;
@@ -26,7 +26,7 @@ export type OverworldSessionRouteOptionCacheState = {
   roadEventState?: OverworldRouteRoadEventState;
 };
 
-export type OverworldSessionRegionalArcProgressCacheState = {
+type OverworldSessionRegionalArcProgressCacheState = {
   caches: OverworldSessionCaches;
   regionalArcs: readonly OverworldRegionalArc[];
   currentRegion: string;
@@ -35,7 +35,7 @@ export type OverworldSessionRegionalArcProgressCacheState = {
   completedRegionalArcIds: ReadonlySet<string>;
 };
 
-export type MutableOverworldSessionRegionalArcCompletionState = {
+type MutableOverworldSessionRegionalArcCompletionState = {
   regionalArcsByRegion: ReadonlyMap<string, readonly OverworldRegionalArc[]>;
   resolvedEventHomeIds: ReadonlySet<string>;
   completedRegionalArcIds: Set<string>;

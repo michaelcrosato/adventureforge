@@ -38,7 +38,7 @@ const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const WORLD_PATH = join(REPO_ROOT, "content/world/new_york_overworld.json");
 const PERSONA_DIR = join(REPO_ROOT, "blind-tester/personas");
 
-export type SavePlaytestReportInput = {
+type SavePlaytestReportInput = {
   reportText: string;
   transcript: string;
   store?: string;
@@ -63,7 +63,7 @@ export type SavePlaytestReportInput = {
   build?: PureRunBuild;
 };
 
-export type SavePlaytestReportResult = {
+type SavePlaytestReportResult = {
   record: PlaytestSessionRecord;
   dir: string;
   extract: ExitInterviewExtraction;
@@ -78,7 +78,7 @@ function git(args: string[]): string {
  * Interview extraction is the completed-outcome gate. Pure V2 + receipt → completed;
  * anything else is malformed_report (or the caller's non-completed label).
  */
-export function classifyPlaytestReportOutcome(
+function classifyPlaytestReportOutcome(
   reportText: string,
   requestedOutcome?: PlaytestOutcome,
   runEvidenceText?: string,

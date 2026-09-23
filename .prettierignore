@@ -20,17 +20,11 @@ traces
 # The Spark player prompt is deliberately compact and byte-contract tested;
 # auto-formatting its JSON example spends model input without changing meaning.
 blind-tester/prompt-overworld-spark.md
-# Byte-faithful recovery of the destroyed 2026-08-27 scale-out branch: reference
-# material whose fidelity IS the point (its prompt-qa.md carries a literal
-# __SEED__ token prettier once mangled). docs/ is outside the format scripts'
-# scope already; this guards the bare `prettier .` case.
-docs/archive/recovered-scaleout-2026-08-27
 # tests/ is under the Prettier gate (bug_0036) EXCEPT the verification assets the
 # integrity guard (scripts/verify-integrity.ts) freezes: the determinism property
 # tests and the hash-pin/known-answer unit tests. A formatter must not churn a
 # byte-frozen verifier asset (it reads as silent tampering to the drift gate), so
 # these stay excluded — ESLint still lints them; only auto-formatting is held off.
 tests/property/determinism.test.ts
-tests/property/parser_determinism.test.ts
 tests/unit/rpg_validator.test.ts
 tests/unit/sha256.test.ts

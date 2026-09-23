@@ -19,12 +19,12 @@ export type OverworldRegionalArcProgress = {
   reward: string;
 };
 
-export type OverworldRegionalArcCompletion = {
+type OverworldRegionalArcCompletion = {
   arc: OverworldRegionalArc;
   entry: OverworldJournalEntry;
 };
 
-export type MutableOverworldRegionalArcCompletionState = {
+type MutableOverworldRegionalArcCompletionState = {
   completedRegionalArcIds: Set<string>;
   journalEntries: OverworldJournalEntry[];
   journalEntriesById: Map<string, OverworldJournalEntry>;

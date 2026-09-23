@@ -3,27 +3,27 @@ import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/se
 /** Compact canonical source identity shared by saves, traces, and source resolution. */
 export type CompactSourceRef = ["wq", string] | ["gen", number];
 
-export type CompactSourceMetadata = {
+type CompactSourceMetadata = {
   worldQuestId?: unknown;
   generatedRpgSeed?: unknown;
 };
 
-export type CompactSourceMetadataLabels = {
+type CompactSourceMetadataLabels = {
   source: string;
   worldQuestId: string;
   generatedRpgSeed: string;
 };
 
-export type CompactSourceRefResult =
+type CompactSourceRefResult =
   | { ok: true; sourceRef: CompactSourceRef }
   | { ok: false; error: string };
 
-export type CompactSourceLegacyMetadata = {
+type CompactSourceLegacyMetadata = {
   worldQuestId?: string;
   generatedRpgSeed?: number;
 };
 
-export type CompactSourceRefConsistencyMessages = {
+type CompactSourceRefConsistencyMessages = {
   sourceConflict: string;
   worldQuestMismatch: (sourceRefWorldQuestId: string, worldQuestId: string) => string;
   generatedSeedMismatch: (sourceRefGeneratedSeed: number, generatedRpgSeed: number) => string;
@@ -31,7 +31,7 @@ export type CompactSourceRefConsistencyMessages = {
   sourceRefConflictsWithWorldQuestId: string;
 };
 
-export type CompactSourceRefConsistencyResult =
+type CompactSourceRefConsistencyResult =
   | { ok: true; metadata: CompactSourceLegacyMetadata }
   | { ok: false; error: string };
 

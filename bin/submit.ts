@@ -128,7 +128,7 @@ function main(): void {
             )
             .join(", ")}`
         : "") +
-      `\n  run \`npm run intake:sync\` or \`npm run intake:sync:linear\` to mirror it`,
+      `\n  run \`npm run intake:sync:linear\` to mirror it`,
   );
 }
 

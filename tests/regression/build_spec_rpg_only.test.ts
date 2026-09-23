@@ -8,7 +8,7 @@ describe("active build spec is RPG-only", () => {
   it("does not direct agents back to retired staged engines", () => {
     expect(spec).not.toContain("Start at Stage 0");
     expect(spec).not.toContain("Stage 1 (CYOA)");
-    expect(spec).not.toMatch(/Stage 2.*Zork-style/);
+    expect(spec).not.toMatch(/Stage 2.*classic text-adventure/);
     expect(spec).not.toContain("content/cyoa/");
     expect(spec).not.toContain("content/parser/");
     expect(spec).not.toContain("src/cyoa/");

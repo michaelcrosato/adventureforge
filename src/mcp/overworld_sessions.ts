@@ -47,7 +47,7 @@ export type OverworldMcpJourneyField<
   journey: OverworldMcpJourneyForArgs<Args>;
 };
 
-export const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
+const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
   "The overworld state changed since your last read. Refresh with get_overworld_session_context.";
 export const OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH = 24;
 
@@ -158,7 +158,7 @@ export type OverworldMcpSessionResponse<
       OverworldMcpViewField<Args>)
   | OverworldMcpGuardedRejection<Args>;
 
-export type OverworldMcpSessionEntry = {
+type OverworldMcpSessionEntry = {
   session_id: string;
   session: OverworldSession;
 };
@@ -194,7 +194,7 @@ export type OverworldMcpReadUnchanged<
   journey: OverworldMcpReadJourneyForArgs<Args>;
 };
 
-export type OverworldMcpFullReadPayload = {
+type OverworldMcpFullReadPayload = {
   session_id: string;
   snapshot_hash: string;
   observation: OverworldView;
@@ -245,7 +245,7 @@ export type OverworldMcpRejectedSessionPayload<
   journeyDecision: JourneyDecisionClassification;
 } & OverworldMcpJourneyField<Args>;
 
-export type OverworldMcpGuardedSession<
+type OverworldMcpGuardedSession<
   Args extends { compact_context?: boolean } = { compact_context?: false },
 > = OverworldMcpSessionEntry | OverworldMcpRejectedSessionPayload<Args>;
 
@@ -267,7 +267,7 @@ export type OverworldMcpExportSuccess = {
   embedded_quest?: EmbeddedQuestChildRecord;
 } & OverworldMcpJourneyField;
 
-export const OVERWORLD_MCP_SESSION_STORE_LIMIT = 64;
+const OVERWORLD_MCP_SESSION_STORE_LIMIT = 64;
 
 function journeyDecisionFrom(value: unknown): JourneyDecisionClassification | undefined {
   if (value === null || typeof value !== "object" || !("journeyDecision" in value)) {
@@ -387,7 +387,7 @@ export function publicOverworldSnapshotHash(snapshotHash: string): string {
   return snapshotHash.slice(0, OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH);
 }
 
-export function overworldSnapshotHashMatches(expectedSnapshotHash: string, snapshotHash: string) {
+function overworldSnapshotHashMatches(expectedSnapshotHash: string, snapshotHash: string) {
   return (
     expectedSnapshotHash === snapshotHash ||
     expectedSnapshotHash === publicOverworldSnapshotHash(snapshotHash)
@@ -398,7 +398,7 @@ type OverworldMcpReadArgsForCompactContext<Compact extends boolean> = Compact ex
   ? { include_observation?: false }
   : { include_observation: true };
 
-export function overworldReadUnchanged<Compact extends boolean = false>(
+function overworldReadUnchanged<Compact extends boolean = false>(
   snapshotHash: string,
   journey: OverworldMcpJourney,
   compactContext = false as Compact,
@@ -414,7 +414,7 @@ type OverworldMcpContextArgsForCompactContext<Compact extends boolean> = Compact
   ? { compact_context: true }
   : { compact_context: false };
 
-export function overworldSnapshotHashRejection<Compact extends boolean = false>(
+function overworldSnapshotHashRejection<Compact extends boolean = false>(
   snapshotHash: string,
   journey: OverworldMcpJourney,
   compactContext = false as Compact,

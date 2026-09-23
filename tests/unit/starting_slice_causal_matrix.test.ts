@@ -6,7 +6,7 @@ import {
   assertProvenStartingSliceProofsExist,
   loadStartingSliceCausalMatrix,
   parseStartingSliceCausalMatrix,
-} from "../../src/starting_slice/causal_matrix.js";
+} from "../regression/support/causal_matrix.js";
 import { STARTING_SLICE_MAX_TYPICAL_FIRST_GOAL_DECISIONS } from "../../src/starting_slice/fleet_certifier.js";
 
 describe("starting-slice causal matrix", () => {

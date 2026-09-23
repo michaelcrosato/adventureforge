@@ -159,7 +159,7 @@ export function totalCycleCount(root: string): number {
 }
 
 /** One cycle entry's span in the log text (`text.slice(start, end)`), and its UTF-8 size. */
-export type LoopStateEntry = { start: number; end: number; bytes: number };
+type LoopStateEntry = { start: number; end: number; bytes: number };
 type LiveEntry = LoopStateEntry;
 
 /**

@@ -3,15 +3,17 @@ import { readFileSync } from "node:fs";
 import {
   assertOverworldIntegrity,
   overworldAreasAt,
-  overworldCharactersAt,
   overworldEdgesFrom,
   overworldEventsAt,
-  overworldExplorationSitesNear,
-  overworldJobsAt,
   overworldQuestCampaignExportForEnding,
   parseOverworldManifest,
-  planOverworldRoute,
 } from "../../src/world/overworld.js";
+import {
+  overworldCharactersAt,
+  overworldExplorationSitesNear,
+  overworldJobsAt,
+  planOverworldRoute,
+} from "./support/overworld_queries.js";
 import { cloneOverworldRoadEvent } from "../../src/world/overworld_clone.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 

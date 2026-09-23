@@ -16,19 +16,9 @@ rc=0
 AFK_PROC_ROOT="/proc"
 alive() { [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null; }
 
-process_start_time() {
-  local pid="$1" stat tail start
-  [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 1
-  [[ -r "$AFK_PROC_ROOT/$pid/stat" ]] || return 1
-  stat="$(<"$AFK_PROC_ROOT/$pid/stat")" || return 1
-  [[ "$stat" == *") "* ]] || return 1
-  tail="${stat##*) }"
-  set -- $tail
-  [[ "$#" -ge 20 ]] || return 1
-  start="${20:-}"
-  [[ "$start" =~ ^[0-9]+$ ]] || return 1
-  printf '%s\n' "$start"
-}
+# process_start_time and the record helpers are shared with both loop drivers.
+# shellcheck source=scripts/process-record.sh
+source "$(dirname "${BASH_SOURCE[0]:-.}")/process-record.sh"
 
 # Output: pid recorded_start trusted_alive identity_state. Placeholders keep the
 # four fields stable for `read`, while user-facing output maps "-" back to "none".

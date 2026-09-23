@@ -10,12 +10,12 @@ export function normalizeRpgTopicCommand(value: string): string {
   return normalizeRpgCommand(value.replace(/[_-]+/g, " "));
 }
 
-export type QualifiedRpgAsk = {
+type QualifiedRpgAsk = {
   speaker: string;
   topic: string;
 };
 
-export type RpgTalkCommand = {
+type RpgTalkCommand = {
   speaker: string;
 };
 

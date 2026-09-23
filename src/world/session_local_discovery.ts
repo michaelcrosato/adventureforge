@@ -30,7 +30,7 @@ export type OverworldLocalDiscoveryResult = {
   discoveredQuests: OverworldQuestView[];
 };
 
-export type OverworldLocalDiscoveryState = {
+type OverworldLocalDiscoveryState = {
   townId: string;
   currentTownId: string;
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
@@ -44,7 +44,7 @@ export type OverworldLocalDiscoveryState = {
   excludedQuestIds?: ReadonlySet<string>;
 };
 
-export type MutableOverworldLocalDiscoveryIds = {
+type MutableOverworldLocalDiscoveryIds = {
   discoveredAreaIds: Set<string>;
   discoveredJobIds: Set<string>;
   discoveredSiteIds: Set<string>;

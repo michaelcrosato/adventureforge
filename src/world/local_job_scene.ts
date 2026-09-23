@@ -10,14 +10,14 @@ import {
   campaignCharacterMatchesConditions,
 } from "./campaign_consequences.js";
 
-export const LOCAL_JOB_SCENE_VERSION = 1 as const;
-export const LOCAL_JOB_SCENE_MIN_OPTIONS = 2 as const;
+const LOCAL_JOB_SCENE_VERSION = 1 as const;
+const LOCAL_JOB_SCENE_MIN_OPTIONS = 2 as const;
 export const LOCAL_JOB_SCENE_MAX_OPTIONS = 6 as const;
 /** Keep prerequisite fan-out auditable alongside the scene's bounded 2-6 definitions. */
 export const LOCAL_JOB_SCENE_MAX_REQUIRED_QUESTS = 4 as const;
-export const LOCAL_JOB_SCENE_MAX_REQUIREMENTS = 8 as const;
+const LOCAL_JOB_SCENE_MAX_REQUIREMENTS = 8 as const;
 export const LOCAL_JOB_SCENE_MAX_MINUTES = 24 * 60;
-export const LOCAL_JOB_SCENE_MAX_RENOWN = 10;
+const LOCAL_JOB_SCENE_MAX_RENOWN = 10;
 
 const NON_BLANK_TEXT = z
   .string()
@@ -26,7 +26,7 @@ const NON_BLANK_TEXT = z
     message: "Authored local-job scene text cannot be blank.",
   });
 
-export const LocalJobSceneTermsSchema = z
+const LocalJobSceneTermsSchema = z
   .object({
     minutes: z.number().int().positive().max(LOCAL_JOB_SCENE_MAX_MINUTES),
     renown: z.number().int().min(1).max(LOCAL_JOB_SCENE_MAX_RENOWN),
@@ -242,7 +242,6 @@ export const LocalJobSceneSchema = z
     });
   });
 
-export type LocalJobSceneTerms = z.infer<typeof LocalJobSceneTermsSchema>;
 export type LocalJobSceneOption = z.infer<typeof LocalJobSceneOptionSchema>;
 export type LocalJobScene = z.infer<typeof LocalJobSceneSchema>;
 
@@ -255,7 +254,7 @@ export type LocalJobSceneConditionState = Readonly<{
   eventOptionIdFor: (eventId: string) => string | null;
 }>;
 
-export type LocalJobSceneLegalTuple = readonly [
+type LocalJobSceneLegalTuple = readonly [
   id: string,
   title: string,
   preview: string,

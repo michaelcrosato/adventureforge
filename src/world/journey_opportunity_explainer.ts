@@ -87,7 +87,7 @@ export type JourneyOpportunityRoadStep = Readonly<{
   destinationName: string;
 }>;
 
-export type JourneyOpportunityAreaStep = Readonly<{
+type JourneyOpportunityAreaStep = Readonly<{
   routeId: string;
   destinationAreaId: string;
   destinationName: string;
@@ -211,7 +211,7 @@ function areaRouteAction(step: JourneyOpportunityAreaStep): JourneyOpportunityNe
   });
 }
 
-export function nextJourneyOpportunityAreaProgress(
+function nextJourneyOpportunityAreaProgress(
   state: JourneyOpportunityExplanationState,
   targetAreaId: string,
 ): JourneyOpportunityNextAction {

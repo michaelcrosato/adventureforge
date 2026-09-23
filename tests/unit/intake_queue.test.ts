@@ -6,7 +6,7 @@
  * stomp, and an ordering that a loud source cannot hijack.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -19,7 +19,6 @@ import {
   SubmissionSchema,
   submissionFileName,
   submissionId,
-  SubmissionStatusSchema,
   titleKey,
   type Submission,
 } from "../../src/intake/submission.js";
@@ -30,12 +29,6 @@ import {
   summarizeQueue,
   upsertSubmission,
 } from "../../src/intake/queue.js";
-import {
-  readMarker,
-  submissionFromIssue,
-  submissionLabels,
-  submissionMarker,
-} from "../../src/intake/github.js";
 import {
   LINEAR_PRIORITY,
   linearAuthorization,
@@ -221,7 +214,7 @@ describe("queue persistence", () => {
     expect(stored.updated_at).not.toBe(filed.updated_at);
   });
 
-  // intake:sync calls upsert immediately after creating the issue, precisely to record
+  // A mirror sync calls upsert immediately after creating the issue, precisely to record
   // where it landed ("so the next sync is a no-op rather than a search"). Keeping
   // existing.external unconditionally discarded that, so the number was never stored.
   it("records an external mirror supplied by the sync", () => {
@@ -291,99 +284,6 @@ describe("queue persistence", () => {
   });
 });
 
-describe("GitHub mirroring", () => {
-  it("round-trips the idempotency marker", () => {
-    const id = "0123456789abcdef";
-    expect(readMarker(`body text\n${submissionMarker(id)}\n`)).toBe(id);
-  });
-
-  it("finds no marker in a human-written issue", () => {
-    expect(readMarker("Please add horses. Thanks!")).toBeNull();
-  });
-
-  it("mirrors the submission's dimensions onto labels", () => {
-    const labels = submissionLabels(
-      make({ source: "playtest", kind: "experience", priority: "P1" }),
-    );
-    expect(labels).toContain("af:submission");
-    expect(labels).toContain("af:source/playtest");
-    expect(labels).toContain("af:kind/experience");
-    expect(labels).toContain("af:P1");
-  });
-
-  it("adopts a human-filed issue, honouring a triaged priority label", () => {
-    const adopted = submissionFromIssue({
-      number: 7,
-      url: "https://github.com/o/r/issues/7",
-      title: "Add horses",
-      body: "It would be nice.",
-      state: "OPEN",
-      labels: ["af:P0", "enhancement"],
-    });
-    expect(adopted.source).toBe("human");
-    expect(adopted.priority).toBe("P0");
-    expect(adopted.status).toBe("open");
-    expect(adopted.external?.number).toBe(7);
-    // Non-af labels survive; our own encoding does not get duplicated into labels.
-    expect(adopted.labels).toEqual(["enhancement"]);
-  });
-
-  // Anyone with write access to the tracker can type a label, so `af:kind/<x>` is
-  // untrusted input. Casting it straight into the schema type minted a submission whose
-  // `kind` was not in the enum at all, which the queue wrote to disk and could never
-  // read back — one unparseable file per sync, forever, for a typo.
-  it("falls back to the default kind when a label names one the schema does not have", () => {
-    const adopted = submissionFromIssue({
-      number: 11,
-      url: "u",
-      title: "Add frobnicators",
-      body: "b",
-      state: "OPEN",
-      labels: ["af:kind/frobnicate"],
-    });
-    expect(adopted.kind).toBe("feature");
-    expect(SubmissionSchema.safeParse(adopted).success).toBe(true);
-  });
-
-  it("still honours a kind label the schema does have", () => {
-    const adopted = submissionFromIssue({
-      number: 12,
-      url: "u",
-      title: "Docs are wrong",
-      body: "b",
-      state: "OPEN",
-      labels: ["af:kind/docs"],
-    });
-    expect(adopted.kind).toBe("docs");
-  });
-
-  it("gives an adopted issue a stable id so re-syncing never duplicates it", () => {
-    const issue = {
-      number: 7,
-      url: "u",
-      title: "Add horses",
-      body: "b",
-      state: "OPEN",
-      labels: [] as string[],
-    };
-    expect(submissionFromIssue(issue).id).toBe(
-      submissionFromIssue({ ...issue, body: "edited" }).id,
-    );
-  });
-
-  it("closes the local item when the issue is closed", () => {
-    const adopted = submissionFromIssue({
-      number: 8,
-      url: "u",
-      title: "Done thing",
-      body: "b",
-      state: "CLOSED",
-      labels: [],
-    });
-    expect(adopted.status).toBe("done");
-  });
-});
-
 describe("playtest tickets crossing into the queue", () => {
   function ticket(over: Partial<QaTicket> = {}): QaTicket {
     return {
@@ -444,45 +344,7 @@ describe("playtest tickets crossing into the queue", () => {
   });
 });
 
-const GROK46_WAVE_CLUSTERS = [
-  { kind: "bug" as const, key: "grok46-wave-steading-north-both-routes" },
-  { kind: "bug" as const, key: "grok46-wave-lure-lay-dc12" },
-  { kind: "bug" as const, key: "grok46-wave-cattle-alarm-zero" },
-  { kind: "bug" as const, key: "grok46-wave-storeshed-up-yearling" },
-  { kind: "bug" as const, key: "grok46-wave-jamie-loft-unused" },
-  { kind: "experience" as const, key: "grok46-wave-cade-procedure-speech" },
-  { kind: "experience" as const, key: "grok46-wave-albany-paperwork-opening" },
-  { kind: "bug" as const, key: "grok46-wave-oath-duplicate-cost" },
-];
-
 describe("grok-4.6 wave playtest intake", () => {
-  it("keeps eight distinct 16-hex ids and open queue files for the wave clusters", () => {
-    const ids = GROK46_WAVE_CLUSTERS.map(({ kind, key }) =>
-      submissionId({ source: "playtest", kind, key }),
-    );
-    expect(new Set(ids).size).toBe(8);
-    for (const id of ids) {
-      expect(id).toMatch(/^[0-9a-f]{16}$/);
-      const files = readdirSync("intake/queue").filter((name) => name.includes(id));
-      expect(files, `missing queue file for ${id}`).toHaveLength(1);
-      const stored = JSON.parse(readFileSync(join("intake/queue", files[0]!), "utf8"));
-      expect(stored.id).toBe(id);
-      expect(stored.source).toBe("playtest");
-      // Lifecycle state belongs to the dev loop, not to this pin. AGENTS.md's cycle
-      // claims a corroborated cluster and closes it (`--claim` → `--done`), so freezing
-      // these eight at "open" made the queue's own documented protocol turn this test
-      // red the first time anyone actually worked one — as it did for 33c83cbe8ead954b.
-      // What must hold is that the entry is never deleted and its status stays a legal
-      // lifecycle value through every transition; a stray or hand-edited status still
-      // fails here.
-      expect(SubmissionStatusSchema.options).toContain(stored.status);
-      expect(stored.labels).toContain("lane:content");
-      expect(existsSync(join("intake/queue", files[0]!))).toBe(true);
-    }
-    expect(ids).not.toContain("4806c6f8ade14c0b");
-    expect(ids).not.toContain("61d3b9dec4cb09fd");
-  });
-
   it("submit CLI upserts a playtest cluster on --key without duplicating", () => {
     const queue = tempQueue();
     const bodyFile = join(queue, "body.md");
@@ -540,57 +402,7 @@ describe("grok-4.6 wave playtest intake", () => {
   });
 });
 
-/**
- * Two-surface playtest visibility: Linear/intake is the short working board,
- * qa/tickets is the idle shelf. These keys must stay unique so re-file updates
- * rather than opening a 392-cluster dump.
- */
-const TWO_SURFACE_TICKETS = [
-  {
-    source: "audit" as const,
-    kind: "bug" as const,
-    key: "grok-reference-tier-autocorroboration",
-    priority: "P1",
-  },
-  {
-    source: "research" as const,
-    kind: "feature" as const,
-    key: "two-surface-playtest-visibility",
-    priority: "P2",
-  },
-  {
-    source: "research" as const,
-    kind: "feature" as const,
-    key: "idle-qa-bucket-next",
-    priority: "P2",
-  },
-];
-
 describe("two-surface playtest visibility intake", () => {
-  it("keeps three distinct 16-hex ids whose bodies name the board/shelf split and the reference-tier leak", () => {
-    const ids = TWO_SURFACE_TICKETS.map(({ source, kind, key }) =>
-      submissionId({ source, kind, key }),
-    );
-    expect(new Set(ids).size).toBe(3);
-    for (const [index, spec] of TWO_SURFACE_TICKETS.entries()) {
-      const id = ids[index]!;
-      expect(id).toMatch(/^[0-9a-f]{16}$/);
-      const files = readdirSync("intake/queue").filter((name) => name.includes(id));
-      expect(files, `missing queue file for ${spec.key}`).toHaveLength(1);
-      const stored = JSON.parse(readFileSync(join("intake/queue", files[0]!), "utf8"));
-      expect(stored.id).toBe(id);
-      expect(["research", "audit"]).toContain(stored.source);
-      expect(stored.source).toBe(spec.source);
-      expect(stored.kind).toBe(spec.kind);
-      expect(stored.priority).toBe(spec.priority);
-      expect(SubmissionStatusSchema.options).toContain(stored.status);
-      const body = String(stored.body);
-      expect(body).toMatch(/intake\/queue|Linear/i);
-      expect(body).toMatch(/qa\/tickets/);
-      expect(body).toMatch(/derivePromotion|reference-tier|reference/i);
-    }
-  });
-
   it("submit CLI upserts the auto-corroboration ticket on --key without duplicating", () => {
     const queue = tempQueue();
     const bodyFile = join(queue, "body.md");

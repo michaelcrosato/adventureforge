@@ -19,7 +19,7 @@
  * `meta.title` off the compiled pack (`GameSession.title`), not re-parse here.
  */
 
-export type PackEntry = {
+type PackEntry = {
   path: string;
   source: string;
 };

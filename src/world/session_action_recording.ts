@@ -17,7 +17,7 @@ export type OverworldRecordedActionResult = {
   entry: OverworldJournalEntry;
 };
 
-export type OverworldRecordedRepeatableEntry = {
+type OverworldRecordedRepeatableEntry = {
   minutesAfter: number;
   entry: OverworldJournalEntry;
 };

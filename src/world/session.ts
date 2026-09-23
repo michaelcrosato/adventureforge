@@ -323,64 +323,31 @@ import {
   type OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
 
-export type {
-  OverworldRoadEncounterOption,
-  OverworldRoadEncounterStrategy,
-} from "./travel_mechanics.js";
+export type { OverworldRoadEncounterStrategy } from "./travel_mechanics.js";
 export type { OverworldRouteEstimate, OverworldSessionRoutePlan } from "./session_routes.js";
 export type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
-export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 export type { OverworldServiceResult } from "./session_service_lifecycle.js";
 export type { OverworldQuestView } from "./session_local_discovery.js";
 export type { OverworldQuestCompletionResult } from "./session_quests.js";
-export type { OverworldQuestStartPreparation } from "./session_quests.js";
 export type { OverworldAreaTravelResult } from "./session_local_actions.js";
-export {
-  OVERWORLD_SESSION_SAVE_VERSION,
-  OverworldSessionSnapshotSchema,
-} from "./session_snapshot.js";
 export type {
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
-  OverworldPendingRoadEncounterSnapshot,
   OverworldSessionSnapshot,
   TravelLogEntry,
-  TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
 export type { OverworldActionResult } from "./session_action_application.js";
-export type {
-  OverworldGoalPassageResult,
-  OverworldGoalPassageStopReason,
-} from "./session_goal_passage.js";
+export type { OverworldGoalPassageResult } from "./session_goal_passage.js";
 export type { OverworldView } from "./session_view.js";
-export type {
-  OverworldDepartureContactLead,
-  OverworldDepartureInteraction,
-} from "./session_departure_interactions.js";
-export type { OpeningDepartureRecap } from "./opening_departure_recap.js";
-export type {
-  JourneyChoice,
-  JourneyChoiceResult,
-  JourneyExitReceipt,
-  JourneyGoalPassagePresentation,
-  JourneyPresentation,
-  JourneyRetentionEvent,
-} from "./journey_contract.js";
-export type {
-  JourneyOpportunityExplanation,
-  JourneyOpportunityIdentity,
-  JourneyOpportunityNextAction,
-} from "./journey_opportunity_explainer.js";
 
-export type OverworldJourneyActionResult = JourneyDecisionAnnotated<OverworldActionResult>;
-export type OverworldJourneyAreaTravelResult = JourneyDecisionAnnotated<OverworldAreaTravelResult>;
+type OverworldJourneyActionResult = JourneyDecisionAnnotated<OverworldActionResult>;
+type OverworldJourneyAreaTravelResult = JourneyDecisionAnnotated<OverworldAreaTravelResult>;
 export type OverworldJourneyQuestCompletionResult =
   JourneyDecisionAnnotated<OverworldQuestCompletionResult>;
 export type OverworldJourneyQuestStartResult = JourneyDecisionAnnotated<OverworldQuestView>;
-export type OverworldJourneyRoadEncounterResult =
-  JourneyDecisionAnnotated<OverworldRoadEncounterResult>;
-export type OverworldJourneyServiceResult = JourneyDecisionAnnotated<OverworldServiceResult>;
-export type OverworldJourneyTravelResult = JourneyDecisionAnnotated<TravelLogEntry>;
+type OverworldJourneyRoadEncounterResult = JourneyDecisionAnnotated<OverworldRoadEncounterResult>;
+type OverworldJourneyServiceResult = JourneyDecisionAnnotated<OverworldServiceResult>;
+type OverworldJourneyTravelResult = JourneyDecisionAnnotated<TravelLogEntry>;
 export type OverworldJourneyGoalPassageResult =
   JourneyDecisionAnnotated<OverworldGoalPassageResult>;
 

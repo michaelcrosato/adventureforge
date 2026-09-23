@@ -13,14 +13,14 @@ import { z } from "zod";
 import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
 import { canonicalize } from "../core/hash.js";
 
-export const REPORT_MANIFEST_SCHEMA_VERSION = 1;
+const REPORT_MANIFEST_SCHEMA_VERSION = 1;
 
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const REPORT_ID_RE = /^(?:pure|report):[0-9a-f]{64}$/u;
 
-export const ReportIdSchema = z.string().regex(REPORT_ID_RE);
+const ReportIdSchema = z.string().regex(REPORT_ID_RE);
 
-export const SortedReportIdsSchema = z.array(ReportIdSchema).superRefine((ids, ctx) => {
+const SortedReportIdsSchema = z.array(ReportIdSchema).superRefine((ids, ctx) => {
   for (let index = 1; index < ids.length; index += 1) {
     if (ids[index - 1]! >= ids[index]!) {
       ctx.addIssue({
@@ -81,7 +81,7 @@ export const ReportCohortSchema = z
   .strict()
   .superRefine(refinePartition);
 
-export const ReportManifestOutputsSchema = z
+const ReportManifestOutputsSchema = z
   .object({
     hotspots_sha256: z.string().regex(SHA256_RE),
     retention_sha256: z.string().regex(SHA256_RE),
@@ -89,7 +89,7 @@ export const ReportManifestOutputsSchema = z
   })
   .strict();
 
-export const ReportManifestKindSchema = z.enum(["bootstrap", "initial", "delta", "standalone"]);
+const ReportManifestKindSchema = z.enum(["bootstrap", "initial", "delta", "standalone"]);
 
 function isSubset(subset: readonly string[], superset: readonly string[]): boolean {
   const allowed = new Set(superset);
@@ -171,11 +171,8 @@ export const ReportManifestSchema = z
     }
   });
 
-export type ReportId = z.infer<typeof ReportIdSchema>;
 export type ReportCorpus = z.infer<typeof ReportCorpusSchema>;
 export type ReportCohort = z.infer<typeof ReportCohortSchema>;
-export type ReportManifestOutputs = z.infer<typeof ReportManifestOutputsSchema>;
-export type ReportManifestKind = z.infer<typeof ReportManifestKindSchema>;
 export type ReportManifest = z.infer<typeof ReportManifestSchema>;
 
 export type LoadedReportManifest = {
