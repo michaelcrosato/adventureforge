@@ -376,8 +376,29 @@ run_player() {
   npx tsx bin/record-playtest-session.ts "${record_args[@]}" 2>&1 | sed "s/^/    /" ||     echo "    (could not record this session — artifacts remain at $out.*)"
 }
 
+# Triage after a wave WITHOUT writing tracked files, except after the loop's final wave.
+#
+# Triage writes qa/tickets/ and intake/queue/, which are tracked. Between waves that was
+# wrong both ways (bug_0655): with an upstream, the fetch-and-reset below threw the
+# output away every wave; without one, the tracked edits stayed and blind-tester/run.sh
+# refused every player of the next wave, because a pure run needs a clean tracked tree
+# (and the unconditional recorder then filed each refusal as a failed session). Triage is
+# pure over the corpus, so nothing is lost by reporting it as a dry run between waves:
+# the store under ai-runs/ survives the reset, and whoever triages that corpus in a
+# committing checkout (the dev loop via AI_LOOP_TRIAGE_STORE, or npm run qa:triage)
+# derives the identical bucket. The final wave (--once or PLAYTEST_MAX_WAVES) still
+# writes the bucket, since no reset and no next wave follow it.
+triage_after_wave() {
+  local final="$1"
+  [[ "${PLAYTEST_TRIAGE:-1}" == "1" ]] || return 0
+  local args=(--store "$STORE")
+  [[ "$final" == "1" ]] || args+=(--dry-run)
+  npm run --silent qa:triage -- "${args[@]}" || \
+    echo "  triage failed; corpus is intact, retrying next wave"
+}
+
 run_wave() {
-  local wave="$1" index=0 pids=()
+  local wave="$1" final="$2" index=0 pids=()
   local build
   build="$(git rev-parse --short HEAD)"
   LAST_WAVE_BUILD="$(git rev-parse HEAD)"
@@ -404,10 +425,7 @@ run_wave() {
   echo "  wave $wave: $index player(s) dispatched"
 
   echo "  corpus: $(npx tsx bin/qa.ts --store-summary --store "$STORE" 2>/dev/null || echo "unavailable")"
-  if [[ "${PLAYTEST_TRIAGE:-1}" == "1" ]]; then
-    npm run --silent qa:triage -- --store "$STORE" || \
-      echo "  triage failed; corpus is intact, retrying next wave"
-  fi
+  triage_after_wave "$final"
   if [[ "${PLAYTEST_PUBLISH:-0}" == "1" ]]; then
     npm run --silent qa:publish -- --store "$STORE" || \
       echo "  publish failed; sessions remain staged locally"
@@ -443,11 +461,13 @@ await_new_build() {
 wave=0
 while true; do
   wave=$((wave + 1))
-  run_wave "$wave"
+  final=0
+  [[ "$once" == "1" ]] && final=1
+  if [[ -n "${PLAYTEST_MAX_WAVES:-}" ]] && (( wave >= PLAYTEST_MAX_WAVES )); then final=1; fi
+  run_wave "$wave" "$final"
   SEED_BASE=$((SEED_BASE + 1000))
 
-  [[ "$once" == "1" ]] && break
-  if [[ -n "${PLAYTEST_MAX_WAVES:-}" ]] && (( wave >= PLAYTEST_MAX_WAVES )); then break; fi
+  [[ "$final" == "1" ]] && break
 
   # Pick up whatever the dev loop has landed since the last wave. Fetch-and-reset
   # rather than pull: this checkout is a read-only mirror of the build under test, so

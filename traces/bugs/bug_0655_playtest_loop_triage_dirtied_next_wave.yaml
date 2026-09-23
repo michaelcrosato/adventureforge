@@ -1,0 +1,53 @@
+id: bug_0655
+title: playtest-loop.sh triaged into tracked files between waves, so wave 2 was refused or the output discarded
+reported_by: 2026-09-22 repository audit at c17192f9 (lane B, task B9)
+severity: S2
+
+symptom: >
+  After every wave playtest-loop.sh ran `npm run qa:triage`, which rewrites the tracked
+  qa/tickets/ and intake/queue/. In a checkout with an upstream, the loop's next step,
+  `git reset --hard @{u}`, threw that output away every wave. In a checkout with no
+  upstream the tracked edits stayed, and blind-tester/run.sh refuses a pure run on a dirty
+  tracked worktree, so every player of wave 2 onward was refused before launch — and the
+  loop's unconditional recorder then filed each refusal as a failed session under a real
+  vendor's name.
+
+cause: >
+  The loop needs a clean tracked tree for its next wave, and triage wrote tracked files
+  between waves. The two were never reconciled: triage was pure over the corpus and its
+  bucket is re-derived by whichever checkout commits it (the dev loop through
+  AI_LOOP_TRIAGE_STORE, or an operator), so the between-wave write bought nothing and cost
+  either the output or the next wave.
+
+reproduction: >
+  tests/regression/playtest_loop_triage_between_waves.test.ts cuts the shipped
+  `triage_after_wave` function and main loop out of playtest-loop.sh and runs them under
+  `bash -s` with npm, git, sleep and run_wave stubbed (the doctor_cli.test.ts technique):
+  between waves triage is invoked with --dry-run, after the final wave without it,
+  PLAYTEST_TRIAGE=0 still skips it, and only the last of PLAYTEST_MAX_WAVES waves (or the
+  single --once wave) is marked final.
+
+fix: >
+  playtest-loop.sh gains `triage_after_wave <final>`: between waves it runs
+  `qa:triage --dry-run`, which prints the same triage summary and writes nothing, so the
+  tree stays clean for the next wave and there is nothing for the reset to clobber. The
+  final wave (--once or PLAYTEST_MAX_WAVES) still writes the bucket, because no reset and
+  no next wave follow it. The main loop computes `final` before the wave and breaks on it,
+  which is the same stop condition it had.
+
+production:
+  - playtest-loop.sh
+regression:
+  - tests/regression/playtest_loop_triage_between_waves.test.ts
+verification:
+  - The new regression passes; tests/unit/doctor_cli.test.ts (whose new-build gate cuts
+    the shipped text from await_new_build to the main loop), and
+    tests/regression/playtest_loop_persona_gate.test.ts and
+    playtest_loop_documented_cohort.test.ts pass unchanged.
+  - The pid guard and every line outside the triage call and the wave counter are
+    untouched.
+residual:
+  - An unbounded loop (no --once, no PLAYTEST_MAX_WAVES) never writes the tracked
+    bucket itself. That is the design docs/two_loop_workflow.md already describes for
+    pooled corpora (the dev loop triages at cycle start); a single-checkout operator runs
+    `npm run qa:triage` when they want the files.
