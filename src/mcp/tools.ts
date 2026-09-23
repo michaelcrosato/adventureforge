@@ -774,11 +774,13 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
     },
 
     async adapt_story(args: AdaptStoryArgs) {
-      // Author a pack from a premise via the writer → adapter → validator loop
-      // (§12.1–3) using the deterministic, keyless MockAuthorProvider — so it runs
-      // fully offline with no API keys. Mirrors bin/author.ts. Returns compact
-      // story/validation proof by default; callers opt into echoing the full
-      // authored pack. Never writes files.
+      // Run the writer → adapter → validator loop (§12.1–3) using the deterministic,
+      // keyless MockAuthorProvider — so it runs fully offline with no API keys. That
+      // provider is the ONLY one wired here and it answers from canned JSON: the premise
+      // reaches the writer prompt, but every premise yields the same Lighthouse pack, and
+      // the tool description says so rather than promising authoring "from a premise".
+      // Mirrors bin/author.ts. Returns compact story/validation proof by default;
+      // callers opt into echoing the full authored pack. Never writes files.
       if ((args as { mode?: unknown }).mode !== undefined) {
         throw new Error("adapt_story is RPG-only; mode is no longer supported.");
       }

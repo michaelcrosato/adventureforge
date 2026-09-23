@@ -75,9 +75,15 @@ function parsePlayMode(): McpPlayMode {
 }
 
 /**
- * Pure play exposes only choices a human can make through the game UI. Authoring,
- * validation, raw-state, direct-quest, restore, and generated-game tools stay in
- * the default full server used by developers and structural tests.
+ * Pure play exposes ONE fresh journey through the moves a player makes in the game UI —
+ * travel, talk, scout, work, quest steps, journey and story choices — plus read-only aids
+ * that answer only from what that player already knows: context reads, opportunity
+ * explanations, and `plan_overworld_session_route`, which plans over discovered roads
+ * only. The UI never calls a planner (it draws the same roads on its map), so the rule is
+ * not "only what the UI calls"; it is "nothing a player inside the game could not learn or
+ * do". Authoring, validation, raw-state, direct-quest, export/restore, and generated-game
+ * tools therefore stay in the default full server used by developers and structural
+ * tests.
  */
 export const PURE_PLAYER_TOOLS = new Set<string>([
   "start_overworld",
@@ -2339,9 +2345,9 @@ tool(
 
 tool(
   "adapt_story",
-  "Create and validate an RPG pack from a story premise. Returns an authoring report.",
+  "Run the offline demo authoring pipeline and return its report. Its canned author returns the same sample Lighthouse pack for any premise.",
   {
-    premise: z.string().describe("Story premise."),
+    premise: z.string().describe("Story premise (not used by the canned author)."),
     include_pack: z.boolean().optional().describe("Echo the authored pack."),
   },
   (a) => api.adapt_story(a),
