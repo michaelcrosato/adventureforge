@@ -1,0 +1,42 @@
+id: bug_0641
+title: sha256Hex's reused message buffer grew to 4x the longest input ever hashed and was never released
+reported_by: engine audit at c17192f9 (lane C, finding C2)
+severity: S3
+
+symptom: >
+  After PR #369 (sha256 buffer reuse), every process or vitest worker that hashed the
+  ~2.7 MB overworld manifest once kept a ~9-11 MB Uint8Array alive for the rest of its
+  life, even though every later hash (per-step state hashes of a few KB) needed a tiny
+  fraction of it. Nothing shrank it; a larger one-off input only made it bigger.
+
+cause: >
+  src/core/sha256.ts reserves a worst-case 4 bytes per UTF-16 code unit plus padding for
+  encodeInto, and getMsgBuffer grew the module-level buffer to max(required, 2x current)
+  with no upper bound and no release path. The reuse was a real win for the hot path
+  (small state hashes, no per-call allocation), but it applied the same retention policy
+  to rare, very large inputs, where retention buys nothing.
+
+reproduction: >
+  tests/unit/sha256_conformance.test.ts "never retains more than the cap across a large
+  input, and stays correct around it" hashes a small input, a just-under-cap input, a
+  just-over-cap input, and a world-sized multibyte input, checking each digest against
+  node:crypto and asserting the retained buffer (sha256RetainedBufferBytes) never exceeds
+  SHA256_RETAINED_BUFFER_MAX_BYTES. With the old growth rule restored it fails with
+  2097042 > 1048576.
+
+fix: >
+  getMsgBuffer keeps reusing (and doubling) the shared buffer up to
+  SHA256_RETAINED_BUFFER_MAX_BYTES (1 MiB); an input whose worst-case encoding needs more
+  gets a transient buffer sized for it alone, released with the call. Digests are
+  byte-identical (the hashing loop is untouched), and every input under the cap — which
+  is every per-step state hash — takes exactly the same reuse path as before.
+  sha256RetainedBufferBytes is exported as a verification seam for the retention bound.
+
+production:
+  - src/core/sha256.ts
+regression:
+  - tests/unit/sha256_conformance.test.ts
+verification:
+  - The new case fails with the pre-fix growth rule and passes with the cap.
+  - tests/unit/sha256.test.ts (NIST vectors) and the node:crypto conformance corpus are
+    green, and npm run replay reproduces the pinned barrow_victory hash.
