@@ -18,15 +18,5 @@
     "observations": 1
   },
   "created_at": "2026-08-31T02:09:35.365Z",
-  "updated_at": "2026-08-31T16:36:41.895Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "539a7187-cb64-4055-bfe4-0ff1a872dbbe",
-      "identifier": "MIC-53",
-      "url": "https://linear.app/michael-crosato/issue/MIC-53/b2e74fa36c75cc38-windows-smoke-ci-jobs-path-sensitive-cli-list-is",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:41.895Z"
 }

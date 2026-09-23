@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "3c7025775acf25b7",
   "title": "Aid-Only last-feed skip still raises cattle alarm into Breaking",
-  "body": "Aid-Only LURE promises that the **last CAST / last feed skips +1 cattle alarm**. On the actual last CAST through the outer scent gate, cattle alarm still ticks (often 3→4 into **Breaking**) and **two cattle go missing**.\n\nThis is a plan-text vs play mismatch on the advertised Aid-Only win condition, not “the player failed a check.” Testers who took Aid-Only specifically to keep the herd intact still got the Breaking/missing-cattle ending.\n\n**This wave** (Grok 4.6 low, `--seed-base 2100000000`, store `ai-runs/playtest/sessions-grok-stress-20260901`, build `b6daf7796ca09886805bd61002bf36675785b931`):\n\n- 92 completed interviews; **30** named Aid-Only / last-feed skip\n- **14** `bugs[]` rows (S2 7 / S1 2 / S0 5); 7 of the S2s are this last-CAST bump\n- 29/30 of those sessions `would_replay: false`\n- Typical `where`: Deep in the Byre, CAST through outer scent gate after Aid-Only LURE\n\nNot a duplicate of MIC-37 (`fa0bcf219c803b70`, cattle alarm stays 0 while opening prose says the cattle already saw you). That is the **opening meter**. This is the **Aid-Only last-feed skip failing at the end of LURE**.\n\n**What players said**\n\n- “Aid-Only promised to skip the last feed's +1 cattle alarm; the final CAST still raised alarm to Breaking and two cattle were lost.”\n- “Aid-Only said skip last-feed +1 cattle alarm; CAST still raised 3→4 into Breaking and two cattle missing.”\n- “Last CAST still raising cattle alarm after Aid-Only promised that bump was skipped, locking two missing cattle.”\n\n**Fix:** Honor the Aid-Only last-feed skip on the final CAST (do not add +1 cattle alarm), or change the plan copy so it does not promise a skip the engine will not grant. Journal, Cade’s plan review, and the actual last CAST must agree.\n\nSessions remain `operator_attested` (grok_cli / reference tier). They count toward bug corroboration, not experience metrics.",
+  "body": "Aid-Only LURE promises that the **last CAST / last feed skips +1 cattle alarm**. On the actual last CAST through the outer scent gate, cattle alarm still ticks (often 3→4 into **Breaking**) and **two cattle go missing**.\n\nThis is a plan-text vs play mismatch on the advertised Aid-Only win condition, not “the player failed a check.” Testers who took Aid-Only specifically to keep the herd intact still got the Breaking/missing-cattle ending.\n\n**This wave** (Grok 4.6 low, `--seed-base 2100000000`, store `ai-runs/playtest/sessions-grok-stress-20260901`, build `b6daf7796ca09886805bd61002bf36675785b931`):\n\n- 92 completed interviews; **30** named Aid-Only / last-feed skip\n- **14** `bugs[]` rows (S2 7 / S1 2 / S0 5); 7 of the S2s are this last-CAST bump\n- 29/30 of those sessions `would_replay: false`\n- Typical `where`: Deep in the Byre, CAST through outer scent gate after Aid-Only LURE\n\nNot a duplicate of ticket `fa0bcf219c803b70` (cattle alarm stays 0 while opening prose says the cattle already saw you). That is the **opening meter**. This is the **Aid-Only last-feed skip failing at the end of LURE**.\n\n**What players said**\n\n- “Aid-Only promised to skip the last feed's +1 cattle alarm; the final CAST still raised alarm to Breaking and two cattle were lost.”\n- “Aid-Only said skip last-feed +1 cattle alarm; CAST still raised 3→4 into Breaking and two cattle missing.”\n- “Last CAST still raising cattle alarm after Aid-Only promised that bump was skipped, locking two missing cattle.”\n\n**Fix:** Honor the Aid-Only last-feed skip on the final CAST (do not add +1 cattle alarm), or change the plan copy so it does not promise a skip the engine will not grant. Journal, Cade’s plan review, and the actual last CAST must agree.\n\nSessions remain `operator_attested` (grok_cli / reference tier). They count toward bug corroboration, not experience metrics.",
   "source": "playtest",
   "kind": "bug",
   "priority": "P1",
@@ -24,15 +24,5 @@
     "observations": 30
   },
   "created_at": "2026-09-02T04:08:47.596Z",
-  "updated_at": "2026-09-05T13:36:37.000Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "624c4efc-e03d-423b-9cab-ee463351a440",
-      "identifier": "MIC-63",
-      "url": "https://linear.app/michael-crosato/issue/MIC-63/3c7025775acf25b7-aid-only-last-feed-skip-still-raises-cattle-alarm",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-09-05T13:36:37.000Z"
 }

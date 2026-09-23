@@ -573,18 +573,6 @@ safe_commit_if_enabled() {
 }
 
 refresh_intake_queue() {
-  # Human triage first: adopt new Linear-filed requests and priority edits into the
-  # queue before assessing. The sync script is fail-open by design — no credential,
-  # a network outage, or an API error prints one line and leaves the queue as it
-  # stands, so this can run unconditionally without wedging the loop. Queue edits it
-  # makes are ordinary tracked changes that ride the cycle's provisional commit, and
-  # a reverted cycle re-adopts them idempotently by their [16-hex] markers.
-  # AI_LOOP_LINEAR_PULL=0 opts a lane out entirely (for example an offline worktree).
-  if [[ "${AI_LOOP_LINEAR_PULL:-1}" == "1" ]]; then
-    npm run --silent intake:sync:linear -- --pull-only || {
-      echo "Linear pull failed; continuing on the queue as it stands."
-    }
-  fi
   # If several QA worktrees are pooling into one corpus, triage it HERE at cycle start
   # rather than having each QA loop push tickets around. Triage is pure over the corpus,
   # so running it in the dev worktree produces exactly what running it in a QA worktree

@@ -19,15 +19,5 @@
     "observations": 1
   },
   "created_at": "2026-08-31T02:09:11.978Z",
-  "updated_at": "2026-08-31T16:36:38.031Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "6a243fa6-40fd-4495-8676-3cc76a6934d9",
-      "identifier": "MIC-47",
-      "url": "https://linear.app/michael-crosato/issue/MIC-47/ffc570b2ac087459-single-source-the-wolf-winter-id-coupling-threaded",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:38.031Z"
 }

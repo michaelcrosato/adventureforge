@@ -18,15 +18,5 @@
     "observations": 1
   },
   "created_at": "2026-08-31T02:09:50.527Z",
-  "updated_at": "2026-08-31T16:36:42.448Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "eadcfe7a-2ef0-4ed7-b66a-d3373762ccea",
-      "identifier": "MIC-55",
-      "url": "https://linear.app/michael-crosato/issue/MIC-55/f19b888fa1c0ca9a-on-enter-goto-skips-the-destination-rooms-on-enter",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:42.448Z"
 }

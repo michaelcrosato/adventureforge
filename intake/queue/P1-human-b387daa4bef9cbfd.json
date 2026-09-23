@@ -18,15 +18,5 @@
     "observations": 1
   },
   "created_at": "2026-08-30T21:58:50.937Z",
-  "updated_at": "2026-08-31T16:36:33.323Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "9acdef37-8cbb-46a8-a9bd-eb05d15368b6",
-      "identifier": "MIC-31",
-      "url": "https://linear.app/michael-crosato/issue/MIC-31/b387daa4bef9cbfd-rebuild-the-persona-qa-fleet-and-lane-runner-from-the",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:33.323Z"
 }

@@ -25,7 +25,6 @@
 import { readFileSync } from "node:fs";
 import {
   defaultPriority,
-  externalMirrors,
   SubmissionEvidenceSchema,
   SubmissionKindSchema,
   SubmissionPrioritySchema,
@@ -111,24 +110,13 @@ function main(): void {
     }),
     created_at: now,
     updated_at: now,
-    external: null,
   };
 
   const dir = arg("--queue") ?? DEFAULT_QUEUE_DIR;
   const stored = upsertSubmission(submission, dir);
   console.log(
     `${stored.priority} ${stored.source}/${stored.kind} ${stored.id} — ${stored.title}` +
-      `\n  status ${stored.status}; queued in ${dir}` +
-      (externalMirrors(stored).length > 0
-        ? `; mirrored as ${externalMirrors(stored)
-            .map((mirror) =>
-              mirror.provider === "github"
-                ? `GitHub #${mirror.number}`
-                : `Linear ${mirror.identifier}`,
-            )
-            .join(", ")}`
-        : "") +
-      `\n  run \`npm run intake:sync:linear\` to mirror it`,
+      `\n  status ${stored.status}; queued in ${dir}`,
   );
 }
 

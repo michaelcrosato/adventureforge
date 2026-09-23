@@ -47,9 +47,7 @@ queue is normal and means the assessor's own candidates carry the cycle (set
 `AI_LOOP_IDLE_WHEN_EMPTY=1` to wait instead).
 
 Running several lanes at once — worktree-per-lane, claim identity/leases, and
-the single-writer map — is `docs/parallel_lanes.md`. The human-facing ticket
-mirror of the intake queue is `docs/linear_workflow.md`; the repo queue always
-wins disagreements.
+the single-writer map — is `docs/parallel_lanes.md`.
 
 ## The dev loop (one cycle)
 

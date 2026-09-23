@@ -21,15 +21,5 @@
     "observations": 1
   },
   "created_at": "2026-08-31T02:09:10.930Z",
-  "updated_at": "2026-08-31T16:36:37.550Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "b2cfbb5b-e13d-4361-a618-bb30188a8a1a",
-      "identifier": "MIC-46",
-      "url": "https://linear.app/michael-crosato/issue/MIC-46/8e3375cd99318d14-deduplicate-the-quest-bridge-orchestration-shared-by",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:37.550Z"
 }

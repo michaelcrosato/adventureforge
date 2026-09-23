@@ -16,15 +16,5 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:00.567Z",
-  "updated_at": "2026-08-31T16:36:35.990Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "bbf5bf5d-065c-413a-b199-dba7a0a91581",
-      "identifier": "MIC-23",
-      "url": "https://linear.app/michael-crosato/issue/MIC-23/61a10a4ba12a99d1-npm-run-health-runs-the-verifier-in-static-mode-only",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:35.990Z"
 }

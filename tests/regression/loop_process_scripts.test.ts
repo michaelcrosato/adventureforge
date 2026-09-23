@@ -321,16 +321,6 @@ describe("loop status/stop process helpers", () => {
     expect(packageScripts["loop:seal-feedback"]).toBe("tsx scripts/seal-feedback-acceptance.ts");
   });
 
-  it("pulls human Linear triage at cycle start, fail-open and opt-out-able", () => {
-    // refresh_intake_queue runs at run_cycle start and inside the idle poll; the
-    // Linear pull must be best-effort there (a keyless or offline lane continues
-    // on the queue as it stands) and must never push from the loop.
-    expect(loopScript).toContain("npm run --silent intake:sync:linear -- --pull-only || {");
-    expect(loopScript).toContain('"${AI_LOOP_LINEAR_PULL:-1}" == "1"');
-    expect(loopScript).toContain("Linear pull failed; continuing on the queue as it stands.");
-    expect(packageScripts["intake:sync:linear"]).toBe("tsx scripts/sync-intake-linear.ts");
-  });
-
   it("fails the cycle when an explicitly requested agent cannot run", () => {
     // "Fails loudly" must mean the exit code, not a stderr line: an unknown or
     // uninstalled AI_AGENT used to print and then proceed agent-less, so the

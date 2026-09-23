@@ -19,15 +19,5 @@
     "observations": 1
   },
   "created_at": "2026-08-31T02:09:33.148Z",
-  "updated_at": "2026-08-31T16:36:38.311Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "f52b7a51-582d-4167-b084-c4de29615612",
-      "identifier": "MIC-48",
-      "url": "https://linear.app/michael-crosato/issue/MIC-48/7250b22cf399b109-reference-tier-rung-lets-one-low-effort-operator",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:38.311Z"
 }

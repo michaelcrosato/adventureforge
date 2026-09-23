@@ -71,7 +71,6 @@ function make(over: Partial<Submission> = {}): Submission {
     evidence: { summary: "because", refs: [], lineages: [], observations: 1 },
     created_at: now,
     updated_at: now,
-    external: null,
     ...over,
   });
 }
@@ -299,7 +298,6 @@ describe("compatibility with queue files from before claims existed", () => {
       evidence: { summary: "because", refs: [], lineages: [], observations: 1 },
       created_at: "2026-08-01T00:00:00.000Z",
       updated_at: "2026-08-01T00:00:00.000Z",
-      external: null,
     };
     writeFileSync(
       join(dir, `P2-audit-${LEGACY_ID}.json`),

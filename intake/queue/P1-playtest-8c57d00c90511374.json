@@ -25,15 +25,5 @@
     "observations": 7
   },
   "created_at": "2026-08-31T02:14:25.883Z",
-  "updated_at": "2026-08-31T16:35:36.091Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "2c5d545e-8321-4001-8293-5a931c3a4085",
-      "identifier": "MIC-36",
-      "url": "https://linear.app/michael-crosato/issue/MIC-36/8c57d00c90511374-cades-talk-is-a-procedure-dump-not-character-speech",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:35:36.091Z"
 }
