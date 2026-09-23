@@ -59,6 +59,10 @@ verification:
     only asserts the ticket is kept, not its status.
   - STALE_AFTER_BUILDS, `isActionable`, `derivePromotion` and the retirement conditions
     are unchanged; no threshold moved.
+  - tests/unit/doctor_cli.test.ts built its CLI corpus on the placeholder build
+    "aaaa…", which only counted as fresh through the old fail-open; its "work waiting"
+    case went red. Its sessions now record the checkout's own HEAD, which is what that
+    case means by fresh evidence. No assertion changed.
 residual:
   - The tracked qa/tickets/ bucket was not re-triaged here; the next triage run over a
     corpus on a complete-history checkout will mark the 55 open tickets stale.
