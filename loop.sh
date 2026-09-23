@@ -324,10 +324,14 @@ dev_agent_binary() {
 dev_agent_command() {
   local template
   template="$(dev_agent_field "$1" command)" || return 1
-  # Exact token replacement only — never eval — so a path with a space or a shell
-  # metacharacter cannot expand into extra arguments.
-  template="${template//\{SANDBOX\}/${AI_CODEX_SANDBOX:-workspace-write}}"
-  template="${template//\{CWD\}/$PWD}"
+  # Placeholders become QUOTED POSITIONAL REFERENCES, never the values themselves
+  # (bug_0632, intake cdae46f8). run_agent executes this string with `bash -c`, so a value
+  # spliced in here would be re-parsed as shell: a repo path with a space split `--cd`
+  # into two words, and one containing `;` or `$(...)` ran as a command. launch_agent
+  # passes the values as $1 (cwd) and $2 (sandbox), which bash expands as single words
+  # and never parses again.
+  template="${template//\{CWD\}/\"\$1\"}"
+  template="${template//\{SANDBOX\}/\"\$2\"}"
   printf '%s' "$template"
 }
 
@@ -369,6 +373,20 @@ agent_cmd() {
   done
 }
 
+# Run one resolved agent command under the hang-kill budget with the prompt on STDIN.
+# Record the ACTUAL worker identity: the bash -c writes its pid + immutable start tick,
+# then `exec`s the agent (exec preserves both), so loop-stop cannot mistake a later
+# process that reused the pid for this worker. The command string is shell-parsed by
+# that bash -c — a registry template is a tracked repo file and AI_AGENT_CMD is the
+# operator's own command — but the VALUES a template names are not spliced into it:
+# the cwd and sandbox arrive as positional $1 and $2 (see dev_agent_command, bug_0632).
+launch_agent() {
+  local cmd="$1" budget="$2" prompt="$3"
+  AFK_AGENT_PID_FILE="$AGENT_PID_FILE" timeout --kill-after=30 "$budget" bash -c \
+    'write_process_record "$AFK_AGENT_PID_FILE" "$$" || { echo "Cannot authenticate worker process identity." >&2; exit 125; }; exec '"$cmd" \
+    bash "$PWD" "${AI_CODEX_SANDBOX:-workspace-write}" < "$prompt"
+}
+
 run_agent() {
   local prompt cmd
   AGENTLESS_CYCLE=0
@@ -397,18 +415,14 @@ run_agent() {
   local override
   override="$(node -e 'try{const t=JSON.parse(require("node:fs").readFileSync("ai-runs/latest-cycle.json","utf8")).agentTimeoutSeconds;if(typeof t==="number"&&t>0)process.stdout.write(String(t))}catch{}' 2>/dev/null || true)"
   [[ -n "$override" ]] && budget="$override"
-  echo "Agent: $cmd   (prompt: $prompt, timeout: ${budget}s)"
+  echo "Agent: $cmd   (prompt: $prompt, timeout: ${budget}s, \$1=$PWD, \$2=${AI_CODEX_SANDBOX:-workspace-write})"
   # Bound the agent turn. The loop has NO other recovery for an agent that never
   # returns (a hung headless agent once wedged the loop for ~9h: the circuit breaker
   # only counts COMPLETED no-progress cycles, so it can't catch a stuck turn). On
   # timeout, SIGTERM then SIGKILL after a 30s grace. A nonzero agent result fails
   # the cycle: partial output is not evidence that the requested work completed.
   local rc=0
-  # Record the ACTUAL worker identity: the bash -c writes its pid + immutable start
-  # tick, then `exec`s the agent (exec preserves both). loop-stop therefore cannot
-  # mistake a later process that reused the pid for this worker.
-  AFK_AGENT_PID_FILE="$AGENT_PID_FILE" timeout --kill-after=30 "$budget" bash -c \
-    'write_process_record "$AFK_AGENT_PID_FILE" "$$" || { echo "Cannot authenticate worker process identity." >&2; exit 125; }; exec '"$cmd" < "$prompt" || rc=$?
+  launch_agent "$cmd" "$budget" "$prompt" || rc=$?
   rm -f "$AGENT_PID_FILE" 2>/dev/null || true
   if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
     echo "⏱ Agent exceeded ${budget}s and was terminated — failing this cycle."

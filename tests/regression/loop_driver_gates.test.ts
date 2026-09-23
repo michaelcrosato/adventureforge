@@ -5,7 +5,15 @@
  * layer, so the test suite has to lock it directly.
  */
 import { describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -530,7 +538,8 @@ describe("loop.sh provisional/final commit contracts", () => {
 });
 
 describe("loop.sh agent selection", () => {
-  const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\nrun_agent()")}\n}`;
+  const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\n# Run one resolved agent")}\n}`;
+  const launchAgent = `${sectionBetween("launch_agent() {", "\n}\n\nrun_agent()")}\n}`;
   // The whole registry block, not two functions picked out of it: the ids and the
   // per-agent fields now come from dev-agents.json (which bin/doctor.ts also reads), so
   // dev_agent_binary and dev_agent_command are no longer self-contained case statements.
@@ -570,7 +579,9 @@ describe("loop.sh agent selection", () => {
   it("auto-detects any supported agent, not one privileged vendor", () => {
     const codexOnly = resolve(["unset AI_AGENT AI_AGENT_CMD AI_CODEX_SANDBOX", "codex() { :; }"]);
     expect(codexOnly.status, codexOnly.stderr).toBe(0);
-    expect(codexOnly.stdout).toContain("codex -a never exec --sandbox workspace-write --cd ");
+    // The placeholders resolve to quoted positional references, not spliced values
+    // (bug_0632): launch_agent supplies the cwd as $1 and the sandbox as $2.
+    expect(codexOnly.stdout).toBe('codex -a never exec --sandbox "$2" --cd "$1" -');
 
     // With no codex installed the loop still runs — on whatever IS installed.
     const claudeOnly = resolve(["unset AI_AGENT AI_AGENT_CMD", "claude() { :; }"]);
@@ -622,6 +633,71 @@ describe("loop.sh agent selection", () => {
   it("emits nothing when no agent is available, so the cycle degrades to evidence-only", () => {
     const result = resolve(["unset AI_AGENT AI_AGENT_CMD"]);
     expect(result.stdout.trim()).toBe("");
+  });
+
+  it("launches a registry agent without re-parsing the cwd or sandbox as shell (bug_0632)", () => {
+    // intake cdae46f8: {CWD} used to be spliced into the string launch_agent hands to
+    // `bash -c`, so a checkout path with a space split --cd, and one containing `;` or
+    // `$(...)` executed. Drive the REAL registry entry through the REAL launch line from a
+    // hostile directory and a hostile sandbox value; the stub agent records its argv.
+    const root = mkdtempSync(join(tmpdir(), "loop-launch-"));
+    const hostile = "repo dir;touch PWNED_SEMI;$(touch PWNED_SUB)";
+    const sandbox = "workspace-write;touch PWNED_SANDBOX";
+    try {
+      mkdirSync(join(root, "stub"));
+      mkdirSync(join(root, hostile));
+      writeFileSync(
+        join(root, "stub", "codex"),
+        '#!/usr/bin/env bash\nfor a in "$@"; do printf "%s\\n" "$a"; done > "$ARGS_OUT"\n',
+        { mode: 0o755 },
+      );
+      writeFileSync(join(root, hostile, "prompt.md"), "prompt\n");
+      const script = [
+        "set -uo pipefail",
+        `AI_LOOP_NODE_CMD=${JSON.stringify(process.execPath)}`,
+        registry,
+        `DEV_AGENT_REGISTRY=${JSON.stringify(`${BASH_REPO_ROOT}/dev-agents.json`)}`,
+        agentCommand,
+        launchAgent,
+        "AGENT_PID_FILE=unused.pid",
+        'timeout() { shift 2; "$@"; }',
+        "write_process_record() { :; }",
+        "export -f write_process_record",
+        'export ARGS_OUT="$PWD/args.txt"',
+        'PATH="$PWD/stub:$PATH"',
+        `cd ${JSON.stringify(hostile).replaceAll("$", "\\$")}`,
+        `AI_CODEX_SANDBOX=${JSON.stringify(sandbox)}`,
+        'cmd="$(dev_agent_command codex)"',
+        'launch_agent "$cmd" 60 prompt.md',
+        'printf "rc=%s\\n" "$?"',
+        'printf "cwd=%s\\n" "$PWD"',
+      ].join("\n");
+      const result = spawnSync("bash", ["-s"], {
+        cwd: root,
+        env: process.env,
+        input: script,
+        encoding: "utf8",
+      });
+      const output = `${result.stdout}\n${result.stderr}`;
+      expect(result.status, output).toBe(0);
+      expect(result.stdout).toContain("rc=0");
+      const bashCwd = /cwd=(.*)/u.exec(result.stdout)?.[1];
+      expect(bashCwd, output).toBeDefined();
+      expect(bashCwd!.endsWith(hostile)).toBe(true);
+
+      const argv = readFileSync(join(root, "args.txt"), "utf8").split("\n").slice(0, -1);
+      expect(argv).toEqual(["-a", "never", "exec", "--sandbox", sandbox, "--cd", bashCwd, "-"]);
+      for (const marker of ["PWNED_SEMI", "PWNED_SUB", "PWNED_SANDBOX"]) {
+        expect(existsSync(join(root, marker)), marker).toBe(false);
+        expect(existsSync(join(root, hostile, marker)), marker).toBe(false);
+      }
+    } finally {
+      try {
+        rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      } catch {
+        // Git Bash can briefly retain its cwd handle on Windows; the temp dir is harmless.
+      }
+    }
   });
 });
 

@@ -28,9 +28,12 @@
     "one-line fix rather than a reason to distrust the loop. Confirm yours once with",
     "`AI_AGENT=<id> AI_LOOP_MAX_CYCLES=1 ./loop.sh`.",
     "",
-    "Substitution in `command` is exact token replacement, no shell and no globbing:",
-    "  {CWD}     — the repo root the cycle runs in",
-    "  {SANDBOX} — value of AI_CODEX_SANDBOX, defaulting to workspace-write"
+    "Placeholders in `command` never splice their VALUE into the command string. loop.sh",
+    "runs that string with `bash -c`, so each placeholder becomes a quoted positional",
+    "reference and the value arrives as a separate argument that is never parsed as",
+    "shell (a checkout path with a space or `;` or `$(...)` stays one word):",
+    "  {CWD}     — \"$1\", the repo root the cycle runs in",
+    "  {SANDBOX} — \"$2\", the value of AI_CODEX_SANDBOX, defaulting to workspace-write"
   ],
   "agents": [
     {
