@@ -25,6 +25,14 @@ export const OVERWORLD_WORLD_SCHEMA_VERSION = 11 as const;
 export const OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION = 10 as const;
 export const OVERWORLD_SESSION_SAVE_VERSION = OVERWORLD_WORLD_SCHEMA_VERSION;
 
+/**
+ * Clock and counter fields a restore will accept. Integer arithmetic on the session clock
+ * (travel, rest, local scenes) is exact only inside the safe-integer range; a restored
+ * 2^53+2 or 1e300 used to load, advance and re-save as a silently inexact clock (bug_0643).
+ * The journal-registration boundary's own `minutes` already carried this bound.
+ */
+const SAFE_NONNEGATIVE_INT = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+
 export type TravelLogEntry = {
   edgeId: string;
   fromId: string;
@@ -64,12 +72,12 @@ const TravelLogEntrySnapshotSchema = z
     fromId: z.string().min(1),
     toId: z.string().min(1),
     roadEventId: z.string().min(1).nullable().optional(),
-    delayMinutes: z.number().int().nonnegative(),
-    minutes: z.number().int().nonnegative(),
-    arrivedAt: z.number().int().nonnegative(),
+    delayMinutes: SAFE_NONNEGATIVE_INT,
+    minutes: SAFE_NONNEGATIVE_INT,
+    arrivedAt: SAFE_NONNEGATIVE_INT,
     suppliesUsed: z.number().int().min(0).max(MAX_SUPPLIES),
     suppliesAfter: z.number().int().min(0).max(MAX_SUPPLIES),
-    fatigueGained: z.number().int().nonnegative(),
+    fatigueGained: SAFE_NONNEGATIVE_INT,
     fatigueAfter: z.number().int().min(0).max(MAX_FATIGUE),
   })
   .strict();
@@ -534,7 +542,7 @@ const OverworldSessionSnapshotBaseSchema = z
     worldHash: z.string().regex(/^[0-9a-f]{64}$/),
     currentId: z.string().min(1),
     currentAreaId: z.string().min(1).nullable(),
-    minutes: z.number().int().nonnegative(),
+    minutes: SAFE_NONNEGATIVE_INT,
     supplies: z.number().int().min(0).max(MAX_SUPPLIES),
     fatigue: z.number().int().min(0).max(MAX_FATIGUE),
     discoveredIds: z.array(z.string().min(1)),
@@ -553,7 +561,7 @@ const OverworldSessionSnapshotBaseSchema = z
     completedQuestIds: z.array(z.string().min(1)),
     questOutcomes: z.array(z.tuple([z.string().min(1), z.string().min(1)])),
     exploredSiteIds: z.array(z.string().min(1)),
-    regionRenown: z.array(z.tuple([z.string().min(1), z.number().int().nonnegative()])),
+    regionRenown: z.array(z.tuple([z.string().min(1), SAFE_NONNEGATIVE_INT])),
     completedRegionalArcIds: z.array(z.string().min(1)),
     pendingRoadEncounter: OverworldPendingRoadEncounterSnapshotSchema.nullable(),
     journey: JourneyContractSnapshotSchema,
