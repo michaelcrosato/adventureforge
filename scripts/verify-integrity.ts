@@ -38,7 +38,13 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { countCycleEntries, LOOP_STATE_FILE, ROTATE_KEEP } from "../src/afk/loop_state.js";
+import {
+  countLiveEntries,
+  liveEntryBytes,
+  LOOP_STATE_FILE,
+  ROTATE_KEEP,
+  ROTATE_MAX_ENTRY_BYTES,
+} from "../src/afk/loop_state.js";
 
 /** Verification assets the project's correctness rests on. Must always exist. */
 export const PROTECTED_FILES = [
@@ -329,8 +335,17 @@ export type Finding = {
 export const MAX_TAUTOLOGY_ASSERTIONS = 0;
 
 /** Live loop-state handoff must stay bounded; old cycle detail belongs in git
- *  history or ignored local archives, not in every agent prompt. */
+ *  history or ignored local archives, not in every agent prompt. Counts entries of
+ *  BOTH shapes — the legacy "### Cycle result" and the "## AFK Cycle" scaffold the
+ *  driver actually writes (bug_0631); counting only the legacy shape let the ledger
+ *  grow one scaffold per cycle while this guard reported it within bounds. */
 export const MAX_LIVE_LOOP_STATE_ENTRIES = ROTATE_KEEP;
+
+/** Byte ceiling on the live entry section (first cycle heading to EOF), alongside the
+ *  entry cap: the count alone let a 15-entry ledger reach ~49 KB against a ≤8-line
+ *  per-entry contract nothing enforced (intake c1101bfc). `loop:rotate-state` trims to
+ *  the same ceiling, so a red finding here means one entry is itself too long. */
+export const MAX_LIVE_LOOP_STATE_ENTRY_BYTES = ROTATE_MAX_ENTRY_BYTES;
 
 /** Matches vacuous assertion patterns the three-count system cannot catch:
  *  (a) literal-bool:   expect(true).toBe(true)  / expect(false).toBe(false)
@@ -380,17 +395,28 @@ export function detectLoopStateOverflow(
   text: string,
   keep: number = MAX_LIVE_LOOP_STATE_ENTRIES,
   where: string = LOOP_STATE_FILE,
+  maxBytes: number = MAX_LIVE_LOOP_STATE_ENTRY_BYTES,
 ): Finding[] {
-  const entries = countCycleEntries(text);
-  if (entries <= keep) return [];
-  return [
-    {
+  const findings: Finding[] = [];
+  const entries = countLiveEntries(text);
+  if (entries > keep) {
+    findings.push({
       severity: "error",
       code: "LOOP_STATE_OVER_ROTATED",
-      message: `${LOOP_STATE_FILE} carries ${entries} live cycle entries; limit is ${keep}. Rotate before committing so old detail stays in git history or ignored local archives instead of every agent context.`,
+      message: `${LOOP_STATE_FILE} carries ${entries} live cycle entries; limit is ${keep}. Rotate before committing (npm run loop:rotate-state) so old detail stays in git history or ignored local archives instead of every agent context.`,
       where,
-    },
-  ];
+    });
+  }
+  const bytes = liveEntryBytes(text);
+  if (bytes > maxBytes) {
+    findings.push({
+      severity: "error",
+      code: "LOOP_STATE_OVER_BYTES",
+      message: `${LOOP_STATE_FILE} carries ${bytes} bytes of live cycle entries; limit is ${maxBytes}. Rotate before committing (npm run loop:rotate-state); if one entry alone exceeds the limit, shorten it to the ledger's terse contract.`,
+      where,
+    });
+  }
+  return findings;
 }
 
 export function detectForbiddenPathPatterns(

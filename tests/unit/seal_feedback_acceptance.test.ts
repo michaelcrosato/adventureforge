@@ -588,18 +588,24 @@ describe("feedback acceptance cycle seal", () => {
       beforeRotation.lastIndexOf("### Cycle result"),
     );
 
-    expect(rotateLoopState(root)).toBe(1);
+    // Rotation counts BOTH entry shapes and archives oldest-first (bug_0631): 16 legacy
+    // entries plus this cycle's "## AFK Cycle" scaffold is 17, so the two OLDEST legacy
+    // entries go and the scaffold — the newest entry — stays live in place, frozen
+    // selection and all. (Before the fix the scaffold was archived and its selection
+    // relocated into the intro; either way the seal must still find exactly one.)
+    expect(rotateLoopState(root)).toBe(2);
     const rotated = readFileSync(statePath, "utf8");
     const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
-    expect(countCycleEntries(rotated)).toBe(15);
-    expect(historicalCycleCount(rotated)).toBe(701);
+    expect(countCycleEntries(rotated)).toBe(14);
+    expect(historicalCycleCount(rotated)).toBe(702);
     expect(rotated.match(/feedback_cycle_selection:/gu)).toHaveLength(1);
-    expect(rotated).toContain(selection);
-    expect(rotated.indexOf(selection)).toBeLessThan(rotated.indexOf("### Cycle result"));
+    expect(rotated).toContain(`## AFK Cycle ${RUN_ID}\n${selection}\n`);
     expect(rotated).not.toContain("### Cycle result - prior_14");
-    expect(rotated).not.toContain(`## AFK Cycle ${RUN_ID}`);
+    expect(rotated).not.toContain("### Cycle result - prior_13");
+    expect(rotated).toContain("### Cycle result - prior_12");
     expect(archive).toContain("### Cycle result - prior_14");
-    expect(archive).toContain(`## AFK Cycle ${RUN_ID}`);
+    expect(archive).toContain("### Cycle result - prior_13");
+    expect(archive).not.toContain(`## AFK Cycle ${RUN_ID}`);
     expect(archive).not.toContain("feedback_cycle_selection");
 
     const result = sealFeedbackAcceptance({
@@ -616,8 +622,8 @@ describe("feedback acceptance cycle seal", () => {
     const sealed = readFileSync(statePath, "utf8");
     expect(sealed).toContain("### Cycle result - rotated_selection");
     expect(sealed).not.toContain("feedback_cycle_selection");
-    expect(countCycleEntries(sealed)).toBe(15);
-    expect(historicalCycleCount(sealed)).toBe(701);
+    expect(countCycleEntries(sealed)).toBe(14);
+    expect(historicalCycleCount(sealed)).toBe(702);
   });
 
   it("keeps noncanonical tail selection material live so the real seal rejects it", () => {
@@ -641,16 +647,16 @@ describe("feedback acceptance cycle seal", () => {
       beforeRotation.split(/\r?\n/u).filter((line) => line.includes("feedback_cycle_selection:")),
     ).toEqual([selection, noncanonicalSelection]);
 
-    expect(rotateLoopState(root)).toBe(1);
+    // The scaffold is the newest entry, so rotation archives the two oldest legacy entries
+    // and leaves both selection lines live in the scaffold, in place (bug_0631).
+    expect(rotateLoopState(root)).toBe(2);
     const rotated = readFileSync(statePath, "utf8");
     const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
     const liveSelectionLines = rotated
       .split(/\r?\n/u)
       .filter((line) => line.includes("feedback_cycle_selection:"));
     expect(liveSelectionLines).toEqual([selection, noncanonicalSelection]);
-    for (const line of liveSelectionLines) {
-      expect(rotated.indexOf(line)).toBeLessThan(rotated.indexOf("### Cycle result"));
-    }
+    expect(rotated).toContain(`## AFK Cycle ${RUN_ID}\n${selection}\n${noncanonicalSelection}\n`);
     expect(archive).not.toContain("feedback_cycle_selection:");
 
     const beforeSeal = readFileSync(statePath, "utf8");
@@ -1174,7 +1180,8 @@ describe("feedback acceptance cycle seal without cycle playtest artifacts", () =
   it("keeps a full live ledger sealable through rotation with nothing played", () => {
     const { root, statePath, startRef, head, selection, provisional } = initRotatingCycle(false);
     writeFileSync(statePath, prependFinalCycleResult(provisional, "rotated_no_playtest"));
-    expect(rotateLoopState(root)).toBe(1);
+    // 16 legacy + the scaffold: the two oldest legacy entries rotate out (bug_0631).
+    expect(rotateLoopState(root)).toBe(2);
     expect(readFileSync(statePath, "utf8")).toContain(selection);
 
     const result = sealFeedbackAcceptance({
@@ -1187,8 +1194,8 @@ describe("feedback acceptance cycle seal without cycle playtest artifacts", () =
     const sealed = readFileSync(statePath, "utf8");
     expect(sealed).toContain("### Cycle result - rotated_no_playtest");
     expect(sealed).not.toContain("feedback_cycle_selection");
-    expect(countCycleEntries(sealed)).toBe(15);
-    expect(historicalCycleCount(sealed)).toBe(701);
+    expect(countCycleEntries(sealed)).toBe(14);
+    expect(historicalCycleCount(sealed)).toBe(702);
   });
 
   it("keeps noncanonical tail selection material fatal", () => {
@@ -1201,7 +1208,7 @@ describe("feedback acceptance cycle seal without cycle playtest artifacts", () =
         "rotated_no_playtest_malformed",
       ),
     );
-    expect(rotateLoopState(root)).toBe(1);
+    expect(rotateLoopState(root)).toBe(2);
 
     const beforeSeal = readFileSync(statePath, "utf8");
     expect(() =>

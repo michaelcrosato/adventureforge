@@ -631,7 +631,9 @@ export function buildPrompt(ctx: {
         "- Judge the change against player value and run its focused tests/validation.",
         ...feedbackInstructions,
         "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines) with the change,",
-        "  self-critique, evidence, and next focus.",
+        "  self-critique, evidence, and next focus. Put it at the END of the file under a",
+        "  `## AFK Cycle <runId>` heading (runId from ai-runs/latest-cycle.json) — the shape",
+        "  rotation and cycle counting match.",
         "- Do not commit or push: this is explicitly an evidence-only run. loop.sh still",
         "  runs post-crawl, health, and integrity drift against the clean starting ref.",
       ];
@@ -768,7 +770,8 @@ export function buildUltraplanPrompt(ctx: {
         "  when status reports ready. Evidence-only runs cannot make the provisional compile",
         "  authoritative because they do not execute the final tracked-state seal.",
         "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines): ultraplan choice,",
-        "  self-critique, evidence, and next focus.",
+        "  self-critique, evidence, and next focus. Put it at the END of the file under a",
+        "  `## AFK Cycle <runId>` heading (runId from ai-runs/latest-cycle.json).",
         "- Do not commit or push. loop.sh still runs post-crawl, health, and integrity drift",
         "  against the clean starting ref, leaving evidence-only changes uncommitted.",
       ];
