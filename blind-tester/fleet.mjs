@@ -219,8 +219,19 @@ Options:
 Unknown arguments abort before fleet work begins.`;
 
 // Rotation order for explicit structural `--mock --personas mixed`; live pure
-// fleets reject mixed/non-default personas.
-const PERSONA_ROTATION = ["explorer", "speedrunner", "breaker", "casual", "lore-reader"];
+// fleets reject mixed/non-default personas. Every non-default file in
+// blind-tester/personas/ belongs here (fleet_args.test.ts holds the two in step).
+// The rotation is a LABEL on the structural path only: mock-agent.mjs reads and
+// discards its prompt, so a mock member plays identically whatever persona it
+// carries. It proves persona plumbing, never persona behavior.
+const PERSONA_ROTATION = [
+  "explorer",
+  "speedrunner",
+  "breaker",
+  "casual",
+  "lore-reader",
+  "cynical_veteran",
+];
 
 /** Throw a usage error for an out-of-range/non-integer numeric flag. `min` is
  * the sensible floor per the brief (count/concurrency >= 1, maxRetries >= 0);

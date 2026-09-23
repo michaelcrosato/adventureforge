@@ -12,7 +12,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatFeedbackStatusLine, parseFeedbackArgs } from "../../bin/feedback.js";
+import {
+  authoritativePolicy,
+  formatFeedbackStatusLine,
+  parseFeedbackArgs,
+} from "../../bin/feedback.js";
 import {
   upsertFeedbackAcceptanceStateText,
   type FeedbackAcceptanceState,
@@ -226,6 +230,20 @@ describe("feedback rebootstrap recovery CLI", () => {
     ).toBe(
       "feedback:status — delta; 1 new verified reports, 1 actionable, 0 excluded mocks; 3 actionable reports required.",
     );
+  });
+
+  // `feedback:status` fails in every checkout but the one that sealed the accepted compile,
+  // because the bundle is gitignored. The message used to end on a bare "run
+  // feedback:rebootstrap", which refuses outside a started dev cycle, counts only once
+  // sealed, and re-baselines every checkout. The whole recovery has to be in the message.
+  it("names the missing bundle and the whole recovery when status cannot load it", () => {
+    const committed = { ok: true as const, found: true, state: missingBundleState() };
+    const status = () => authoritativePolicy(tempRoot(), false, committed);
+    expect(status).toThrow(
+      "accepted feedback compile ai-runs/feedback/20260808T220000Z/report-manifest.json is missing or corrupt",
+    );
+    expect(status).toThrow(/npm run feedback:rebootstrap\s+inside a started dev cycle and seal it/);
+    expect(status).toThrow(/replaces the committed baseline for every checkout/);
   });
 
   it("refuses recovery without an accepted pointer or while its bundle remains valid", () => {

@@ -36,7 +36,10 @@ npm run qa:triage -- --verified <ticket_id> --verified-by tests/regression/<the 
 
 which writes `verified_by` onto the ticket file. Triage carries that field forward by
 identity, so the promotion is durable rather than a one-run override, and it also exempts the
-ticket from staleness — a proved defect should not age out for want of fresh reports.
+ticket from staleness — a proved defect should not age out for want of fresh reports. The id
+may name any ticket in the bucket, including one the current corpus no longer mentions or an
+empty store; a `stale` ticket it stamps is revived to `open`. An id that matches no current
+ticket fails the run by name and writes nothing.
 `experience` tickets are never offered as leads: how the game reads is not a thing a test can
 settle.
 
@@ -65,8 +68,21 @@ carried-forward ticket when **all** of these hold, and keeps it otherwise:
   clone, a lane worktree, one machine's shard — every ticket looks silent, and
   nothing retires.
 
-`open`, `in_progress`, `fixed`, `verified_fixed` and `wont_fix` are somebody's
-live position and never retire, whatever their age.
+`in_progress`, `fixed`, `verified_fixed` and `wont_fix` are somebody's live
+position and never retire, whatever their age. An `open` ticket does not retire
+either — but it ages. Every pass re-tests a carried-forward, unverified `open`
+ticket exactly as it tests a freshly clustered one, and one that has gone quiet
+becomes `stale` that pass and may retire on a later one (never both at once).
+Before bug_0651 only a fresh cluster could make a ticket stale, so an `open`
+ticket the corpus stopped mentioning stayed in the bucket forever.
+
+"Gone quiet" means last seen more than `STALE_AFTER_BUILDS` commits behind HEAD,
+**or on a build a complete history does not contain**. Playtests run on lane
+branches, and a squash-merge replaces every lane commit, so the build a session
+recorded usually vanishes from `git log` once its lane lands; before bug_0650 such
+a build was exempt from aging forever. Only a truncated history — a shallow
+clone, or git history that could not be read — keeps the old benefit of the
+doubt, and `qa:triage` says so on stderr when it does.
 
 Retirement is a decision about the file, not the finding. A ticket's id is derived
 from its cluster's stable identity and its evidence is recomputed from the

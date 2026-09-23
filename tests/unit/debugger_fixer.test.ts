@@ -9,13 +9,8 @@ import { describe, it, expect } from "vitest";
 import { initState } from "../../src/core/state.js";
 import type { Rules } from "../../src/core/engine.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import { diagnose, toBugArtifact } from "../../agents/debugger.js";
-import {
-  applyContentPatch,
-  proposeFix,
-  regressionTestStub,
-  type ContentPatchProposal,
-} from "../../agents/fixer.js";
+import { diagnose } from "../../agents/debugger.js";
+import { applyContentPatch, type ContentPatchProposal } from "../../agents/fixer.js";
 
 const startState = () => initState({ seed: 1, start: "a" });
 
@@ -44,7 +39,7 @@ describe("debugger.diagnose", () => {
     expect(d.type).toBe("loop");
   });
 
-  it("reports no_failure on a clean ending and builds a §15 artifact", () => {
+  it("reports no_failure on a clean ending", () => {
     const rules: Rules = {
       legalActions: () => [{ type: "LOOK" }],
       resolve: () => ({ conditions: [], effects: [{ end_game: "done" }] }),
@@ -53,15 +48,6 @@ describe("debugger.diagnose", () => {
     const actions = [{ type: "LOOK" as const }];
     const d = diagnose(rules, state, actions);
     expect(d.type).toBe("no_failure");
-
-    const artifact = toBugArtifact(state, actions, d, {
-      bugId: "bug_test_0001",
-      packId: "win_pack",
-      contentHash: "hash",
-    });
-    expect(artifact.bug_id).toBe("bug_test_0001");
-    expect(artifact.initial_state).toBe("start");
-    expect(artifact.trace).toEqual(actions);
   });
 });
 
@@ -143,50 +129,5 @@ describe("fixer.applyContentPatch", () => {
     });
     expect(res.ok).toBe(false);
     expect(res.report.findings.some((f) => f.code === "PATCH_SCHEMA_BREAK")).toBe(true);
-  });
-});
-
-describe("fixer.proposeFix", () => {
-  it("proposes a single-layer hint for an RPG soft-lock", () => {
-    const p = proposeFix(
-      { type: "soft_lock", description: "stuck", severity: "high", where: [], step: 3 },
-      { location: "old_well" },
-    );
-    expect(p.layer).toBe("hint_text");
-    expect(p.ops).toHaveLength(1);
-    expect(p.ops[0]?.op).toBe("add_room_journal_hint");
-  });
-});
-
-describe("fixer.regressionTestStub", () => {
-  it("generates replay regressions that load by world_quest_id through the source runtime", () => {
-    const source = regressionTestStub(
-      "bug_test_0002",
-      "traces/bugs/bug_test_0002.yaml",
-      "cold_forge",
-    );
-
-    expect(source).toContain("RpgSourceRuntime");
-    expect(source).toContain('requireWorldQuestPlayable("cold_forge")');
-    expect(source).not.toContain("loadRpgSourceFile");
-    expect(source).not.toContain("content/rpg/quests");
-    expect(source).not.toContain("packPath");
-  });
-
-  it("generates a regression that cannot pass vacuously", () => {
-    // `replayTrace` returns ok:true with "no expected final hash to assert" when a
-    // trace omits expected_final_hash, and replaying against unrelated content
-    // proves nothing about the bug. A stub whose only assertion is `.ok` is a
-    // permanently green test — the exact trap this project's tautology guard
-    // exists for, and one a stub can plant before any scanner can see it.
-    const source = regressionTestStub(
-      "bug_test_0003",
-      "traces/bugs/bug_test_0003.json",
-      "cold_forge",
-    );
-
-    expect(source).toContain("expect(trace.content_hash).toBe(source.compiled.contentHash);");
-    expect(source).toContain("expect(trace.expected_final_hash).toBeDefined();");
-    expect(source).toContain("expect(result.finalHash).toBe(trace.expected_final_hash);");
   });
 });

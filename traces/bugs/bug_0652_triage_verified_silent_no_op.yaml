@@ -1,0 +1,49 @@
+id: bug_0652
+title: qa:triage --verified was a silent no-op for any ticket the current corpus did not cluster
+reported_by: 2026-09-22 repository audit at c17192f9 (lane B, task B2)
+severity: S2
+
+symptom: >
+  `npm run qa:triage -- --verified <id> --verified-by <test>` is the documented way to
+  record a deterministic reproduction and promote a lead to `verified`. Run anywhere but
+  against the exact corpus that produced the ticket, it did nothing and exited 0: with an
+  empty store the command printed "the bucket is unchanged" and returned, and with a store
+  that no longer mentioned the ticket it rewrote the ticket unstamped. A mistyped id was
+  indistinguishable from a successful stamp.
+
+cause: >
+  bin/triage.ts returned early whenever the session store was empty, before any stamping.
+  In src/qa/triage.ts the stamp was applied only inside the loop over current clusters; the
+  carry-forward loop pushed a prior ticket back as-is, and nothing compared the requested
+  ids with what had actually been stamped.
+
+reproduction: >
+  tests/unit/qa_triage_cli.test.ts: a real `qa:triage` process given an id that matches
+  nothing now exits 1, names the id, and writes no ticket file; a second case writes a real
+  ticket, marks it stale, empties the store, and proves `--verified` stamps it, revives it
+  to `open`, promotes it to `verified`, and files it in the queue.
+  tests/unit/qa_playtest_pipeline.test.ts, "stamping a reproduction on a ticket the corpus
+  no longer mentions", covers the same rules in-process, including a superseded identity
+  being reported rather than stamped.
+
+fix: >
+  Stamping a carried-forward ticket is sound — a reproduction is evidence on the build that
+  ran it, fresher than any report — so the carry-forward loop now stamps a named,
+  unsuperseded ticket, sets `promotion` to `verified`, and revives `stale` to `open` exactly
+  as a fresh report would (other statuses are decisions and are kept). A superseded ticket
+  is history and is not stamped. `TriageResult.unmatchedVerifiedIds` lists every requested
+  id that matched no current ticket, and bin/triage.ts refuses on it: one stderr line per
+  id, "Nothing was written", exit 1, before the bucket or queue is touched. With ids to
+  stamp, an empty store no longer short-circuits.
+
+production:
+  - src/qa/triage.ts
+  - bin/triage.ts
+  - qa/tickets/README.md
+regression:
+  - tests/unit/qa_triage_cli.test.ts
+  - tests/unit/qa_playtest_pipeline.test.ts
+verification:
+  - The in-process cases fail against the pre-fix src/qa/triage.ts and pass after it.
+  - Triage with no `--verified` flag is unchanged; the playtest loop and loop.sh never pass
+    one, so their triage cannot newly fail on this.

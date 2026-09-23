@@ -37,7 +37,7 @@ Development and playtesting are **separate loops that run in parallel**, and
   promotes corroborated findings into the intake queue. Live pure waves take only
   the `default` persona — persona-directed play changes the thing retention
   measures — so the persona library rotates on the structural lanes instead
-  (`PLAYTEST_MOCK=1`, or `npm run fleet:mock -- --personas …`).
+  (`PLAYTEST_MOCK=1`, or `npm run fleet:mock -- --personas …`) — structurally only: the mock ignores persona prompts.
 
 Other teams are optional and use the same intake: an audit agent, a research or
 design agent, the crawler, or a person. **Playtest feedback is not the only way

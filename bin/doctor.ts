@@ -336,9 +336,11 @@ function reportBlockers(
           ` then aged out:`,
       );
       console.log(`  their last-seen build is more than STALE_AFTER_BUILDS commits behind this`);
-      console.log(`  checkout's HEAD, and \`isActionable\` excludes a stale ticket. Re-running`);
-      console.log(`  triage here will NOT revive them — staleness is recomputed against HEAD`);
-      console.log(`  every pass. Only fresh sessions on the build under test will.`);
+      console.log(`  checkout's HEAD, or is a commit its full history does not contain (a`);
+      console.log(`  squash-merged lane build), and \`isActionable\` excludes a stale ticket.`);
+      console.log(`  Re-running triage here will NOT revive them — staleness is recomputed`);
+      console.log(`  against HEAD every pass. Only fresh sessions on the build under test, or`);
+      console.log(`  a reproduction recorded with \`qa:triage -- --verified\`, will.`);
       return;
     }
     const hasReference = (byTier.reference ?? 0) > 0;

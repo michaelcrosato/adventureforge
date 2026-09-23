@@ -946,8 +946,23 @@ describe("fleet planning", () => {
     );
     expect(runs.map((r: { seed: number }) => r.seed)).toEqual([100, 101, 102, 103, 104, 105, 106]);
     expect(runs[0].persona).toBe("explorer");
-    expect(runs[5].persona).toBe("explorer"); // 5 % 5 wraps
-    expect(new Set(runs.map((r: { persona: string }) => r.persona)).size).toBe(5);
+    expect(runs[5].persona).toBe("cynical_veteran");
+    expect(runs[6].persona).toBe("explorer"); // 6 % 6 wraps
+    expect(new Set(runs.map((r: { persona: string }) => r.persona)).size).toBe(6);
+  });
+
+  // cynical_veteran shipped as a persona file but was never added to the rotation, so
+  // `--mock --personas mixed` silently never exercised it. Pin the rotation to the
+  // persona library itself so the next persona cannot be left out the same way.
+  it("rotates through every non-default persona file", () => {
+    const library = readdirSync(join(process.cwd(), "blind-tester", "personas"))
+      .filter((name) => name.endsWith(".md") && name !== "default.md")
+      .map((name) => name.slice(0, -".md".length))
+      .sort();
+    const runs = planFleetRuns(
+      parseFleetArgs(["--mock", "--count", String(library.length), "--personas", "mixed"]),
+    );
+    expect(runs.map((r: { persona: string }) => r.persona).sort()).toEqual(library);
   });
 
   it("allows named personas on live fleets but refuses unrecorded sampling", () => {

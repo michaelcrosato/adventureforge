@@ -1,0 +1,70 @@
+id: bug_0650
+title: qa:triage never aged a finding whose build a squash-merge had removed from history
+reported_by: 2026-09-22 repository audit at c17192f9 (lane B, task B1); shallow-clone half is intake e84dcbbbbc4be84f
+severity: S2
+
+symptom: >
+  Every build cited by a tracked ticket in qa/tickets/ (10 distinct last_seen_build SHAs
+  across 103 tickets) was absent from `git log` on main, so none of those tickets could
+  ever go stale however old they were: 55 of them sat `open` indefinitely, and a local
+  triage over a pooled corpus would have promoted nine items off a three-week-old
+  pre-squash build (36ff6d10). AGENTS.md tells agents to rely on STALE_AFTER_BUILDS; for
+  the findings that actually reach the bucket, the rule was not running.
+
+cause: >
+  `buildsSince` (src/qa/triage.ts) returns null for a build not in the spine, and the
+  aging rule skipped null outright ("an unrecognized build cannot be aged"). That
+  fail-open was written for an unpublished build on some other machine, but playtests run
+  on lane branches and a squash-merge replaces every lane commit with one new commit on
+  main, so the SHA a session recorded leaves HEAD's ancestry as soon as its lane lands. The
+  exemption became the normal case, and it was permanent. The one environment where the
+  fail-open IS right — a spine that is itself truncated, i.e. a shallow clone — was not
+  detected at all (intake e84dcbbbbc4be84f), so the two cases could not be told apart.
+
+reproduction: >
+  tests/unit/qa_playtest_pipeline.test.ts, "aging a finding the build history cannot
+  place": a session on a build absent from a complete ten-commit spine now yields a
+  `stale` ticket (it yielded `open` before the fix); the same corpus against a truncated
+  or empty spine still yields `open`; a verified finding is still exempt.
+  tests/unit/qa_triage_cli.test.ts, "the recency spine triage ages against", builds a real
+  three-commit repository and a real `--depth 1` clone of it and proves the spine reader
+  reports the full clone complete, the shallow clone truncated, and an unreadable
+  directory truncated.
+
+fix: >
+  The aging test moved into `agedOut(history, historyComplete, build)`: a build the spine
+  contains ages by distance exactly as before, and a build it does not contain is stale
+  when the history is complete and exempt only when it is truncated. `TriageInput` gains
+  `buildHistoryTruncated`; an empty spine is always treated as truncated. The spine reader
+  moved out of bin/triage.ts (which runs main() at import and could not be tested) into
+  src/qa/build_history.ts, whose `readBuildHistory` probes `git rev-parse
+  --is-shallow-repository` and fails OPEN — any probe error or non-`false` answer reads as
+  truncated, since a wrong "complete" would stale the whole bucket. `buildHistoryWarning`
+  gives bin/triage.ts the stderr line intake e84dcbbbbc4be84f asked for, naming `git fetch
+  --unshallow`. It warns rather than failing so the playtest loop keeps triaging.
+
+production:
+  - src/qa/triage.ts
+  - src/qa/build_history.ts
+  - bin/triage.ts
+  - bin/doctor.ts
+  - qa/tickets/README.md
+regression:
+  - tests/unit/qa_playtest_pipeline.test.ts
+  - tests/unit/qa_triage_cli.test.ts
+verification:
+  - The new aging cases fail against the pre-fix src/qa/triage.ts and pass after it.
+  - The pre-existing triage suites (qa_playtest_pipeline, qa_region_identity,
+    qa_triage_cli) pass unchanged, including "keeps a ticket in the open state", which
+    only asserts the ticket is kept, not its status.
+  - STALE_AFTER_BUILDS, `isActionable`, `derivePromotion` and the retirement conditions
+    are unchanged; no threshold moved.
+  - tests/unit/doctor_cli.test.ts built its CLI corpus on the placeholder build
+    "aaaa…", which only counted as fresh through the old fail-open; its "work waiting"
+    case went red. Its sessions now record the checkout's own HEAD, which is what that
+    case means by fresh evidence. No assertion changed.
+residual:
+  - The tracked qa/tickets/ bucket was not re-triaged here; the next triage run over a
+    corpus on a complete-history checkout will mark the 55 open tickets stale.
+  - docs/two_loop_workflow.md's Staleness paragraph still describes only the distance
+    rule; that file belongs to another lane in this batch and was left for it.

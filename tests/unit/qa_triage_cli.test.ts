@@ -12,8 +12,10 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { buildHistoryWarning, readBuildHistory } from "../../src/qa/build_history.js";
 import { sealPlaytestSession, type PlaytestSessionBody } from "../../src/qa/session_record.js";
 import { sha256Hex, writePlaytestSession } from "../../src/qa/session_store.js";
 import { QaTicketSchema } from "../../src/qa/ticket.js";
@@ -109,13 +111,31 @@ function triage(
   store: string,
   tickets: string,
   queue: string = temp("af-triage-q-"),
+  extra: readonly string[] = [],
 ): { out: string; code: number | null } {
   const result = spawnSync(
     process.execPath,
-    [TSX, "bin/triage.ts", "--store", store, "--tickets", tickets, "--queue", queue],
+    [TSX, "bin/triage.ts", "--store", store, "--tickets", tickets, "--queue", queue, ...extra],
     { cwd: ROOT, encoding: "utf8", timeout: 180_000 },
   );
   return { out: `${result.stdout ?? ""}\n${result.stderr ?? ""}`, code: result.status };
+}
+
+/** A git command in `cwd` that works on a machine with no global identity or signing. */
+function git(cwd: string, args: readonly string[]): string {
+  return execFileSync(
+    "git",
+    [
+      "-c",
+      "user.name=qa-test",
+      "-c",
+      "user.email=qa-test@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      ...args,
+    ],
+    { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
 }
 
 function onlyTicket(dir: string): unknown {
@@ -208,5 +228,95 @@ describe("qa:triage on disk", () => {
     expect(existsSync(damaged)).toBe(true);
     expect(readFileSync(damaged, "utf8")).toContain("half-writ");
     expect(out).toContain("unreadable ticket");
+  });
+
+  // bug_0652. `--verified` was a silent no-op for any id this corpus did not cluster:
+  // exit 0, nothing stamped, nothing said. An id is a request, so one that promoted
+  // nothing fails the run, by name, before anything is written.
+  it("refuses a --verified id that matched no ticket, naming it and writing nothing", () => {
+    const tickets = temp("af-triage-t-");
+    const typo = "0123456789abcdef";
+    const { out, code } = triage(corpus(commits()[0]!), tickets, undefined, [
+      "--verified",
+      typo,
+      "--verified-by",
+      "tests/regression/some_repro.test.ts",
+    ]);
+
+    expect(code).toBe(1);
+    expect(out).toContain(`--verified ${typo} matched no current ticket`);
+    expect(out).toContain("Nothing was written");
+    expect(readdirSync(tickets).filter((name) => name.endsWith(".json"))).toEqual([]);
+  });
+
+  it("stamps a bucket ticket the corpus no longer mentions, even from an empty store", () => {
+    // First run writes a real ticket; then it goes stale and its evidence leaves the store,
+    // which is exactly what a later maintainer reproducing it would find.
+    const tickets = temp("af-triage-t-");
+    triage(corpus(commits()[0]!), tickets);
+    const [file] = readdirSync(tickets).filter((name) => name.endsWith(".json"));
+    const path = join(tickets, file!);
+    const written = QaTicketSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+    writeFileSync(path, `${JSON.stringify({ ...written, status: "stale" }, null, 2)}\n`);
+
+    const queue = temp("af-triage-q-");
+    const { out, code } = triage(temp("af-triage-empty-"), tickets, queue, [
+      "--verified",
+      written.ticket_id,
+      "--verified-by",
+      "tests/regression/some_repro.test.ts",
+    ]);
+
+    expect(code, out).toBe(0);
+    expect(onlyTicket(tickets)).toMatchObject({
+      ticket_id: written.ticket_id,
+      status: "open",
+      promotion: "verified",
+      verified_by: "tests/regression/some_repro.test.ts",
+    });
+    expect(readdirSync(queue).filter((name) => name.endsWith(".json"))).toHaveLength(1);
+  });
+});
+
+// bug_0650. Triage now ages a build a COMPLETE history cannot place, so whether the spine
+// is complete is load-bearing: a shallow clone reported as complete would stale every
+// ticket at once. Proven against a real shallow clone of a throwaway repository rather
+// than trusted.
+describe("the recency spine triage ages against", () => {
+  function repoWithCommits(count: number): string {
+    const dir = temp("af-spine-origin-");
+    git(dir, ["init", "--quiet"]);
+    for (let i = 0; i < count; i += 1) {
+      writeFileSync(join(dir, "f.txt"), `${i}\n`);
+      git(dir, ["add", "f.txt"]);
+      git(dir, ["commit", "--quiet", "-m", `c${i}`]);
+    }
+    return dir;
+  }
+
+  it("reports a full clone as complete, newest commit first", () => {
+    const origin = repoWithCommits(3);
+    const history = readBuildHistory(origin);
+    expect(history).toMatchObject({ truncated: false, reason: null });
+    expect(history.commits).toHaveLength(3);
+    expect(history.commits[0]).toBe(git(origin, ["rev-parse", "HEAD"]).trim());
+    expect(buildHistoryWarning(history)).toBeNull();
+  });
+
+  it("reports a shallow clone as truncated and tells the operator how to fix it", () => {
+    const origin = repoWithCommits(3);
+    const clone = join(temp("af-spine-clone-"), "shallow");
+    git(tmpdir(), ["clone", "--quiet", "--depth", "1", pathToFileURL(origin).href, clone]);
+
+    const history = readBuildHistory(clone);
+    expect(history).toMatchObject({ truncated: true, reason: "shallow" });
+    expect(history.commits).toHaveLength(1);
+    expect(buildHistoryWarning(history)).toContain("git fetch --unshallow");
+  });
+
+  it("reports a directory git cannot read as truncated, never as complete", () => {
+    const history = readBuildHistory(temp("af-spine-none-"));
+    expect(history).toEqual({ commits: [], truncated: true, reason: "unreadable" });
+    expect(buildHistoryWarning(history)).toContain("could not be read");
   });
 });

@@ -14,6 +14,7 @@ import { OverworldSession, type OverworldSessionSnapshot } from "../world/sessio
 import type { OverworldView } from "../world/session_view.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 import { excludedJourneyDecision } from "../world/journey_decision.js";
+import type { EmbeddedQuestChildRecord } from "../cli/embedded_quest_journey.js";
 import {
   OVERWORLD_COMPACT_RESULT_LEGEND,
   type OverworldCompactResultLegendKey,
@@ -116,6 +117,9 @@ export type OverworldMcpRestoreResponse<Args extends OverworldMcpResponseOptions
   snapshot_hash: string;
   /** Non-fatal compatibility notices produced while loading the save. */
   warnings: readonly string[];
+  /** The re-bound active quest, when the snapshot was restored with its embedded_quest. */
+  rpg_session_id?: string;
+  rpg_state_hash?: string;
   /** Definitions for every compact field present in this restored response. */
   legend?: OverworldCompactLegendPatch;
 } & OverworldMcpJourneyField<Args> &
@@ -256,6 +260,11 @@ export type OverworldMcpExportSuccess = {
   session_id: string;
   snapshot_hash: string;
   snapshot: OverworldSessionSnapshot;
+  /**
+   * The active quest's child, present exactly when the journey was exported mid-quest.
+   * Kept beside the versioned snapshot rather than inside it; restore needs both (bug_0654).
+   */
+  embedded_quest?: EmbeddedQuestChildRecord;
 } & OverworldMcpJourneyField;
 
 export const OVERWORLD_MCP_SESSION_STORE_LIMIT = 64;
@@ -456,7 +465,10 @@ export class OverworldMcpSessionStore {
   }
 
   restore(snapshot: unknown): OverworldMcpSessionEntry {
-    const session = OverworldSession.restore(this.loadManifest(), snapshot);
+    return this.register(OverworldSession.restore(this.loadManifest(), snapshot));
+  }
+
+  private register(session: OverworldSession): OverworldMcpSessionEntry {
     const session_id = `o-${randomUUID()}`;
     rememberOverworldSessionEntry(this.sessions, session_id, session, this.maxSessions);
     return { session_id, session };
@@ -630,16 +642,28 @@ export class OverworldMcpSessionStore {
     } as unknown as OverworldMcpStartResponse<Args>;
   }
 
+  /**
+   * `prepareChild` verifies an embedded child against the restored parent BEFORE the parent
+   * is registered, so a refused child leaves no half-restored session behind, and returns
+   * the binder that attaches it to the parent's new id.
+   */
   restoreResponse<Args extends OverworldMcpResponseOptions>(
     args: Args,
     snapshot: unknown,
+    prepareChild?: (
+      session: OverworldSession,
+    ) => ((sessionId: string) => { rpg_session_id: string; rpg_state_hash: string }) | null,
   ): OverworldMcpRestoreResponse<Args> {
-    const restored = this.restore(snapshot);
+    const session = OverworldSession.restore(this.loadManifest(), snapshot);
+    const bindChild = prepareChild?.(session) ?? null;
+    const restored = this.register(session);
+    const child = bindChild?.(restored.session_id);
     return {
       ok: true,
       session_id: restored.session_id,
       snapshot_hash: this.snapshotHash(restored.session),
       warnings: restored.session.restoreWarnings(),
+      ...(child ?? {}),
       journey:
         args.compact_context === true
           ? compactJourneyPresentation(restored.session.journey())
@@ -718,6 +742,7 @@ export class OverworldMcpSessionStore {
 
   exportSnapshot<Args extends OverworldMcpExportArgs>(
     args: Args,
+    exportChild?: (sessionId: string, session: OverworldSession) => EmbeddedQuestChildRecord | null,
   ): OverworldMcpExportResponse<Args> {
     const guarded = this.guardedSession(args, args.session_id);
     if (isOverworldMcpRejectedSessionPayload(guarded)) {
@@ -725,7 +750,12 @@ export class OverworldMcpSessionStore {
     }
     const { session } = guarded;
     const snapshotHash = this.fullSnapshotHash(session);
+    const embeddedQuest = exportChild?.(args.session_id, session) ?? null;
+    // `unchanged` is a claim about the whole export. Mid-quest, the child can advance on a
+    // decision the journey does not count, which leaves the parent hash where it was, so
+    // the claim is only made when there is no child riding beside the snapshot.
     if (
+      embeddedQuest === null &&
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {
@@ -740,6 +770,7 @@ export class OverworldMcpSessionStore {
       snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
       journey: session.journey(),
       snapshot: session.snapshot(),
+      ...(embeddedQuest !== null ? { embedded_quest: embeddedQuest } : {}),
     } as OverworldMcpExportResponse<Args>;
   }
 

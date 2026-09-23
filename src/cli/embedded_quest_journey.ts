@@ -140,6 +140,69 @@ const CliJourneySaveSchema = z
     }
   });
 
+/**
+ * The persisted form of ONE embedded quest child: its launch anchor, the save bundle of its
+ * current state, and the exact accepted action trail that reaches that state from launch.
+ *
+ * This is the shape the terminal journey writes beside its parent snapshot, and it is
+ * exported so the MCP server persists a mid-quest child in the very same form
+ * (`export_overworld_session` / `restore_overworld_session`, bug_0654). Before that, MCP
+ * exported only the parent, so a journey saved mid-quest restored with its quest started
+ * and no child able to finish it. One record and one verifier mean the two surfaces cannot
+ * disagree about what makes a restored child trustworthy.
+ */
+export type EmbeddedQuestChildRecord = CliJourneySaveChild;
+export const EmbeddedQuestChildRecordSchema = CliJourneySaveChildSchema;
+
+/** The live state an embedded child record is written from. */
+export type EmbeddedQuestChildSource = Readonly<{
+  worldQuestId: string;
+  title: string;
+  contentHash: string;
+  launchCharacter: CampaignCharacterState;
+  continuity: EmbeddedQuestCharacterContinuity;
+  actionIds: readonly string[];
+  state: GameState;
+}>;
+
+/** Write one embedded child in its persisted, content-bound form. */
+export function embeddedQuestChildRecord(
+  child: EmbeddedQuestChildSource,
+): EmbeddedQuestChildRecord {
+  return {
+    worldQuestId: child.worldQuestId,
+    title: child.title,
+    contentHash: child.contentHash,
+    launchCharacter: cloneCampaignCharacterState(child.launchCharacter),
+    continuity: cloneEmbeddedQuestCharacterContinuity(child.continuity),
+    actionIds: [...child.actionIds],
+    rpgSave: save(child.state, child.contentHash, SAVE_MODE, {
+      worldQuestId: child.worldQuestId,
+      embeddedCharacterContinuity: child.continuity,
+    }),
+  };
+}
+
+/** A child whose record survived every restore check, ready to be bound to a live parent. */
+export type RestoredEmbeddedQuestChild = Readonly<{
+  worldQuestId: string;
+  title: string;
+  contentHash: string;
+  continuity: EmbeddedQuestCharacterContinuity;
+  actionIds: readonly string[];
+  phase: CliEmbeddedQuestPhase;
+  index: RpgIndex;
+  state: GameState;
+}>;
+
+/**
+ * Quests the parent has started and not completed. While the journey is live, a non-empty
+ * answer means a persisted parent is only restorable together with its embedded child.
+ */
+export function unfinishedEmbeddedQuestIds(parent: OverworldSession): string[] {
+  return unfinishedQuestIds(parent);
+}
+
 export class CliJourneyIntegrityError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -416,6 +479,30 @@ function restoreChild(args: {
   } catch (error) {
     throw wrapIntegrity("Could not restore embedded quest", error);
   }
+}
+
+/**
+ * Verify a persisted embedded child against its restored parent with every check the
+ * terminal journey applies — content hash, save/source identity, character continuity, the
+ * parent-proven launch character and campaign import receipt, a deterministic replay of the
+ * whole action trail to the saved state, the replayed decisions against the parent's own
+ * decision trail, and parent/child phase consistency — and return it ready to bind. Throws
+ * a `CliJourneyIntegrityError` naming the first check that failed.
+ */
+export function restoreEmbeddedQuestChild(args: {
+  world: OverworldManifest;
+  runtime: RpgSourceRuntime;
+  parent: OverworldSession;
+  phase: CliEmbeddedQuestPhase;
+  saved: EmbeddedQuestChildRecord;
+}): RestoredEmbeddedQuestChild {
+  return restoreChild({
+    world: args.world,
+    runtime: args.runtime,
+    parent: args.parent,
+    phase: `quest_${args.phase}`,
+    saved: args.saved,
+  });
 }
 
 /**
@@ -709,21 +796,7 @@ export class CliJourneySession {
       version: CLI_JOURNEY_SAVE_VERSION,
       phase: phaseFor(child),
       overworld: this.parentSession.snapshot(),
-      child:
-        child === null
-          ? null
-          : {
-              worldQuestId: child.worldQuestId,
-              title: child.title,
-              contentHash: child.contentHash,
-              launchCharacter: cloneCampaignCharacterState(child.launchCharacter),
-              continuity: cloneEmbeddedQuestCharacterContinuity(child.continuity),
-              actionIds: [...child.actionIds],
-              rpgSave: save(child.state, child.contentHash, SAVE_MODE, {
-                worldQuestId: child.worldQuestId,
-                embeddedCharacterContinuity: child.continuity,
-              }),
-            },
+      child: child === null ? null : embeddedQuestChildRecord(child),
     };
   }
 

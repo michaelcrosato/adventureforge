@@ -201,8 +201,13 @@ function scoreAwardOnFailure(node: unknown): boolean {
  * both shipped packs' top award lands AT the terminal claim (cold_forge's +20 ember on_enter
  * and sunken_barrow's +25 circlet take_effects both fire as the win condition trips).
  */
-function maxReachableScore(index: RpgIndex): { max: number; cappedOut: boolean } {
+function maxReachableScore(index: RpgIndex): { max: number; min: number; cappedOut: boolean } {
   let max = 0;
+  // The floor, over the same complete region (intake cacc2a4f). Nothing clamps `score` at
+  // zero — dec_var has no floor in src/core/effects.ts — and a negative score makes a save
+  // permanently unloadable (assertRpgStateReferences refuses it). The WORST regime is in the
+  // bracket, so a penalty that rides a failed roll is visited too.
+  let min = 0;
   const ruleSets = [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)];
   const result = exhaustiveEndingsMulti(
     ruleSets,
@@ -211,10 +216,11 @@ function maxReachableScore(index: RpgIndex): { max: number; cappedOut: boolean }
     (s) => {
       const score = s.vars[SCORE_VAR] ?? 0; // score is undefined until the first inc_var
       if (score > max) max = score;
+      if (score < min) min = score;
     },
     { explore: (action) => livenessExplore(index, action) },
   );
-  return { max, cappedOut: result.cappedOut };
+  return { max, min, cappedOut: result.cappedOut };
 }
 
 describe("bug_0149 — every RPG pack's reachable max score equals its declared max_score", () => {
@@ -268,11 +274,17 @@ describe("bug_0149 — every RPG pack's reachable max score equals its declared 
             `trusting the economy here`,
         ).toBe(false);
 
-        const { max, cappedOut } = maxReachableScore(indexRpgPack(pack));
+        const { max, min, cappedOut } = maxReachableScore(indexRpgPack(pack));
 
         // The search must have exhausted the reachable region, else the observed maximum is
         // unproven (a higher score could lie in the truncated tail).
         expect(cappedOut, `state-space search hit the ${MAX_STATES} cap`).toBe(false);
+        // The floor (intake cacc2a4f): no reachable state may carry a negative score, or a
+        // save taken there could never be restored.
+        expect(
+          min,
+          `a reachable state carries score ${min} — a penalty drives score below zero, and a save taken there is unloadable`,
+        ).toBeGreaterThanOrEqual(0);
         // The crux: reachable max > declared is overflow/farm/under-declared max_score;
         // reachable max < declared is phantom points (a max_score no route can reach).
         expect(
@@ -331,6 +343,52 @@ endings: [{ id: e, title: E, text: "done" }]
     expect(cappedOut).toBe(false);
     expect(max).toBe(35); // the true reachable max…
     expect(max).not.toBe(r.compiled.pack.meta.max_score); // …which the equality check rejects (35 != 30)
+  });
+
+  it("FAILS on a planted BELOW-ZERO pack (a penalty that can drive score negative)", () => {
+    // The gem's take awards +10, but kicking the bucket costs 5 and is available from the
+    // start — so a player who kicks first holds score -5 (intake cacc2a4f). The floor check
+    // must see that state: reachable min -5 < 0, while the max still equals max_score.
+    const src = `
+meta: { id: t, title: T, start_room: a, max_score: 10, vars_init: { hp: 10, attack: 3, defense: 1 } }
+rooms:
+  - id: a
+    name: A
+    description: "base"
+    objects: [bucket, gem]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: B
+    description: "B"
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: bucket
+    name: bucket
+    description: "a bucket"
+    interactions:
+      - verb: USE
+        target: bucket
+        conditions: [{ not_flag: kicked }]
+        effects:
+          - set_flag: kicked
+          - dec_var: { name: score, by: 5 }
+  - id: gem
+    name: gem
+    description: "a gem"
+    takeable: true
+    take_effects:
+      - inc_var: { name: score, by: 10 }
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: E, text: "done" }]
+`;
+    const r = compileRpgSource(src);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const { max, min, cappedOut } = maxReachableScore(indexRpgPack(r.compiled.pack));
+    expect(cappedOut).toBe(false);
+    expect(max).toBe(10); // the ceiling check alone would pass this pack…
+    expect(min).toBe(-5); // …but the floor sees the kick-first state
+    expect(min).toBeLessThan(0);
   });
 
   it("FAILS on a planted PHANTOM-POINTS pack (a declared max_score no route can reach)", () => {

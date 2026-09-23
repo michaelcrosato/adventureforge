@@ -13,10 +13,10 @@
  *   npm run qa:triage -- --dry-run       report what would change, write nothing
  *   npm run qa:triage -- --store <dir>   triage a corpus somewhere else
  */
-import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { buildLocationIndex } from "../src/feedback/normalize.js";
 import { DEFAULT_QUEUE_DIR } from "../src/intake/submission.js";
+import { buildHistoryWarning, readBuildHistory } from "../src/qa/build_history.js";
 import { DEFAULT_TICKET_DIR } from "../src/qa/ticket.js";
 import { reconcileTicketSubmissions } from "../src/qa/ticket_submission.js";
 import { readTickets, summarizeBucket, writeTickets } from "../src/qa/ticket_store.js";
@@ -31,36 +31,6 @@ function argValue(flag: string, fallback: string): string {
   const value = process.argv[index + 1];
   if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
   return value;
-}
-
-/**
- * Recency spine for staleness: the commits this checkout knows about, newest first.
- *
- * Read from git rather than from the sessions themselves so that a build nobody has
- * played yet still counts as "newer" — otherwise a quiet period in the fleet would make
- * every ticket look freshly seen.
- *
- * The whole history, deliberately, not a window. `buildsSince` returns null for a commit
- * it cannot find and triage skips aging on null — a fail-open the comment there defends,
- * because expiring a ticket whose build simply was not published would be worse than
- * keeping it. But a truncated window turns that safety valve into the normal case: with
- * the previous `-n200` on a repository already past 1,500 commits, every session played
- * on a build older than the last two hundred was permanently exempt from
- * STALE_AFTER_BUILDS, which is precisely the ticket most likely to describe something
- * already fixed. Full history costs one 41-byte line per commit and is read once.
- */
-function buildHistory(): string[] {
-  try {
-    return execFileSync("git", ["log", "--format=%H"], {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-      maxBuffer: 64 * 1024 * 1024,
-    })
-      .split("\n")
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
 }
 
 /** Every value given for a repeatable flag, so `--verified a --verified b` takes both. */
@@ -102,7 +72,11 @@ function main(): void {
     console.error(`! unreadable ticket ${bad.file}: ${bad.reason} (left in place)`);
   }
 
-  if (entries.length === 0) {
+  // A `--verified` stamp needs no corpus: it names a ticket already in the bucket. This
+  // early return used to swallow it — the flag was accepted, nothing was stamped, and the
+  // run exited 0 (bug_0652) — so with ids to stamp, an empty store falls through to triage,
+  // which carries every ticket forward and stamps the ones named.
+  if (entries.length === 0 && verifiedTicketIds.length === 0) {
     console.log(`No playtest sessions in ${store}; the bucket is unchanged.`);
     // The previous run may have written proven replacements before intake failed.
     // Those persisted decisions can be retried without inventing new corpus evidence.
@@ -119,14 +93,34 @@ function main(): void {
     return;
   }
 
+  const history = readBuildHistory(REPO_ROOT);
+  const historyWarning = buildHistoryWarning(history);
+  if (historyWarning !== null) console.error(historyWarning);
+
   const result = triagePlaytestCorpus({
     sessions: entries.map((entry) => entry.record),
     locationIndex: buildLocationIndex(REPO_ROOT),
-    buildHistory: buildHistory(),
+    buildHistory: history.commits,
+    buildHistoryTruncated: history.truncated,
     existingTickets: existing,
     verifiedTicketIds,
     ...(verifiedBy !== "" ? { verifiedBy } : {}),
   });
+
+  // Refuse before writing anything. The operator asked for a promotion by id, so an id
+  // that promoted nothing is a failed request, not a detail — and writing the ids that DID
+  // match would leave a half-applied stamp to be discovered later in the bucket.
+  if (result.unmatchedVerifiedIds.length > 0) {
+    for (const id of result.unmatchedVerifiedIds) {
+      console.error(
+        `! --verified ${id} matched no current ticket in ${ticketDir} or the corpus in ${store}` +
+          ` (mistyped, retired, or superseded — \`npm run qa:bucket -- --all\` lists ids).`,
+      );
+    }
+    console.error("Nothing was written: fix the ids above and re-run.");
+    process.exitCode = 1;
+    return;
+  }
 
   const { stats } = result;
   console.log(

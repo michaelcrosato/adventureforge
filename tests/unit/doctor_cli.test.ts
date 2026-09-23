@@ -8,7 +8,7 @@
  * empty queue. These tests pin that it distinguishes them, because a diagnostic that
  * says the same thing in both states is worse than none — it teaches you to ignore it.
  */
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
@@ -27,6 +27,15 @@ import { isActionable, QaTicketSchema, ticketFileName } from "../../src/qa/ticke
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 const TRANSCRIPT = "line one\nline two\n";
+/**
+ * The build these sessions played. It has to be a commit this checkout's history holds:
+ * triage ages a finding whose build a complete history cannot place (bug_0650), and the
+ * cases below are about fresh evidence, not stale evidence.
+ */
+const PLAYED_BUILD = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: ROOT,
+  encoding: "utf8",
+}).trim();
 
 const dirs: string[] = [];
 function temp(prefix: string): string {
@@ -52,7 +61,7 @@ function session(over: {
     game_session_id: `o-${over.index}`,
     run_seed: 100 + over.index,
     build: {
-      git_commit: "a".repeat(40),
+      git_commit: PLAYED_BUILD,
       tracked_worktree_clean: true,
       world_id: "new_york_overworld",
       world_hash: "b".repeat(64),

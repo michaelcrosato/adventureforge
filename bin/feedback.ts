@@ -143,8 +143,18 @@ export function authoritativePolicy(
   }
   const previous = loadAcceptedFeedbackBundle(root, parsed.state);
   if (!previous) {
+    // The marker naming this compile is committed, but its bundle is gitignored, so every
+    // checkout but the one that sealed it lands here — a fresh clone, a lane worktree, CI.
+    // The bare "run rebootstrap" this used to end on was half the recovery: the command
+    // refuses without a started dev cycle, its compile counts only once sealed, and a
+    // sealed rebootstrap re-baselines EVERY checkout. Say all of that where it is needed.
     throw new Error(
-      "accepted feedback compile is missing or corrupt; restore its ignored artifacts or run npm run feedback:rebootstrap",
+      `accepted feedback compile ${parsed.state.accepted_compile.manifest_path} is missing or corrupt ` +
+        "in this checkout (the bundle is gitignored, so it exists only where it was sealed). " +
+        "Restore that bundle from that machine, or recover with npm run feedback:rebootstrap " +
+        'inside a started dev cycle and seal it (docs/afk_loop.md, "If the whole ai-runs/ ' +
+        'directory was cleared"). A sealed rebootstrap replaces the committed baseline for ' +
+        "every checkout and marks every verified report on disk as already seen.",
     );
   }
   return {

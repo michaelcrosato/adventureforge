@@ -1556,7 +1556,6 @@ describe("OverworldSession", () => {
         react.createElement(module.QuestNotice, {
           quest,
           areaName: "Station Quarter",
-          isCurrentArea: true,
           onStart: () => undefined,
         }),
       );
@@ -1588,7 +1587,6 @@ describe("OverworldSession", () => {
         react.createElement(module.QuestNotice, {
           quest: { ...quest, launch: undefined },
           areaName: "Station Quarter",
-          isCurrentArea: true,
           onStart: () => undefined,
         }),
       );

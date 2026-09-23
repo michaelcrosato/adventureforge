@@ -61,6 +61,7 @@ import {
 } from "./transcript_projection.js";
 import { OverworldMcpSessionStore } from "./overworld_sessions.js";
 import { createOverworldToolHandlers } from "./overworld_tool_handlers.js";
+import { createEmbeddedQuestPersistence } from "./embedded_quest_persistence.js";
 import { overworldQuestCompletionFromRpgSession } from "./overworld_quest_bridge.js";
 import {
   embeddedJourneyFocus,
@@ -463,6 +464,12 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
   const rpgSources = new RpgSourceRuntime(root);
   const rpgRuntime = new RpgMcpSessionRuntime(sessions);
   const overworldSessions = new OverworldMcpSessionStore(() => loadOverworldManifestFromRoot(root));
+  const embeddedQuests = createEmbeddedQuestPersistence({
+    sessions,
+    rpgRuntime,
+    rpgSources,
+    loadOverworldManifest: () => loadOverworldManifestFromRoot(root),
+  });
 
   function embeddedJourneyField(rpgSessionId: string): EmbeddedJourneyField | null {
     const rpgSession = sessions.get(rpgSessionId);
@@ -506,6 +513,7 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
       rpgRuntime,
       overworldSessions,
       loadOverworldManifest: () => loadOverworldManifestFromRoot(root),
+      embeddedQuests,
       startEmbeddedWorldQuest: (startArgs, context) => {
         const responseOptions = {
           compact_observation: true,
@@ -694,6 +702,9 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
           if (response.journeyActionId === null) {
             throw new Error("Accepted RPG journey decision is missing its canonical action id.");
           }
+          // The child's state has already advanced, so its replay trail advances with it;
+          // an export must be able to replay exactly to the state it saves (bug_0654).
+          sessions.recordEmbeddedAction(rpgSession.id, response.journeyActionId);
           const journey = overworldSession.recordQuestDecision(
             response.journeyActionId,
             response.journeyDecision,
@@ -763,11 +774,13 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
     },
 
     async adapt_story(args: AdaptStoryArgs) {
-      // Author a pack from a premise via the writer → adapter → validator loop
-      // (§12.1–3) using the deterministic, keyless MockAuthorProvider — so it runs
-      // fully offline with no API keys. Mirrors bin/author.ts. Returns compact
-      // story/validation proof by default; callers opt into echoing the full
-      // authored pack. Never writes files.
+      // Run the writer → adapter → validator loop (§12.1–3) using the deterministic,
+      // keyless MockAuthorProvider — so it runs fully offline with no API keys. That
+      // provider is the ONLY one wired here and it answers from canned JSON: the premise
+      // reaches the writer prompt, but every premise yields the same Lighthouse pack, and
+      // the tool description says so rather than promising authoring "from a premise".
+      // Mirrors bin/author.ts. Returns compact story/validation proof by default;
+      // callers opt into echoing the full authored pack. Never writes files.
       if ((args as { mode?: unknown }).mode !== undefined) {
         throw new Error("adapt_story is RPG-only; mode is no longer supported.");
       }
@@ -913,7 +926,13 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
           report: loaded.report,
         };
       }
-      const result = applyContentPatch(loaded.compiled.pack, args.proposal);
+      // The patched pack is held to the quest's own load-path bar — import-aware
+      // validation plus campaign catalog parity — not to plain validateRpg, which
+      // cannot see flags a campaign import supplies and so failed even a zero-op patch
+      // on Wolf-Winter (bug_0653).
+      const result = applyContentPatch(loaded.compiled.pack, args.proposal, {
+        validate: (pack) => rpgSources.validateWorldQuestPack(source.questId, pack),
+      });
       if (!result.ok) {
         return {
           ok: false,

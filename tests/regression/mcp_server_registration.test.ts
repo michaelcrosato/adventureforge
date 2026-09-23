@@ -364,8 +364,12 @@ describe("MCP server registration", () => {
     // +540 on 2026-09-06: choose_overworld_session_story gained a full-mode-only
     // option_id alias for choice, so the obvious inspect-then-choose sequence no
     // longer fails on an argument-name mismatch (queue 61d3b9dec4cb09fd).
-    expect(overworldSchemaSource.length).toBe(9_734);
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(9_800);
+    // +134 on 2026-09-22 (bug_0654): restore_overworld_session gained the optional
+    // embedded_quest argument and export_overworld_session's description says to pass
+    // it back, because a snapshot exported mid-quest is not restorable without its
+    // child. Ceiling raised by the same step, not loosened past it.
+    expect(overworldSchemaSource.length).toBe(9_868);
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(9_900);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");

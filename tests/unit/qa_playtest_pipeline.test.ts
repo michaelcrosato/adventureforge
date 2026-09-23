@@ -1312,6 +1312,205 @@ describe("retiring aged-out tickets so the bucket stays bounded", () => {
   });
 });
 
+// bug_0650 / bug_0651. Playtests run on lane branches, and a squash-merge replaces every
+// lane commit, so the build a session recorded routinely vanishes from `git log`. That
+// build used to be exempt from aging forever, and a carried-forward `open` ticket was
+// never re-aged at all — so neither kind of ticket could ever leave the dev loop's view.
+describe("aging a finding the build history cannot place", () => {
+  const transcript = "line one\nline two\n";
+  const HEAD = "a".repeat(40);
+  /** A lane commit its squash-merge replaced: real once, absent from history now. */
+  const SQUASHED = "d".repeat(40);
+  /** Newest first, STALE_AFTER_BUILDS + 2 long, so index 9 is past the threshold. */
+  const WINDOW = [HEAD, ...Array.from({ length: 9 }, (_, i) => String(i + 1).repeat(40))];
+
+  function sessionOn(build: string) {
+    const store = tempDir();
+    const played = body();
+    writePlaytestSession(
+      store,
+      sealPlaytestSession({ ...played, build: { ...played.build, git_commit: build } }),
+      transcript,
+    );
+    return listPlaytestSessions(store).entries.map((entry) => entry.record);
+  }
+
+  function carried(over: Partial<QaTicket> = {}): QaTicket {
+    return {
+      schema_version: 2,
+      ticket_id: "7".repeat(16),
+      title: "a finding the corpus stopped mentioning",
+      kind: "bug",
+      severity: "S3",
+      status: "open",
+      promotion: "corroborated",
+      location: "somewhere_else",
+      excerpts: [],
+      evidence: {
+        report_count: 2,
+        families: ["claude", "gpt"],
+        providers: ["claude_code", "codex"],
+        tiers: ["volume"],
+        has_runner_enforced_report: true,
+        session_ids: ["s1", "s2"],
+        first_seen_build: SQUASHED,
+        last_seen_build: SQUASHED,
+        first_seen_at: "2026-08-31T12:00:00.000Z",
+        last_seen_at: "2026-08-31T12:00:00.000Z",
+      },
+      priority: 6,
+      ...over,
+    };
+  }
+
+  function triage(input: Partial<Parameters<typeof triagePlaytestCorpus>[0]>) {
+    return triagePlaytestCorpus({
+      sessions: sessionOn(HEAD),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: WINDOW,
+      ...input,
+    });
+  }
+
+  const find = (tickets: readonly QaTicket[], id = "7".repeat(16)) =>
+    tickets.find((t) => t.ticket_id === id);
+
+  it("ages a fresh cluster whose build a complete history does not contain", () => {
+    const { tickets, stats } = triage({ sessions: sessionOn(SQUASHED) });
+    expect(tickets.length).toBeGreaterThan(0);
+    expect(tickets.every((t) => t.status === "stale")).toBe(true);
+    expect(stats.stale).toBe(tickets.length);
+  });
+
+  it("keeps the benefit of the doubt when the history is truncated", () => {
+    const shallow = triage({ sessions: sessionOn(SQUASHED), buildHistoryTruncated: true });
+    expect(shallow.tickets.every((t) => t.status === "open")).toBe(true);
+    // No history at all is truncated by definition, whatever the flag says.
+    const none = triage({ sessions: sessionOn(SQUASHED), buildHistory: [] });
+    expect(none.tickets.every((t) => t.status === "open")).toBe(true);
+  });
+
+  it("still exempts a verified finding, whose reproduction does not decay", () => {
+    const id = triage({ sessions: sessionOn(SQUASHED) }).tickets[0]!.ticket_id;
+    const stamped = triage({
+      sessions: sessionOn(SQUASHED),
+      verifiedTicketIds: [id],
+      verifiedBy: "tests/regression/some_repro.test.ts",
+    });
+    expect(find(stamped.tickets, id)).toMatchObject({ status: "open", promotion: "verified" });
+  });
+
+  it("re-ages a carried-forward open ticket, then retires it on a later pass", () => {
+    const first = triage({ existingTickets: [carried()] });
+    expect(find(first.tickets)).toMatchObject({ status: "stale" });
+    // Aged and retired are never the same pass: the next reader still sees it go stale.
+    expect(first.stats.retired).toBe(0);
+
+    const second = triage({ existingTickets: first.tickets });
+    expect(second.stats.retired).toBe(1);
+    expect(find(second.tickets)).toBeUndefined();
+  });
+
+  it("ages a carried-forward ticket by distance when history does contain its build", () => {
+    const at = (index: number) =>
+      find(
+        triage({
+          existingTickets: [
+            carried({ evidence: { ...carried().evidence, last_seen_build: WINDOW[index]! } }),
+          ],
+        }).tickets,
+      )!.status;
+    expect(at(8)).toBe("open"); // exactly STALE_AFTER_BUILDS back: not yet
+    expect(at(9)).toBe("stale");
+  });
+
+  it("does not age a carried-forward ticket someone claimed, verified, or decided", () => {
+    for (const over of [
+      { status: "in_progress" as const },
+      { verified_by: "tests/regression/some_repro.test.ts", promotion: "verified" as const },
+      { status: "wont_fix" as const },
+    ]) {
+      const ticket = carried(over);
+      expect(find(triage({ existingTickets: [ticket] }).tickets)).toEqual(ticket);
+    }
+  });
+
+  it("does not age a carried-forward ticket against a truncated history", () => {
+    const { tickets } = triage({ existingTickets: [carried()], buildHistoryTruncated: true });
+    expect(find(tickets)).toEqual(carried());
+  });
+});
+
+// bug_0652. `--verified <id>` only ever reached tickets the CURRENT corpus clustered; one
+// carried forward from the bucket was written back unstamped, and nothing said so.
+describe("stamping a reproduction on a ticket the corpus no longer mentions", () => {
+  const ID = "7".repeat(16);
+
+  function carried(over: Partial<QaTicket> = {}): QaTicket {
+    return {
+      schema_version: 2,
+      ticket_id: ID,
+      title: "a finding reproduced after its reports aged out",
+      kind: "bug",
+      severity: "S3",
+      status: "stale",
+      promotion: "accumulating",
+      location: "steading_yard",
+      excerpts: [],
+      evidence: {
+        report_count: 2,
+        families: ["claude"],
+        providers: ["claude_code"],
+        tiers: ["volume"],
+        has_runner_enforced_report: true,
+        session_ids: ["s1", "s2"],
+        first_seen_build: "d".repeat(40),
+        last_seen_build: "d".repeat(40),
+        first_seen_at: "2026-08-31T12:00:00.000Z",
+        last_seen_at: "2026-08-31T12:00:00.000Z",
+      },
+      priority: 6,
+      ...over,
+    };
+  }
+
+  function stamp(existingTickets: readonly QaTicket[], ids: readonly string[]) {
+    return triagePlaytestCorpus({
+      sessions: [],
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+      existingTickets,
+      verifiedTicketIds: ids,
+      verifiedBy: "tests/regression/some_repro.test.ts",
+    });
+  }
+
+  it("stamps it, promotes it to verified, and revives it from stale", () => {
+    const result = stamp([carried()], [ID]);
+    expect(result.unmatchedVerifiedIds).toEqual([]);
+    const ticket = result.tickets.find((t) => t.ticket_id === ID)!;
+    expect(ticket).toMatchObject({
+      status: "open",
+      promotion: "verified",
+      verified_by: "tests/regression/some_repro.test.ts",
+    });
+    expect(isActionable(ticket)).toBe(true);
+    expect(QaTicketSchema.parse(ticket)).toEqual(ticket);
+  });
+
+  it("leaves a decision in place while still recording the reproduction", () => {
+    const ticket = stamp([carried({ status: "wont_fix" })], [ID]).tickets[0]!;
+    expect(ticket).toMatchObject({ status: "wont_fix", promotion: "verified" });
+  });
+
+  it("names every id that matched nothing, including a superseded identity", () => {
+    const superseded = carried({ ticket_id: "6".repeat(16), superseded_by: ["5".repeat(16)] });
+    const result = stamp([carried(), superseded], [ID, "6".repeat(16), "not-a-ticket"]);
+    expect(result.unmatchedVerifiedIds).toEqual(["6".repeat(16), "not-a-ticket"]);
+    expect(result.tickets.find((t) => t.ticket_id === "6".repeat(16))!.verified_by).toBe(undefined);
+  });
+});
+
 /**
  * Unmapped findings: one bucket, and content still decides.
  *

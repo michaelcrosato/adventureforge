@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "ee71d42e47c00fa6",
+  "title": "Overworld clock at MAX_SAFE_INTEGER restores, then throws on the next save",
+  "body": "Residual from bug_0643: a hand-edited overworld snapshot whose clock is exactly Number.MAX_SAFE_INTEGER restores (the new bound is inclusive), and after one road of travel the next snapshot() throws instead of saving. There is no single place the clock advances, so the fix needs either a lower restore bound that leaves room for a full campaign or a checked-add helper used by every clock write.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "src/world/session_snapshot.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:43.666Z",
+  "updated_at": "2026-09-23T05:16:43.666Z",
+  "external": null
+}

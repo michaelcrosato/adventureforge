@@ -72,6 +72,15 @@ export type TriageInput = {
   locationIndex: LocationIndex;
   /** Newest build first — the recency spine used for staleness. */
   buildHistory: readonly string[];
+  /**
+   * The spine is known to be INCOMPLETE — a shallow clone, or a probe that could not tell.
+   * Only then may a build missing from it be given the benefit of the doubt. Against a
+   * complete history, a build that is not in it is one this checkout cannot place, most
+   * often a lane-branch commit whose squash-merge replaced it, and a finding nobody can
+   * show is recent is aged exactly like one known to be old (bug_0650). An empty spine is
+   * treated as incomplete whatever this says: there is nothing to measure against.
+   */
+  buildHistoryTruncated?: boolean;
   /** Tickets already on disk, so workflow state and ids survive re-triage. */
   existingTickets?: readonly QaTicket[];
   /**
@@ -334,12 +343,37 @@ function ticketTitle(cluster: IssueCluster): string {
 
 /**
  * How many builds back a ticket was last seen. Returns null when the build is not in
- * the known history at all — an unrecognized build cannot be aged, and guessing would
- * expire tickets from a machine whose builds simply were not published.
+ * the known history at all; `agedOut` decides what an unplaceable build means.
  */
 function buildsSince(buildHistory: readonly string[], build: string): number | null {
   const index = buildHistory.indexOf(build);
   return index === -1 ? null : index;
+}
+
+/**
+ * Whether an unverified ticket last seen on `build` has gone quiet for too long.
+ *
+ * A build the spine does not contain used to be exempt, always, on the theory that it
+ * might simply be unpublished. That theory holds only while the spine might be missing
+ * it. Playtests run on lane branches, and a squash-merge replaces every lane commit with
+ * one new commit on `main`, so the SHA a session recorded vanishes from `git log` the
+ * moment its lane lands — and the exemption became permanent for exactly the findings
+ * most likely to be fixed. When the tracked bucket was audited, every build its tickets
+ * cited was missing from history, and a local triage would have promoted nine items off a
+ * three-week-old pre-squash build (bug_0650).
+ *
+ * So the benefit of the doubt now needs a reason: a TRUNCATED spine (shallow clone, empty
+ * or unreadable history) keeps the old fail-open, and anything else ages. "Cannot show it
+ * is recent" and "is old" are the same answer for a queue whose purpose is to hand the
+ * dev loop only findings that still describe the build it is changing.
+ */
+function agedOut(
+  buildHistory: readonly string[],
+  historyComplete: boolean,
+  build: string,
+): boolean {
+  const age = buildsSince(buildHistory, build);
+  return age === null ? historyComplete : age > STALE_AFTER_BUILDS;
 }
 
 /**
@@ -350,7 +384,8 @@ function buildsSince(buildHistory: readonly string[], build: string): number | n
  *
  * - `status === "stale"` is the age test, already made. A ticket only reaches `stale`
  *   by going more than `STALE_AFTER_BUILDS` builds without a fresh report while
- *   unverified, and any fresh report revives it to `open` above — so a ticket that is
+ *   unverified (or on a build a complete history cannot place — see `agedOut`), and any
+ *   fresh report or reproduction revives it to `open` — so a ticket that is
  *   BOTH stale and absent from the current corpus has been silent for two independent
  *   reasons. Every other status is somebody's live position and is never touched:
  *   `wont_fix` and `verified_fixed` are decisions, `in_progress` and `fixed` are work
@@ -392,6 +427,12 @@ export type TriageResult = {
     /** Aged-out, undecided tickets dropped from the bucket this run. See `isRetireable`. */
     retired: number;
   };
+  /**
+   * `verifiedTicketIds` entries that matched no current ticket — absent from the corpus
+   * AND the bucket, superseded by a corrected identity, or simply mistyped. A caller that
+   * passed an id asked for a promotion, so it has to hear that none happened (bug_0652).
+   */
+  unmatchedVerifiedIds: string[];
 };
 
 export function triagePlaytestCorpus(input: TriageInput): TriageResult {
@@ -399,6 +440,8 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
   const verified = new Set(input.verifiedTicketIds ?? []);
   const existing = new Map((input.existingTickets ?? []).map((t) => [t.ticket_id, t]));
   const currentBuild = input.buildHistory[0] ?? null;
+  const historyComplete = input.buildHistory.length > 0 && input.buildHistoryTruncated !== true;
+  const freshStamp = input.verifiedBy ?? "operator reproduction";
 
   const sessionById = new Map(input.sessions.map((s) => [s.record_id, s]));
   const { records: issues, confusionKeys } = sessionIssueRecords(input.sessions, idx);
@@ -451,9 +494,7 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
     // rung survives every later triage without the operator re-passing a flag — which is the
     // whole difference between a promotion and a one-run override. A fresh stamp wins over a
     // carried one so a re-verification can name the newer proof.
-    const verifiedBy = verified.has(id)
-      ? (input.verifiedBy ?? "operator reproduction")
-      : prior?.verified_by;
+    const verifiedBy = verified.has(id) ? freshStamp : prior?.verified_by;
     const isVerified = verifiedBy !== undefined;
     const promotion = derivePromotion(evidence, { verified: isVerified });
     // Preserve workflow state a human or the dev loop set. Re-triage owns the
@@ -462,8 +503,8 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
     let status = prior?.status ?? "open";
     if (status === "stale") status = "open"; // fresh evidence revives a stale ticket
     if (status === "open" || status === "in_progress") {
-      const age = buildsSince(input.buildHistory, evidence.last_seen_build);
-      if (!isVerified && age !== null && age > STALE_AFTER_BUILDS) status = "stale";
+      if (!isVerified && agedOut(input.buildHistory, historyComplete, evidence.last_seen_build))
+        status = "stale";
     }
 
     tickets.push({
@@ -495,6 +536,14 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
   // 3% of its bytes, and noise in every `ls`, `rg` and agent index, because a stale
   // ticket is by definition one the dev loop is not allowed to pick up. So a narrow
   // class retires instead; `isRetireable` states the exact conditions.
+  //
+  // Retirement only ever takes a ticket that is ALREADY `stale`, and for a long time only a
+  // fresh cluster could make one stale — so a carried-forward `open` ticket never aged at
+  // all, and could never retire. Carrying it forward now applies the same age test a
+  // clustered ticket gets (bug_0651). It ages in one pass and can retire in a later one,
+  // never both at once: a ticket this run first noticed going quiet is still shown to the
+  // next reader as `stale` before its file goes. Only `open` ages here. `in_progress` is a
+  // claim someone made on it, and every other status is a decision.
   let retired = 0;
   for (const [id, prior] of existing) {
     if (tickets.some((t) => t.ticket_id === id)) continue;
@@ -507,14 +556,37 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
       });
       continue;
     }
+    // A reproduction is evidence the finding exists on the build that ran it, which is
+    // fresher than any report the corpus holds — so stamping a ticket the corpus no longer
+    // mentions is as sound as stamping one it does, and it revives a stale ticket exactly
+    // as a fresh report would. Before this, `--verified <id>` on a carried-forward ticket
+    // was dropped without a word (bug_0652). A superseded ticket is history; its
+    // replacement is the identity to verify, so it is left unstamped and reported.
+    if (verified.has(id) && !prior.superseded_by) {
+      tickets.push({
+        ...prior,
+        status: prior.status === "stale" ? "open" : prior.status,
+        promotion: derivePromotion(prior.evidence, { verified: true }),
+        verified_by: freshStamp,
+      });
+      continue;
+    }
     if (corpusHasEvidence && isRetireable(prior)) {
       retired += 1;
       continue;
     }
-    tickets.push(prior);
+    const ages =
+      prior.status === "open" &&
+      prior.verified_by === undefined &&
+      !prior.superseded_by &&
+      agedOut(input.buildHistory, historyComplete, prior.evidence.last_seen_build);
+    tickets.push(ages ? { ...prior, status: "stale" } : prior);
   }
 
   tickets.sort(compareTickets);
+  const unmatchedVerifiedIds = [...verified]
+    .filter((id) => !tickets.some((t) => t.ticket_id === id && !t.superseded_by))
+    .sort();
   const actionable = tickets.filter(isActionable);
   const currentTickets = tickets.filter((ticket) => !ticket.superseded_by);
 
@@ -533,5 +605,6 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
       superseded: tickets.length - currentTickets.length,
       retired,
     },
+    unmatchedVerifiedIds,
   };
 }

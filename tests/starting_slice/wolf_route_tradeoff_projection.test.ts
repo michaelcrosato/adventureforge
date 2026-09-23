@@ -427,7 +427,6 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         react.createElement(module.QuestNotice, {
           quest,
           areaName: "Station Quarter",
-          isCurrentArea: true,
           onStart: () => undefined,
         }),
       );

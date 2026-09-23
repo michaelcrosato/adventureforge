@@ -90,6 +90,8 @@ export type RpgSessionSource = {
 export type RpgSessionStartOptions = RpgSessionSource & {
   hideGraph?: boolean;
   seed?: number;
+  /** Replay trail of a restored embedded child; see `Session.embeddedActionIds`. */
+  embeddedActionIds?: readonly string[];
 };
 
 export function rpgSourceFields(source: {
@@ -213,6 +215,7 @@ export class RpgMcpSessionRuntime {
       ...(opts.embeddedCharacterContinuity
         ? { embeddedCharacterContinuity: opts.embeddedCharacterContinuity }
         : {}),
+      ...(opts.embeddedActionIds ? { embeddedActionIds: opts.embeddedActionIds } : {}),
       index,
       rules,
       step,
