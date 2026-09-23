@@ -1884,7 +1884,7 @@ tool(
 );
 tool(
   "export_overworld_session",
-  "Export a snapshot. Pass it to restore_overworld_session to continue later.",
+  "Export a snapshot, plus embedded_quest mid-quest. Pass both to restore_overworld_session to continue later.",
   {
     ...OVERWORLD_SESSION,
     ...EXPECTED_SNAPSHOT_HASH,
@@ -1897,6 +1897,7 @@ tool(
   "Restore an exported snapshot as a new session. The start tutorial is not repeated. Keep the returned legend and add later legend_delta values by key.",
   {
     snapshot: BOUNDED_SNAPSHOT_RECORD.describe("Snapshot from export_overworld_session."),
+    embedded_quest: BOUNDED_SNAPSHOT_RECORD.optional().describe("Required if that export had one."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.restore_overworld_session(defaultCompactOverworld(a)),

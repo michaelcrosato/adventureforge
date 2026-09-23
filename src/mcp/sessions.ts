@@ -326,6 +326,14 @@ export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   overworldSessionId?: string;
   /** Player-facing continuity metadata for a quest launched from a campaign parent. */
   embeddedCharacterContinuity?: EmbeddedQuestCharacterContinuity;
+  /**
+   * Every accepted action id since launch, kept for an embedded child only. It is the
+   * replay trail `export_overworld_session` persists so a restore can PROVE the child's
+   * state was reached from its launch (bug_0654) — the same proof the terminal journey
+   * and browser UI require. The transcript cannot serve: it is capped at
+   * MCP_SESSION_TRANSCRIPT_TURN_LIMIT turns and stores compacted action ids.
+   */
+  embeddedActionIds?: readonly string[];
   /** Procedural RPG generation seed for in-memory generated sessions. */
   generatedRpgSeed?: number;
   /** The compiled RPG index for this session. */
@@ -382,14 +390,20 @@ export class SessionStore {
     const id = `r${++this.counter}`;
     const state = cloneFrozenGameState(init.state);
     const transcript = cloneTranscriptRows(init.transcript);
+    const { embeddedActionIds, ...rest } = init;
     const session: Session = {
-      ...init,
+      ...rest,
       ...(init.embeddedCharacterContinuity
         ? {
             embeddedCharacterContinuity: deepFreeze(
               cloneEmbeddedQuestCharacterContinuity(init.embeddedCharacterContinuity),
             ),
           }
+        : {}),
+      // Only a child bound to a parent keeps a trail; a standalone session has nothing
+      // to be restored beside.
+      ...(init.overworldSessionId !== undefined
+        ? { embeddedActionIds: deepFreeze([...(embeddedActionIds ?? [])]) }
         : {}),
       id,
       state,
@@ -436,6 +450,34 @@ export class SessionStore {
 
   clearEmbeddedJourneyPause(overworldSessionId: string): void {
     this.embeddedJourneyPauses.delete(overworldSessionId);
+  }
+
+  /** Append one accepted action to an embedded child's replay trail. */
+  recordEmbeddedAction(id: string, actionId: string): Session {
+    const session = this.get(id);
+    if (!session.overworldSessionId || !session.embeddedActionIds) {
+      throw new Error("Only an RPG session launched from the overworld keeps a replay trail.");
+    }
+    session.embeddedActionIds = deepFreeze([...session.embeddedActionIds, actionId]);
+    return session;
+  }
+
+  /**
+   * The retained child a parent launched for `worldQuestId`, if it is still in memory.
+   * The most recently created match wins; a parent has at most one unfinished quest.
+   */
+  embeddedChildFor(overworldSessionId: string, worldQuestId: string): Session | null {
+    let found: Session | null = null;
+    for (const session of this.sessions.values()) {
+      if (
+        session.overworldSessionId === overworldSessionId &&
+        session.worldQuestId === worldQuestId &&
+        (found === null || BigInt(session.id.slice(1)) > BigInt(found.id.slice(1)))
+      ) {
+        found = session;
+      }
+    }
+    return found;
   }
 
   update(id: string, state: GameState): Session {

@@ -61,6 +61,7 @@ import {
 } from "./transcript_projection.js";
 import { OverworldMcpSessionStore } from "./overworld_sessions.js";
 import { createOverworldToolHandlers } from "./overworld_tool_handlers.js";
+import { createEmbeddedQuestPersistence } from "./embedded_quest_persistence.js";
 import { overworldQuestCompletionFromRpgSession } from "./overworld_quest_bridge.js";
 import {
   embeddedJourneyFocus,
@@ -463,6 +464,12 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
   const rpgSources = new RpgSourceRuntime(root);
   const rpgRuntime = new RpgMcpSessionRuntime(sessions);
   const overworldSessions = new OverworldMcpSessionStore(() => loadOverworldManifestFromRoot(root));
+  const embeddedQuests = createEmbeddedQuestPersistence({
+    sessions,
+    rpgRuntime,
+    rpgSources,
+    loadOverworldManifest: () => loadOverworldManifestFromRoot(root),
+  });
 
   function embeddedJourneyField(rpgSessionId: string): EmbeddedJourneyField | null {
     const rpgSession = sessions.get(rpgSessionId);
@@ -506,6 +513,7 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
       rpgRuntime,
       overworldSessions,
       loadOverworldManifest: () => loadOverworldManifestFromRoot(root),
+      embeddedQuests,
       startEmbeddedWorldQuest: (startArgs, context) => {
         const responseOptions = {
           compact_observation: true,
@@ -694,6 +702,9 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
           if (response.journeyActionId === null) {
             throw new Error("Accepted RPG journey decision is missing its canonical action id.");
           }
+          // The child's state has already advanced, so its replay trail advances with it;
+          // an export must be able to replay exactly to the state it saves (bug_0654).
+          sessions.recordEmbeddedAction(rpgSession.id, response.journeyActionId);
           const journey = overworldSession.recordQuestDecision(
             response.journeyActionId,
             response.journeyDecision,

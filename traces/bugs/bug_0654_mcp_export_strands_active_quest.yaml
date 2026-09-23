@@ -1,0 +1,78 @@
+id: bug_0654
+title: MCP export_overworld_session during a quest stranded the campaign on restore
+reported_by: 2026-09-22 repository audit at c17192f9 (lane B, task B4); reproduced live over MCP
+severity: S2
+
+symptom: >
+  A journey exported over MCP while a quest was active restored into a parent that could
+  never finish that quest. After restore_overworld_session, start_overworld_session_quest
+  answered "The Wolf-Winter is already active", complete_overworld_session_quest answered
+  "This RPG quest did not start from the supplied overworld session", and following the
+  goal found "No goal route". The browser UI and the terminal journey save the same state
+  without any of this.
+
+cause: >
+  export_overworld_session (src/mcp/overworld_sessions.ts) returned only the parent
+  snapshot, which records the quest as started. restore mints a NEW parent session id,
+  while the child RPG session — if it was still in server memory at all — stayed bound to
+  the OLD id, and nothing could re-bind it: Session.overworldSessionId is locked metadata,
+  load_game deliberately creates a standalone session (tests/unit/campaign_import_bridge.test.ts
+  pins that), and the MCP child kept no replay trail a restore could verify (its transcript
+  is capped and stores compacted ids). The terminal journey (src/cli/embedded_quest_journey.ts)
+  and the UI (ui/src/engine.ts GameSession.restoreEmbedded) persist the child beside the
+  parent as a save bundle plus its accepted action trail, and verify it on load.
+
+reproduction: >
+  tests/unit/mcp_tools.test.ts, "MCP export/restore carries the active quest (bug_0654)":
+  launch sunken_barrow, take two steps, export; restoring with the export's embedded_quest
+  yields a child bound to the new parent id at the identical state hash, which then plays
+  to victory and completes the quest on the restored parent. Restoring the same snapshot
+  without the child is refused by name; a truncated action trail, an edited save state, a
+  child for another quest, a malformed record, and a child supplied to a snapshot with no
+  active quest are each refused; and a mid-quest export never answers `unchanged`.
+
+fix: >
+  The terminal journey's persisted child record and verifier are exported
+  (EmbeddedQuestChildRecord / embeddedQuestChildRecord / restoreEmbeddedQuestChild) and
+  MCP reuses them, so the surfaces share one definition of a trustworthy child: content
+  hash, save/source identity, character continuity, the parent-proven launch character and
+  import receipt, a deterministic replay of the full action trail to the saved state, the
+  replayed decisions against the parent's own decision trail, and parent/child phase
+  consistency. MCP children now keep that trail (Session.embeddedActionIds, appended in
+  step_action). export_overworld_session adds `embedded_quest` BESIDE the versioned
+  snapshot — the snapshot schema has no child slot, and adding one would move every
+  snapshot hash — whenever the live journey has an unfinished quest, and refuses to export
+  one whose child session is no longer in memory rather than produce an unrestorable
+  export. restore_overworld_session accepts `embedded_quest`, verifies it against the
+  restored parent BEFORE registering either, binds a fresh child to the new parent id,
+  re-registers a journey pause, and returns rpg_session_id and rpg_state_hash. A
+  mid-quest snapshot without its child is refused with the remedy. Pure play still
+  exposes neither tool.
+
+production:
+  - src/cli/embedded_quest_journey.ts
+  - src/mcp/embedded_quest_persistence.ts
+  - src/mcp/overworld_sessions.ts
+  - src/mcp/overworld_tool_handlers.ts
+  - src/mcp/sessions.ts
+  - src/mcp/rpg_session_runtime.ts
+  - src/mcp/tools.ts
+  - src/mcp/server.ts
+regression:
+  - tests/unit/mcp_tools.test.ts
+  - tests/regression/mcp_server_registration.test.ts
+verification:
+  - The existing mid-quest restore in mcp_tools.test.ts ("already active" path) now asserts
+    the refusal without the child and restores with it; every other assertion there is
+    unchanged.
+  - The overworld schema-source pin in mcp_server_registration.test.ts moved 9,734 -> 9,868
+    (+134, the new argument and export wording) and its ceiling 9,800 -> 9,900, with the
+    reason inline.
+  - The terminal journey's saves are byte-identical, since document() now calls the shared
+    embeddedQuestChildRecord, which writes the same keys in the same order.
+  - No src/world change. load_game's standalone semantics are unchanged.
+residual:
+  - hide_graph is not part of any snapshot, so a restored child reverts to the default
+    graph view.
+  - A journey exported mid-quest by a build before this fix carries no child and is now
+    refused on restore, with the reason, instead of restoring into a stranded parent.

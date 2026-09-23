@@ -1187,7 +1187,11 @@ describe("MCP pure play mode", () => {
       // +116 on 2026-09-06: choose_overworld_session_story now also accepts option_id
       // as a full-mode-only alias for choice, so the obvious inspect-then-choose
       // sequence no longer fails on an argument-name mismatch (queue 61d3b9dec4cb09fd).
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_794);
+      // +132 on 2026-09-22 (bug_0654): restore_overworld_session publishes an optional
+      // embedded_quest property and export_overworld_session's description says to pass
+      // it back — a snapshot exported mid-quest is not restorable without its child.
+      // Neither tool is in the pure catalogue, whose pins are unchanged.
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_926);
       expect(fullRead?.description).toBe(
         "Read current context without acting. Station support uses the exact board[5] id.",
       );

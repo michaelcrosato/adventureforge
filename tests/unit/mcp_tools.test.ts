@@ -131,7 +131,12 @@ function playSunkenBarrowToVictory(a: ReturnType<typeof api>, sessionId: string)
   expect(last.ok).toBe(true);
   last = stepByCommand(a, sessionId, "take iron bar");
   expect(last.ok).toBe(true);
-  last = stepByCommand(a, sessionId, "go north");
+  return finishSunkenBarrowFromIronBar(a, sessionId);
+}
+
+/** The rest of `playSunkenBarrowToVictory`, from just after the iron bar is taken. */
+function finishSunkenBarrowFromIronBar(a: ReturnType<typeof api>, sessionId: string) {
+  let last = stepByCommand(a, sessionId, "go north");
 
   for (let i = 0; i < 40 && !last.observation.ended; i += 1) {
     if (last.observation.mode !== "rpg") throw new Error("expected RPG observation");
@@ -938,8 +943,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterQuestStart.ok).toBe(true);
     if (!afterQuestStart.ok) throw new Error("expected post-quest export");
     expect(afterQuestStart.snapshot.startedQuestIds).toEqual([discoveredQuest.id]);
+    // Exported mid-quest, so the export carries the child and restore requires it
+    // (bug_0654); a parent restored alone could never finish the quest.
+    expect(afterQuestStart.embedded_quest?.worldQuestId).toBe(discoveredQuest.id);
+    expect(() =>
+      a.restore_overworld_session({ snapshot: afterQuestStart.snapshot, compact_context: true }),
+    ).toThrow(/needs the embedded_quest/);
     const restoredStarted = a.restore_overworld_session({
       snapshot: afterQuestStart.snapshot,
+      embedded_quest: afterQuestStart.embedded_quest,
       compact_context: true,
     });
     expect(Object.keys(restoredStarted.legend ?? {}).sort()).toEqual(
@@ -4565,5 +4577,111 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     expect(r.report.findings[0]?.message).toMatch(/set_meta/);
     expect(r.report.findings[0]?.message).toMatch(/set_object_field/);
     expect(r.report.findings[0]?.message).toMatch(/add_room_journal_hint/);
+  });
+});
+
+// bug_0654. MCP exported only the parent snapshot; restore mints a new parent id and the
+// child stayed bound to the old one, so a journey saved mid-quest came back unable to
+// finish its quest: restart said "already active", completion said "did not start from the
+// supplied overworld session". The export now carries the child and restore re-binds it
+// under the same checks the terminal journey applies.
+describe("MCP export/restore carries the active quest (bug_0654)", () => {
+  function midQuest() {
+    const a = api();
+    const started = a.start_overworld({ compact_context: false });
+    registerLedgerAdvocate(a, started.session_id);
+    revealOverworldQuest(a, started.session_id, "sunken_barrow");
+    const launched = a.start_overworld_session_quest({
+      ...FULL_OVERWORLD_QUEST_START,
+      session_id: started.session_id,
+      quest_id: "sunken_barrow",
+      seed: 1,
+    });
+    expect(stepByCommand(a, launched.rpg_session_id, "go down").ok).toBe(true);
+    expect(stepByCommand(a, launched.rpg_session_id, "take iron bar").ok).toBe(true);
+    const exported = a.export_overworld_session({ session_id: started.session_id });
+    if (!exported.ok) throw new Error("expected a mid-quest export");
+    if (!exported.embedded_quest) throw new Error("expected the export to carry the child");
+    return { a, started, launched, exported, child: exported.embedded_quest };
+  }
+
+  it("restores the child bound to the new parent, and the quest finishes there", () => {
+    const { a, started, launched, exported, child } = midQuest();
+    expect(child).toMatchObject({ worldQuestId: "sunken_barrow" });
+    expect(child.actionIds).toHaveLength(2);
+    expect("embedded_quest" in exported.snapshot).toBe(false);
+
+    const restored = a.restore_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
+      snapshot: exported.snapshot,
+      embedded_quest: child,
+    });
+    expect(restored.session_id).not.toBe(started.session_id);
+    expect(restored.snapshot_hash).toBe(exported.snapshot_hash);
+    const rebound = a.sessions.get(restored.rpg_session_id!);
+    expect(rebound.id).not.toBe(launched.rpg_session_id);
+    expect(rebound.overworldSessionId).toBe(restored.session_id);
+    expect(rebound.stateHash).toBe(a.sessions.get(launched.rpg_session_id).stateHash);
+    expect(restored.rpg_state_hash).toBe(publicRpgStateHash(rebound.stateHash));
+    expect(rebound.embeddedActionIds).toEqual(child.actionIds);
+
+    const ended = finishSunkenBarrowFromIronBar(a, rebound.id);
+    expect(ended.questCompletion).toMatchObject({ quest: { id: "sunken_barrow" } });
+    const completedAgain = a.complete_overworld_session_quest({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: restored.session_id,
+      rpg_session_id: rebound.id,
+    });
+    expect(completedAgain.ok).toBe(true);
+    expect(
+      a.get_overworld_session({ session_id: restored.session_id, include_observation: true })
+        .observation.completedQuestIds,
+    ).toEqual(["sunken_barrow"]);
+    // Finished, so a new export has no child to carry.
+    const after = a.export_overworld_session({ session_id: restored.session_id });
+    expect(after.ok && after.embedded_quest).toBeFalsy();
+  });
+
+  it("refuses a mid-quest snapshot restored without its child, naming the remedy", () => {
+    const { a, exported } = midQuest();
+    expect(() => a.restore_overworld_session({ snapshot: exported.snapshot })).toThrow(
+      /needs the embedded_quest from the same export_overworld_session response/,
+    );
+  });
+
+  it("refuses a child that does not replay to its saved state or match its parent", () => {
+    const { a, exported, child } = midQuest();
+    const restore = (embedded_quest: unknown, snapshot: unknown = exported.snapshot) =>
+      a.restore_overworld_session({ snapshot, embedded_quest });
+
+    expect(() => restore({ ...child, actionIds: child.actionIds.slice(0, 1) })).toThrow(
+      /action trail state does not match/,
+    );
+    const save = JSON.parse(child.rpgSave) as { state: { vars: Record<string, number> } };
+    save.state.vars.hp = 999;
+    expect(() => restore({ ...child, rpgSave: JSON.stringify(save) })).toThrow(/stateHash/);
+    expect(() => restore({ ...child, worldQuestId: "wolf_winter" })).toThrow(
+      /embedded_quest is for "wolf_winter"/,
+    );
+    expect(() => restore({ ...child, actionIds: "not a list" })).toThrow(
+      /embedded_quest is malformed/,
+    );
+
+    const fresh = a.start_overworld({ compact_context: false });
+    const quiet = a.export_overworld_session({ session_id: fresh.session_id });
+    if (!quiet.ok) throw new Error("expected a pre-quest export");
+    expect(quiet.embedded_quest).toBeUndefined();
+    expect(() => restore(child, quiet.snapshot)).toThrow(/no active quest to bind it to/);
+  });
+
+  it("never answers `unchanged` for a mid-quest export, whose child can move alone", () => {
+    const { a, started, exported } = midQuest();
+    const again = a.export_overworld_session({
+      session_id: started.session_id,
+      if_snapshot_hash: exported.snapshot_hash,
+    });
+    expect("unchanged" in again).toBe(false);
+    if ("unchanged" in again || !again.ok) throw new Error("expected a full mid-quest export");
+    expect(again.embedded_quest).toEqual(exported.embedded_quest);
   });
 });

@@ -89,6 +89,7 @@ import {
   type RpgSessionPayloadBody,
 } from "./rpg_session_runtime.js";
 import { runRpgGetObservation } from "./rpg_session_tools.js";
+import type { EmbeddedQuestPersistence } from "./embedded_quest_persistence.js";
 import type { RpgViewOptions } from "./rpg_view_projection.js";
 import type { SessionStore } from "./sessions.js";
 import {
@@ -330,6 +331,8 @@ export type OverworldToolHandlerDeps = {
     args: Args,
     context: EmbeddedOverworldQuestStartContext,
   ) => RpgSessionPayload<Args>;
+  /** Persists an active quest's child beside its parent across export/restore (bug_0654). */
+  embeddedQuests: EmbeddedQuestPersistence;
 };
 
 export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
@@ -423,14 +426,16 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     export_overworld_session<Args extends OverworldMcpExportArgs>(
       args: Args,
     ): OverworldExportResponse<Args> {
-      return overworldSessions.exportSnapshot(args);
+      return overworldSessions.exportSnapshot(args, deps.embeddedQuests.exportChild);
     },
 
-    restore_overworld_session<Args extends { snapshot: unknown } & OverworldResponseOptions>(
-      args: Args,
-    ): OverworldRestoreResponse<DefaultCompactOverworldContext<Args>> {
+    restore_overworld_session<
+      Args extends { snapshot: unknown; embedded_quest?: unknown } & OverworldResponseOptions,
+    >(args: Args): OverworldRestoreResponse<DefaultCompactOverworldContext<Args>> {
       const responseOptions = defaultCompactOverworldContext(args);
-      return overworldSessions.restoreResponse(responseOptions, args.snapshot);
+      return overworldSessions.restoreResponse(responseOptions, args.snapshot, (session) =>
+        deps.embeddedQuests.prepareRestore(session, args.embedded_quest),
+      );
     },
 
     plan_overworld_session_route<
