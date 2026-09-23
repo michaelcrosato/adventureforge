@@ -1,21 +1,14 @@
 /**
  * Debugger agent (spec §12.5, §15).
  *
- * Turns a failed or odd playthrough into a REPLAYABLE bug artifact plus a
- * diagnosis. It is deterministic code over the pure engine: it replays a trace's
- * actions through `step`, inspects the terminal state and the legal-action set at
- * each turn, and classifies what went wrong (soft-lock, conversation trap, an
- * unrecoverable death, or a loop with no exit). The artifact it emits is the §15
- * BUG record — pack identity, content hash, seed, initial state, and the exact
- * action list, which is everything needed to reconstruct the run.
- *
- * A `BugArtifact` is NOT a `Trace`, and `bin/replay` will not read one: replay
- * consumes the recorded-trace shape (`mode`, `source_ref`, `actions`,
- * `expected_final_hash`) from JSON, while artifacts carry `trace`/`pack_id` and
- * the committed corpus under `traces/bugs/` is YAML. Turning an artifact into a
- * replayable regression means re-recording its actions with `recordTrace` against
- * the pack named here; `regressionTestStub` (agents/fixer.ts) writes the test that
- * then locks it.
+ * Turns a failed or odd playthrough into a diagnosis. It is deterministic code over
+ * the pure engine: it replays a trace's actions through `step`, inspects the
+ * terminal state and the legal-action set at each turn, and classifies what went
+ * wrong (soft-lock, conversation trap, an unrecoverable death, or a loop with no
+ * exit). `inspect_trace` is its caller. The §15 bug records themselves are authored
+ * YAML under `traces/bugs/`, checked by `npm run verify:bug-traces`; a JSON
+ * artifact builder and a regression-test stub generator used to live beside this
+ * and the fixer, and were removed once nothing but their own tests called them.
  *
  * No LLM is required to *find* a structural failure; the engine's legal-action
  * set is ground truth. A model can still author the prose diagnosis, but the
@@ -134,81 +127,4 @@ export function diagnose<A extends EngineAction>(
     where: [`location:${where(state)}`],
     step: actions.length,
   };
-}
-
-export type FixLayer =
-  | "content"
-  | "engine_rule"
-  | "validator"
-  | "test"
-  | "hint_text"
-  | "quest_structure";
-
-/** The §15 bug-artifact shape, ready to serialize to traces/bugs/. */
-export type BugArtifact = {
-  bug_id: string;
-  pack_id: string;
-  content_hash: string;
-  seed: number;
-  initial_state: "start" | GameState;
-  trace: EngineAction[];
-  failure: { type: FailureType; description: string; severity: Diagnosis["severity"] };
-  expected: string[];
-  fix?: { layer: FixLayer; summary: string };
-  regression_test?: string;
-};
-
-export type BuildArtifactOptions = {
-  bugId: string;
-  packId: string;
-  contentHash: string;
-  /** Embed the full initial state, or just the marker "start". */
-  embedInitialState?: boolean;
-  expected?: string[];
-  fix?: { layer: FixLayer; summary: string };
-  regressionTest?: string;
-};
-
-/** Build a §15 bug artifact from a diagnosis + the offending trace. */
-export function toBugArtifact(
-  initialState: GameState,
-  actions: EngineAction[],
-  diagnosis: Diagnosis,
-  opts: BuildArtifactOptions,
-): BugArtifact {
-  return {
-    bug_id: opts.bugId,
-    pack_id: opts.packId,
-    content_hash: opts.contentHash,
-    seed: initialState.seed,
-    initial_state: opts.embedInitialState ? initialState : "start",
-    trace: actions,
-    failure: {
-      type: diagnosis.type,
-      description: diagnosis.description,
-      severity: diagnosis.severity,
-    },
-    expected: opts.expected ?? defaultExpectations(diagnosis.type),
-    ...(opts.fix ? { fix: opts.fix } : {}),
-    ...(opts.regressionTest ? { regression_test: opts.regressionTest } : {}),
-  };
-}
-
-function defaultExpectations(type: FailureType): string[] {
-  switch (type) {
-    case "soft_lock":
-      return [
-        "every reachable non-ending state offers at least one progress-making action (§10, §17.3)",
-      ];
-    case "loop":
-      return ["loops are intentional and declared; every other path terminates (§17.6)"];
-    case "death_unrecoverable":
-      return ["death endings remain recoverable via an earlier save (§8.7, §13 Stage 3)"];
-    case "rejected_action":
-      return [
-        "the legal-action set never offers an action the engine then rejects (§14 testing strategy)",
-      ];
-    case "no_failure":
-      return ["no change required"];
-  }
 }

@@ -23,7 +23,6 @@ import { z } from "zod";
 import { RpgPackSchema, type RpgPack } from "../src/rpg/schema.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeReport, type ValidationReport } from "../src/validate/report.js";
-import type { Diagnosis, FixLayer } from "./debugger.js";
 
 export const FixLayerSchema = z.enum([
   "content",
@@ -197,83 +196,4 @@ export function applyContentPatch(
     reparsed.data,
   );
   return { ok: report.ok, applied, pack: reparsed.data, report };
-}
-
-/**
- * Heuristic: turn a diagnosis into a candidate single-layer proposal. The fixer
- * proposes; the validator disposes. A model can refine this, but even the
- * code-only default produces a legitimate, safe patch for the common cases.
- */
-export function proposeFix(diagnosis: Diagnosis, ctx: { location?: string }): ContentPatchProposal {
-  if (diagnosis.type === "soft_lock" && ctx.location) {
-    return {
-      layer: "hint_text",
-      summary: `Add an in-world hint at "${ctx.location}" so the player is never left without a signposted next step (§17.1, §17.7).`,
-      ops: [
-        {
-          op: "add_room_journal_hint",
-          room: ctx.location,
-          text: "You sense there is still a way forward here — look closer at what you carry and what stands before you.",
-        },
-      ],
-    };
-  }
-  // Loops, rejected actions, and engine-touching fixes have no content-patch op:
-  // the fixer surfaces them as a diagnosis (empty ops) for the agent to fix in code
-  // directly under trust, but verify — not a human-approval gate.
-  const layer: FixLayer = diagnosis.type === "loop" ? "quest_structure" : "content";
-  return {
-    layer,
-    summary: `Direct code fix required (no content-patch op) for "${diagnosis.type}" at ${ctx.location ?? "unknown"}: ${diagnosis.description}`,
-    ops: [],
-  };
-}
-
-/**
- * A regression-test source stub asserting the diagnosed failure cannot recur (§15).
- *
- * The stub must not be pasteable into a permanently-green test that asserts
- * nothing. Two holes make that possible and both are closed here:
- *   - `replayTrace` returns ok:true with "no expected final hash to assert" when
- *     the trace omits `expected_final_hash` (a shape integrity.ts permits), so the
- *     stub demands that hash is present and is the one replay reproduced;
- *   - a trace replayed against content it was not recorded on proves nothing, so
- *     the stub binds `content_hash` to the source the same way bin/replay,
- *     bin/inspect and the MCP trace tools do before they step anything.
- */
-export function regressionTestStub(
-  bugId: string,
-  replayPath: string,
-  worldQuestId: string,
-): string {
-  const replayPathLiteral = JSON.stringify(replayPath);
-  const worldQuestIdLiteral = JSON.stringify(worldQuestId);
-  return `import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { RpgSourceRuntime } from "../../src/mcp/rpg_source_runtime.js";
-import { indexRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
-import { replayTrace } from "../../src/trace/replay.js";
-import type { Trace } from "../../src/trace/record.js";
-
-// Regression for ${bugId} (§15). The bug's trace must replay to its recorded
-// hash forever — if a future change reintroduces the failure, this goes red.
-describe("${bugId}", () => {
-  it("replays the fixed trace to its expected final hash", () => {
-    const trace = JSON.parse(readFileSync(${replayPathLiteral}, "utf8")) as Trace;
-    const source = new RpgSourceRuntime(process.cwd()).requireWorldQuestPlayable(${worldQuestIdLiteral});
-
-    // Bind the trace to the build it was recorded against. Replaying against
-    // different content proves nothing about this bug.
-    expect(trace.content_hash).toBe(source.compiled.contentHash);
-    // A trace with no recorded final hash replays "ok" while asserting nothing,
-    // so demand the hash this regression exists to lock.
-    expect(trace.expected_final_hash).toBeDefined();
-
-    const rules = buildRpgRules(indexRpgPack(source.compiled.pack));
-    const result = replayTrace(trace, rules);
-    expect(result.ok).toBe(true);
-    expect(result.finalHash).toBe(trace.expected_final_hash);
-  });
-});
-`;
 }

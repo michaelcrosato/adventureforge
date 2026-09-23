@@ -22,7 +22,6 @@ export type RpgCompactEvent =
       extra?: unknown,
       diagnostic?: string,
     ]
-  | readonly ["u", from: string, to: string]
   | readonly ["o", id: string]
   | readonly ["c", id: string]
   | readonly ["m", from: string, to: string]

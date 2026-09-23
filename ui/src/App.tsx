@@ -482,24 +482,19 @@ function suppliesLabel(value: number): string {
 export function QuestNotice({
   quest,
   areaName,
-  isCurrentArea,
   onStart,
 }: {
   quest: OverworldQuestView;
   areaName: string;
-  isCurrentArea: boolean;
   onStart: (approachId?: string) => void;
 }): JSX.Element {
   if (!quest.launch) {
     return (
       <li className="quest-notice">
-        <button disabled={!isCurrentArea} onClick={() => onStart()}>
+        <button onClick={() => onStart()}>
           <span>{quest.title}</span>
           <small>{quest.discovery}</small>
-          <small>
-            Posted in {areaName}
-            {!isCurrentArea ? " — move there to start" : ""}
-          </small>
+          <small>Posted in {areaName}</small>
         </button>
       </li>
     );
@@ -510,10 +505,7 @@ export function QuestNotice({
       <div className="quest-notice-heading">
         <strong>{quest.title}</strong>
         <p>{quest.discovery}</p>
-        <small>
-          Posted in {areaName}
-          {!isCurrentArea ? " — move there to start" : ""}
-        </small>
+        <small>Posted in {areaName}</small>
       </div>
       <fieldset className="quest-launch-fieldset">
         <legend>{quest.launch.prompt}</legend>
@@ -522,8 +514,7 @@ export function QuestNotice({
           {quest.launch.options.map((option) => {
             const projection = option.projection;
             const blockedReason = projection?.available === false ? projection.blockedReason : null;
-            const areaReason = !isCurrentArea ? `Move to ${areaName} to start.` : null;
-            const disabled = !isCurrentArea || projection?.available === false;
+            const disabled = projection?.available === false;
             return (
               <li key={option.id}>
                 <button disabled={disabled} onClick={() => onStart(option.id)}>
@@ -555,11 +546,7 @@ export function QuestNotice({
                       Arrival time: {timeLabel(projection.minutesAfter)}.
                     </small>
                   ) : null}
-                  {(blockedReason || areaReason) && (
-                    <small className="quest-launch-blocked">
-                      {[blockedReason, areaReason].filter(Boolean).join(" ")}
-                    </small>
-                  )}
+                  {blockedReason && <small className="quest-launch-blocked">{blockedReason}</small>}
                 </button>
               </li>
             );
@@ -603,7 +590,7 @@ export function DepartureLaunchPanel({
       <h3>Depart now</h3>
       <p>Choose an available road to leave now. Planning is optional.</p>
       <ul className="quest-list">
-        <QuestNotice quest={quest} areaName={areaName} isCurrentArea={true} onStart={onStart} />
+        <QuestNotice quest={quest} areaName={areaName} onStart={onStart} />
       </ul>
     </div>
   );

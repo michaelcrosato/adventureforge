@@ -3,7 +3,8 @@
  *
  * `runAdaptLoop` (agents/authoring/adapter.ts) is the author → validate → revise loop
  * behind the RPG authoring path. Its only model call is `provider.completeJson(...)`,
- * which does `schema.parse(extractJson(text))`: it THROWS both when no balanced JSON
+ * which for a live model extracts JSON from the reply and then `schema.parse`s it: it
+ * THROWS both when no balanced JSON
  * can be extracted (prose / fences / truncation) AND when the parsed object fails the
  * `.strict()` adapter OUTPUT schema (an extra key, a wrong shape). The deterministic
  * MockAuthorProvider never does either — but a live frontier model will.
@@ -48,7 +49,7 @@ class FlakyAuthorProvider implements Provider {
     if (req.schemaName === "WriterStory") return this.inner.completeJson(req);
     this.adapterCalls++;
     if (this.adapterCalls <= this.throwFirst) {
-      // Mimics `completeJson`'s own failure mode (extractJson / strict-schema throw).
+      // Mimics a live `completeJson`'s own failure mode (JSON extraction / strict-schema throw).
       throw new Error(`simulated off-shape model reply (adapter call ${this.adapterCalls})`);
     }
     this.delegatedUserPayloads.push(req.user);

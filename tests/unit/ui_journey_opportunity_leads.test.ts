@@ -3,10 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createServer } from "vite";
 
-import {
-  INITIAL_JOURNEY_GOAL_GUIDANCE,
-  JOURNEY_OPPORTUNITY_GUIDANCE,
-} from "../../src/world/journey_contract.js";
+import { JOURNEY_OPPORTUNITY_GUIDANCE } from "../../src/world/journey_contract.js";
 import { deferJourneyOpportunityDetails } from "../../src/world/journey_opportunity_leads.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
@@ -16,7 +13,11 @@ const EXPECTED_DEFERRED_GUIDANCE =
   "Choose the current journey option first. 5 optional follow-up leads remain. Complete any other required choice. The leads return when play resumes.";
 
 describe("journey opportunity UI", () => {
-  it("keeps roots bounded and offers read-only next steps only during active play", async () => {
+  // The active-play half of this test used to render ui/src/JourneyStatus.tsx, a status
+  // widget no shipped screen mounted (intake 776d5d8b). It now renders the lead list the
+  // way the shipped OverworldPlayScreen mounts it, so the assertions describe what a
+  // player actually sees rather than a component that never reached one.
+  it("keeps roots bounded and offers read-only next steps on the shipped lead list", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
       root: uiRoot,
@@ -27,10 +28,10 @@ describe("journey opportunity UI", () => {
       server: { middlewareMode: true },
     });
     try {
-      const [choiceModule, storyModule, statusModule] = await Promise.all([
+      const [choiceModule, storyModule, leadsModule] = await Promise.all([
         server.ssrLoadModule("/src/JourneyChoiceScreen.tsx"),
         server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx"),
-        server.ssrLoadModule("/src/JourneyStatus.tsx"),
+        server.ssrLoadModule("/src/JourneyOpportunityLeads.tsx"),
       ]);
       const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
       const react = requireFromUi("react") as {
@@ -124,7 +125,6 @@ describe("journey opportunity UI", () => {
           ],
         },
       };
-      const statusJourney = { ...base, opportunities, storyChoice: null };
 
       const choiceMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(choiceModule.JourneyChoiceScreen, {
@@ -138,12 +138,13 @@ describe("journey opportunity UI", () => {
           onChoose: () => undefined,
         }),
       );
+      // Props exactly as OverworldPlayScreen passes them during active play.
       const statusMarkup = reactDomServer.renderToStaticMarkup(
-        react.createElement(statusModule.JourneyStatus, {
-          journey: statusJourney,
-          onFollowGoalPassage: () => undefined,
-          onExplainOpportunity: () => undefined,
-          opportunityExplanation: {
+        react.createElement(leadsModule.JourneyOpportunityLeads, {
+          opportunities,
+          headingId: "nw-world-opportunities-title",
+          onExplain: () => undefined,
+          explanation: {
             lead: opportunities.leads[0],
             nextAction: {
               tool: "talk_overworld_session_contact",
@@ -152,13 +153,6 @@ describe("journey opportunity UI", () => {
               label: "Talk to the job's visible local contact.",
             },
           },
-        }),
-      );
-      const pendingStatusMarkup = reactDomServer.renderToStaticMarkup(
-        react.createElement(statusModule.JourneyStatus, {
-          journey: choiceJourney,
-          onFollowGoalPassage: () => undefined,
-          onExplainOpportunity: () => undefined,
         }),
       );
 
@@ -175,7 +169,6 @@ describe("journey opportunity UI", () => {
         expect(markup).not.toMatch(/albany_city__|dispatch_|option_id|reward|renown/i);
       }
       expect(statusMarkup).toContain("Optional work");
-      expect(statusMarkup).toContain(INITIAL_JOURNEY_GOAL_GUIDANCE.replaceAll("'", "&#x27;"));
       expect(statusMarkup).toContain("Available leads");
       expect(statusMarkup).toContain(JOURNEY_OPPORTUNITY_GUIDANCE);
       expect(statusMarkup).toContain("if you are in its area, finish any setup and start it");
@@ -191,7 +184,6 @@ describe("journey opportunity UI", () => {
       expect(statusMarkup).toContain("Show how to start");
       expect(statusMarkup).toContain("Talk to the job&#x27;s visible local contact.");
       expect(statusMarkup).toContain("talk albany_city__transport_hub__contact");
-      expect(pendingStatusMarkup).not.toContain("Show one lawful next action");
     } finally {
       await server.close();
     }

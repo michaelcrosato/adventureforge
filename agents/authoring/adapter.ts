@@ -74,8 +74,8 @@ async function runAdaptLoop<P>(
       });
     } catch (err) {
       // A real model can return prose, code fences, extra keys (the adapter OUTPUT
-      // schemas are `.strict()`), or otherwise off-shape JSON — `completeJson` throws on
-      // BOTH the `extractJson` failure and the Zod parse. The mock never does this, but a
+      // schemas are `.strict()`), or otherwise off-shape JSON — a live `completeJson` would
+      // throw on BOTH a failed JSON extraction and the Zod parse. The mock never does this, but a
       // live frontier model will (the keystone keyed-run risk). Treat a thrown completion
       // as a NON-GREEN round, not a fatal crash: surface it as an ERROR finding fed back
       // into the next prompt so the model can revise toward valid output, exactly as a

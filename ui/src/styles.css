@@ -1737,72 +1737,6 @@ button:hover {
   border-color: #f7d98f;
 }
 
-.world-header {
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 1.25rem;
-  padding-bottom: 1rem;
-}
-
-.journey-status {
-  align-items: stretch;
-  background: linear-gradient(110deg, rgba(17, 32, 29, 0.96), rgba(32, 29, 24, 0.96));
-  border: 1px solid color-mix(in srgb, var(--water) 45%, var(--line));
-  border-left: 4px solid var(--water);
-  border-radius: 10px;
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1fr) auto;
-  margin-bottom: 1.25rem;
-  padding: 1rem 1.1rem;
-}
-
-.journey-goal-copy h2,
-.journey-goal-copy p,
-.journey-rhythm,
-.journey-rhythm dd,
-.journey-rhythm dt {
-  margin: 0;
-}
-
-.journey-goal-copy h2 {
-  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
-  margin-top: 0.2rem;
-}
-
-.journey-goal-copy > p:last-child {
-  color: var(--muted);
-  font-size: 0.82rem;
-  margin-top: 0.25rem;
-}
-
-.journey-rhythm {
-  display: grid;
-  gap: 0.55rem;
-  grid-template-columns: repeat(3, minmax(5.5rem, auto));
-}
-
-.journey-rhythm div {
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  display: grid;
-  padding: 0.55rem 0.7rem;
-}
-
-.journey-rhythm dt {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  text-transform: uppercase;
-}
-
-.journey-rhythm dd {
-  color: var(--road);
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
 .journey-opportunities {
   background: color-mix(in srgb, var(--panel-3) 88%, black);
   border: 1px solid color-mix(in srgb, var(--water) 30%, var(--line));
@@ -1895,101 +1829,6 @@ button:hover {
   color: var(--water);
   font-family: var(--font-mono);
   text-transform: uppercase;
-}
-
-.journey-passage {
-  background:
-    linear-gradient(120deg, rgba(44, 35, 20, 0.96), rgba(23, 31, 25, 0.97)), var(--panel-2);
-  border: 1px solid color-mix(in srgb, var(--road) 62%, var(--line));
-  border-left: 4px solid var(--road);
-  border-radius: 9px;
-  display: grid;
-  gap: 0.85rem 1rem;
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) minmax(11rem, auto);
-  padding: 0.9rem 1rem;
-}
-
-.journey-passage-copy,
-.journey-passage-copy h3,
-.journey-passage-copy p,
-.journey-passage-facts,
-.journey-passage-facts dd,
-.journey-passage-facts dt {
-  margin: 0;
-}
-
-.journey-passage-copy {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.journey-passage-copy h3 {
-  color: var(--ink);
-  font-size: clamp(1rem, 2vw, 1.25rem);
-}
-
-.journey-passage-consequence {
-  color: #d8d8cc;
-  max-width: 78ch;
-}
-
-.journey-passage-stop {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.journey-passage-stop strong {
-  color: #c9cabd;
-}
-
-.journey-passage-facts {
-  display: grid;
-  gap: 0.55rem;
-  grid-column: 1;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.journey-passage-facts div {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid color-mix(in srgb, var(--road) 22%, var(--line));
-  border-radius: 7px;
-  display: grid;
-  gap: 0.15rem;
-  padding: 0.5rem 0.65rem;
-}
-
-.journey-passage-facts dt {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  text-transform: uppercase;
-}
-
-.journey-passage-facts dd {
-  color: var(--road);
-  font-family: var(--font-display);
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.journey-passage-action {
-  align-self: stretch;
-  background: var(--road);
-  border-color: var(--road);
-  color: #17140e;
-  font-family: var(--font-display);
-  font-weight: 750;
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  min-height: 5.5rem;
-  min-width: 11rem;
-}
-
-.journey-passage-action:hover,
-.journey-passage-action:focus-visible {
-  background: #ecc66f;
-  border-color: #f7d98f;
 }
 
 .journey-decision-page,
@@ -2196,9 +2035,7 @@ button:hover {
 }
 
 .kicker,
-.mode,
-.settlement,
-.location-topline span:last-child {
+.mode {
   color: var(--road);
   font-family: var(--font-mono);
   font-size: 0.76rem;
@@ -2413,22 +2250,16 @@ h3 {
 }
 
 .overworld,
-.world-grid,
 .game {
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
 }
 
-.world-grid,
 .game {
   margin-top: 1rem;
 }
 
-.location-panel,
-.atlas-panel,
-.roads-panel,
-.local-panel,
 .scene,
 .state,
 .log {
@@ -2439,72 +2270,8 @@ h3 {
   padding: 1.25rem;
 }
 
-.atlas-panel,
-.local-panel,
 .state {
   background: var(--panel-2);
-}
-
-.location-topline {
-  align-items: center;
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
-  margin-bottom: 0.65rem;
-}
-
-.settlement.metropolis {
-  color: var(--water);
-}
-
-.settlement.great_city,
-.settlement.major_city {
-  color: var(--road);
-}
-
-.settlement.city,
-.settlement.large_town {
-  color: var(--forest);
-}
-
-.location-panel p {
-  color: #d8d8cc;
-  margin: 0.85rem 0 0;
-}
-
-.location-facts {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 1rem 0 0;
-}
-
-.location-facts div {
-  border-top: 1px solid var(--line);
-  min-width: 0;
-  padding-top: 0.55rem;
-}
-
-.departure-interactions {
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 0.55rem;
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-}
-
-.departure-interactions h3,
-.departure-interactions h4,
-.departure-interactions p {
-  margin: 0;
-}
-
-.departure-interactions p {
-  color: var(--muted);
-}
-
-.departure-interactions .mini-command {
-  justify-self: start;
 }
 
 .station-dispatch-board {
@@ -2661,104 +2428,6 @@ dd {
   overflow-wrap: anywhere;
 }
 
-.atlas-panel p {
-  color: var(--muted);
-  margin: 0.5rem 0 0.8rem;
-}
-
-.discovered-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.discovered-list span {
-  background: #262a20;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: #dcdaca;
-  font-size: 0.78rem;
-  padding: 0.25rem 0.55rem;
-}
-
-.route-planner {
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 0.55rem;
-  margin-top: 1rem;
-  padding-top: 0.25rem;
-}
-
-.route-planner button {
-  align-items: flex-start;
-  background: #222717;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-height: 0;
-  padding: 0.65rem;
-  text-align: left;
-}
-
-.route-planner span {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-}
-
-.world-journal {
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 0.55rem;
-  margin-top: 1rem;
-  padding-top: 0.25rem;
-}
-
-.world-journal div {
-  background: #26231d;
-  border-radius: 6px;
-  display: grid;
-  gap: 0.15rem;
-  padding: 0.55rem 0.65rem;
-}
-
-.world-journal span {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-}
-
-.renown-list {
-  border-top: 1px solid var(--line);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 1rem;
-  padding-top: 0.25rem;
-}
-
-.renown-list h3 {
-  flex: 0 0 100%;
-}
-
-.renown-list span {
-  background: #2b2a1f;
-  border: 1px solid color-mix(in srgb, var(--road) 42%, var(--line));
-  border-radius: 999px;
-  color: #e2d6b7;
-  font-size: 0.76rem;
-  padding: 0.25rem 0.55rem;
-}
-
-.regional-thread-list {
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 0.55rem;
-  margin-top: 1rem;
-  padding-top: 0.25rem;
-}
-
 .thread {
   background: #20251f;
   border: 1px solid var(--line);
@@ -2784,7 +2453,6 @@ dd {
   margin: 0;
 }
 
-.road-list,
 .quest-list,
 .choices,
 .facts,
@@ -2796,7 +2464,6 @@ dd {
   padding: 0;
 }
 
-.road-list button,
 .quest-list button,
 .choices button {
   align-items: flex-start;
@@ -2867,135 +2534,15 @@ dd {
   font-weight: 700;
 }
 
-.road-list button {
-  background: #222717;
-}
-
-.road-list small,
 .quest-list small {
   color: var(--muted);
   font-size: 0.82rem;
   overflow-wrap: anywhere;
 }
 
-.road-list button:disabled,
 .quest-list button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
-}
-
-.road-encounter {
-  background: #23251d;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--road);
-  border-radius: 6px;
-  display: grid;
-  gap: 0.5rem;
-  margin: 0.75rem 0 1rem;
-  padding: 0.85rem;
-}
-
-.road-encounter.high {
-  border-left-color: var(--danger);
-}
-
-.road-encounter.medium {
-  border-left-color: var(--road);
-}
-
-.road-encounter.low {
-  border-left-color: var(--forest);
-}
-
-.road-encounter span,
-.road-encounter small {
-  color: var(--road);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  text-transform: uppercase;
-}
-
-.road-encounter p {
-  color: #d8d8cc;
-  margin: 0;
-}
-
-.encounter-actions {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.encounter-actions button {
-  align-items: flex-start;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  text-align: left;
-}
-
-.area-list,
-.area-route-list,
-.job-list,
-.poi-list {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.area-route-list {
-  background: #23251d;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  gap: 0.5rem;
-  padding: 0.75rem;
-}
-
-.area-route-list h3 {
-  margin: 0;
-}
-
-.area-route-list button {
-  align-items: flex-start;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  text-align: left;
-}
-
-.current-area {
-  background: #222717;
-  border: 1px solid color-mix(in srgb, var(--forest) 36%, var(--line));
-  border-left: 3px solid var(--forest);
-  border-radius: 6px;
-  display: grid;
-  gap: 0.25rem;
-  margin-top: 0.75rem;
-  padding: 0.85rem;
-}
-
-.current-area span {
-  color: var(--forest);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  text-transform: uppercase;
-}
-
-.current-area p {
-  color: #d8d8cc;
-  margin: 0;
-}
-
-.site-list {
-  display: grid;
-  gap: 0.65rem;
-  margin-top: 0.75rem;
-}
-
-.contact-list,
-.event-list {
-  display: grid;
-  gap: 0.65rem;
-  margin-top: 0.75rem;
 }
 
 .area,
@@ -3057,20 +2604,6 @@ dd {
   padding: 0.35rem 0.7rem;
 }
 
-.inline-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.resolved-label {
-  color: var(--forest);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 .event.hazard {
   border-left: 3px solid var(--danger);
 }
@@ -3083,33 +2616,8 @@ dd {
   border-left: 3px solid var(--road);
 }
 
-.event.rumor {
-  border-left: 3px solid var(--water);
-}
-
-.site.waterway {
-  border-left: 3px solid var(--water);
-}
-
-.site.wildland {
-  border-left: 3px solid var(--forest);
-}
-
-.site.ruin {
-  border-left: 3px solid var(--road);
-}
-
-.site.industrial {
-  border-left: 3px solid #9c8f7a;
-}
-
-.site.civic {
-  border-left: 3px solid #c6c2ad;
-}
-
 .poi span,
-.empty,
-.quest-origin {
+.empty {
   color: var(--muted);
 }
 
@@ -3125,13 +2633,6 @@ dd {
   padding: 0.75rem 1rem;
 }
 
-.scene-heading {
-  align-items: start;
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-}
-
 .secondary {
   background: transparent;
   color: var(--muted);
@@ -3141,23 +2642,6 @@ dd {
 .text {
   color: #d8d8cc;
   font-size: 1rem;
-  white-space: pre-wrap;
-}
-
-.quest-dialogue {
-  border-left: 3px solid var(--accent);
-  margin: 1rem 0;
-  padding: 0.25rem 0 0.25rem 1rem;
-}
-
-.quest-dialogue h3,
-.quest-dialogue p {
-  margin: 0;
-}
-
-.quest-dialogue p {
-  color: #d8d8cc;
-  margin-top: 0.4rem;
   white-space: pre-wrap;
 }
 
@@ -3171,14 +2655,6 @@ dd {
   color: var(--muted);
   cursor: not-allowed;
   opacity: 0.72;
-}
-
-.choice-detail,
-.choice-reason {
-  color: #c9bda5;
-  font-size: 0.82rem;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
 }
 
 .ending {
@@ -3280,9 +2756,7 @@ dd {
 
 @media (max-width: 880px) {
   .overworld,
-  .world-grid,
   .game,
-  .location-facts,
   .character-groups {
     grid-template-columns: 1fr;
   }
@@ -3294,41 +2768,12 @@ dd {
   .station-dispatch-support {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .journey-status {
-    grid-template-columns: 1fr;
-  }
-
-  .journey-rhythm {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .journey-passage {
-    grid-template-columns: 1fr;
-  }
-
-  .journey-passage-action {
-    grid-column: 1;
-    grid-row: auto;
-    min-height: 3.5rem;
-  }
-
-  .scene-heading,
-  .location-topline {
-    align-items: stretch;
-    flex-direction: column;
-  }
 }
 
 @media (max-width: 520px) {
-  .journey-rhythm,
   .journey-choice-actions,
   .journey-continuation-preview-cards {
     grid-template-columns: 1fr;
-  }
-
-  .journey-passage-facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .station-dispatch-board {
@@ -3337,10 +2782,6 @@ dd {
 
   .station-dispatch-support {
     grid-template-columns: 1fr;
-  }
-
-  .journey-rhythm div {
-    grid-template-columns: 1fr auto;
   }
 
   .journey-choice-actions button {
