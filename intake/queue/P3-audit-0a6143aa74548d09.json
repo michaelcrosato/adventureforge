@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "0a6143aa74548d09",
+  "title": "Generator produces one structure for every seed",
+  "body": "The procedural generator varies flavour but not structure. Every seed yields the same 7-room, two-fight gauntlet with 2 enemies and 3 endings and exactly 20,272 search states (checked for seeds 0-4, -5 and 123456789), so the \"moving proof input\" the README describes is structurally a single point. If generated packs are meant to keep the verifier from becoming a memorized target, vary room count, gating shape and ending structure under the same validator bar.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "feature",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "src/gen/rpg_generator.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:41.665Z",
+  "updated_at": "2026-09-23T05:16:41.665Z",
+  "external": null
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "778e93cbdbe4a59d",
+  "title": "Feedback compiler baseline is machine-local, so feedback:status fails in every other checkout",
+  "body": "The feedback compiler's accepted baseline is split across a tracked marker and a gitignored bundle. AI_LOOP_STATE.md names accepted compile 20260822T154750Z, but its manifest and hotspots live only in ignored ai-runs/ on the machine that produced it, so npm run feedback:status exits 1 in every other checkout and charter step 6 is a no-op wherever autonomous runs actually happen (all four #367 cycles skipped it). The documented recovery (feedback:rebootstrap inside a sealed cycle) re-baselines every checkout and leaves the original machine failing instead.\n\nDecide where the accepted baseline lives (tracked, published alongside the corpus, or content-addressed and fetchable) so status is reproducible from any clone. The error message was improved in the 2026-09-22 sweep; the design gap remains.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "src/feedback",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:37.482Z",
+  "updated_at": "2026-09-23T05:16:37.482Z",
+  "external": null
+}

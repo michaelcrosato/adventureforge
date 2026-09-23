@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "8699d72d1eb4281d",
+  "title": "Outside Albany: cloned NPC names, free services everywhere, road risk by class only",
+  "body": "The world is thin outside the authored Albany chapter:\n- 701 characters share 18 names; the authored Albany cast (Rowan Quill, Jamie Tanner, Hayden Hale, Reese Pryce, Emery Sloane, Blair Drake) is cloned into 41-42 other towns each.\n- All 247 towns offer free rest and resupply (45 minutes to full); renown gates 1 of 33 service rules; the clock only matters for Wolf-Winter's 60-minute dispatch window.\n- Road risk depends only on road class: all 261 ambient regional connectors are \"high\" (+3 fatigue), so a 5-minute local road costs more fatigue than an hour on the interstate.\nThis is a design/content item for after the starting slice is certified (ROADMAP freezes new towns until then); filing so it is not lost.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "experience",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "content/world/new_york_overworld.json",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:40.609Z",
+  "updated_at": "2026-09-23T05:16:40.609Z",
+  "external": null
+}

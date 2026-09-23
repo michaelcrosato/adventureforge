@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "882c181397dc03b8",
+  "title": "Starting-slice certification accepts only Codex fleet evidence",
+  "body": "The starting-slice certifier only accepts Codex fleet evidence. src/starting_slice/fleet_certifier.ts (~614, ~633-643) admits provider \"claude\" only as historical Sonnet attestation v2, while current certification requires fleet attestation v9, which only the Codex capture path produces. The charter says any provable vendor can drive the playtest loop (Claude Code is runner_enforced today, src/blind/providers.ts), but only one vendor family can move the milestone from active_unproven.\n\nDecide whether Claude Code runs may certify, and if so define a current Claude attestation equivalent to v9 (binding provider, model, CLI version, transcript hash and receipt) and admit it in the certifier.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "feature",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "src/starting_slice/fleet_certifier.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:35.360Z",
+  "updated_at": "2026-09-23T05:16:35.360Z",
+  "external": null
+}

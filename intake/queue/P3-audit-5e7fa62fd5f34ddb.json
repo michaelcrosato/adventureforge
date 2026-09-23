@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "5e7fa62fd5f34ddb",
+  "title": "ship from main with local commits leaves local main diverged after the squash",
+  "body": "npm run ship started on main with unpushed local commits now weighs those commits when choosing the bar (bug_0635), but after the squash merge its final \"git pull --ff-only\" fails because local main has diverged from the squashed result. The landing succeeds; the local checkout is left needing a manual reset to origin/main. Either start ship from a fresh branch automatically when main has local commits, or reset local main to origin/main after a successful squash when every local commit is contained in the merged tree.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "scripts/ship.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:44.691Z",
+  "updated_at": "2026-09-23T05:16:44.691Z",
+  "external": null
+}

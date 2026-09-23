@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "12e0dab5fdf5a761",
+  "title": "src/world structural debt: import cycles, exception-driven legality, anonymous errors",
+  "body": "Structural debt in src/world that no single fix addresses:\n- 12 import cycles (madge), 10 of them through overworld.ts -> quest_launch.ts.\n- Legality decided by catching exceptions in liveJobChoices/liveEventChoices (session.ts ~3219-3297).\n- 891 anonymous \"throw new Error\" with no error subclass, so callers match on message text.\n- chooseJourneyStoryInternal is ~420 lines (session.ts ~2173-2593); session.ts is 4,036 lines.\n- The six opening journal modules are near-copies (~2,000 lines).\n- The 12-quest campaign order is hard-coded in TypeScript (journey_campaign.ts ~13, 20, 977).\nRelated open items: 6bac01f8 (dead exports), ffc570b2 (wolf_winter coupling in core), 339f5089 (split the world JSON), 8e3375cd (dedupe the quest bridge).\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "src/world",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:39.625Z",
+  "updated_at": "2026-09-23T05:16:39.625Z",
+  "external": null
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "931cbec9df9d0ebe",
+  "title": "Playtest corpus is never published, so QA tickets cannot be regenerated",
+  "body": "The playtest session corpus is never published, so QA tickets cannot be regenerated or re-verified anywhere else. origin has no playtest-sessions ref; #367's 51-session corpus lived only in its container and is gone, while a 308-session local store on the operator machine is unpublished and disagrees with the tracked tickets (re-triaging there deleted 47 of 102). qa:triage --verified and staleness therefore depend on which machine runs them.\n\nMake publishing part of the playtest loop (npm run qa:publish exists — wire it in or document when it must run), and have triage read the published corpus back.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "scripts/publish-playtest-sessions.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:36.476Z",
+  "updated_at": "2026-09-23T05:16:36.476Z",
+  "external": null
+}

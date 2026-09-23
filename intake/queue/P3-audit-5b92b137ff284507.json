@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "5b92b137ff284507",
+  "title": "Compact MCP legend cannot be re-requested after client context compaction",
+  "body": "MCP compact legends cannot be requested again. A session-creating response carries the legend and later responses only add legend_delta for first uses (server.ts ~1371-1374, overworld_sessions.ts ~432-505); nothing returns the full legend on demand. A long pure session whose client compacts its context loses the field definitions for good. Suspected, not reproduced with a real client. Consider an include_legend flag on the read-only context tools.\n\nAudit report: https://claude.ai/artifact/SD45nGH1YqftoSvkxL8Hbb (2026-09-22, main c17192f9).",
+  "source": "audit",
+  "kind": "feature",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "src/mcp/server.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-23T05:16:42.674Z",
+  "updated_at": "2026-09-23T05:16:42.674Z",
+  "external": null
+}
