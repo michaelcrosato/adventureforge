@@ -524,7 +524,8 @@ function resolveRpgActionCore(
  * Same-room actions stay first-class without discarding the exchange: a player
  * can read the book Cade just pointed at and then take the already-offered next
  * topic. Moving, ending play, or making the speaking NPC ineligible clears the
- * active variable after the action's own effects and prose. Explicit leave topics
+ * active variable after the action's own effects and prose (ahead of an
+ * `end_game`, the last effect that can land). Explicit leave topics
  * already clear themselves and are not decorated twice. TALK and combat are
  * suppressed by their legal enumerators. The dialogue variable is excluded from
  * the journey consequence hash, so an automatic close never invents a meaningful
@@ -552,9 +553,24 @@ export function withRpgDialogueInterruption(
     evalConditions(projectedActive.npc.conditions ?? [], projected);
   if (exchangeStillValid || projectedActive === null) return resolution;
 
+  // `applyEffects` stops at the first `end_game`, so a close appended after a
+  // terminal effect never lands and the ended state keeps a live conversation
+  // into its observation and save (bug_0640). Close immediately ahead of that
+  // `end_game` instead: every effect before it — including an ASK node's own
+  // re-pointing of the dialogue variable — has already applied, and nothing
+  // after it ever does, so the only difference is that the close now lands.
+  const close: Effect = { set_var: { name: dlgVar(active.npc.id), value: 0 } };
+  const terminalAt = resolution.effects.findIndex((effect) => "end_game" in effect);
   return {
     conditions: resolution.conditions,
-    effects: [...resolution.effects, { set_var: { name: dlgVar(active.npc.id), value: 0 } }],
+    effects:
+      terminalAt < 0
+        ? [...resolution.effects, close]
+        : [
+            ...resolution.effects.slice(0, terminalAt),
+            close,
+            ...resolution.effects.slice(terminalAt),
+          ],
   };
 }
 
