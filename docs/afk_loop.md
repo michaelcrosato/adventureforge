@@ -116,8 +116,9 @@ only a census proof catches is not caught by that cycle. On `main` the nightly
 `npm run test:exhaustive` against the branch head periodically and after any cycle that
 touched the engine or content.
 
-**Failure handling.** loop.sh refuses to start on a dirty tree (AI_LOOP_ALLOW_DIRTY=1
-overrides commit-mode startup only, accepting the risk below). Each cycle snapshots
+**Failure handling.** loop.sh refuses to start on a dirty tree, and re-checks that at
+every cycle boundary in both modes (AI_LOOP_ALLOW_DIRTY=1 overrides it for commit mode
+only, accepting the risk below). Each cycle snapshots
 its exact non-ignored untracked paths. A red gate fails explicitly (`|| return 1`, not
 `set -e`): tracked work and the provisional commit reset to the pre-cycle ref, and
 only untracked paths absent from that snapshot are cleaned, across the whole repo.

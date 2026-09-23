@@ -101,7 +101,7 @@ describe("loop.sh verification gates", () => {
   it("keeps the provisional and final commits in the exact-clean evidence order", () => {
     const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
     const ordered = [
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
       "refresh_intake_queue",
       "report_qa_bucket",
       "npm run ai:loop",
@@ -367,7 +367,7 @@ describe("loop.sh latest_prompt (bug_0613)", () => {
 
 describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
   const cleanEvidence = `${sectionBetween(
-    "require_clean_evidence_cycle_start() {",
+    "require_clean_cycle_start() {",
     "\n}\n\nremove_new_untracked_since_cycle_start()",
   )}\n}`;
   const cleanup = `${sectionBetween(
@@ -379,7 +379,7 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
     const clean = runGateHarness(
       [initRepo, cleanEvidence].join("\n"),
       { AI_LOOP_COMMIT: "0", AI_LOOP_ALLOW_DIRTY: "1" },
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
     );
     expect(clean.status, clean.output).toBe(0);
 
@@ -388,7 +388,7 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
         "\n",
       ),
       { AI_LOOP_COMMIT: "0", AI_LOOP_ALLOW_DIRTY: "1" },
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
     );
     expect(dirty.status).toBe(1);
     expect(dirty.output).toContain("exact-clean worktree at cycle start");
@@ -397,9 +397,37 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
     const explicitRisk = runGateHarness(
       [initRepo, "printf '%s\\n' pending > pending.md", cleanEvidence].join("\n"),
       { AI_LOOP_COMMIT: "1", AI_LOOP_ALLOW_DIRTY: "1" },
-      "require_clean_evidence_cycle_start",
+      "require_clean_cycle_start",
     );
     expect(explicitRisk.status, explicitRisk.output).toBe(0);
+  });
+
+  it("rechecks a commit-mode cycle boundary too, unless the dirty override was given (bug_0633)", () => {
+    // The startup guard refuses a dirty tree because a red gate hard-resets it; before
+    // bug_0633 the per-cycle recheck returned early in commit mode, so only the FIRST
+    // cycle had that protection and a tree dirtied mid-run was reset or committed over.
+    const clean = runGateHarness(
+      [initRepo, cleanEvidence].join("\n"),
+      { AI_LOOP_COMMIT: "1" },
+      "require_clean_cycle_start",
+    );
+    expect(clean.status, clean.output).toBe(0);
+
+    const trackedEdit = runGateHarness(
+      [initRepo, "printf '%s\\n' external >> AI_LOOP_STATE.md", cleanEvidence].join("\n"),
+      { AI_LOOP_COMMIT: "1" },
+      "require_clean_cycle_start",
+    );
+    expect(trackedEdit.status).toBe(1);
+    expect(trackedEdit.output).toContain("Commit-mode cycle refuses to start on a dirty worktree");
+
+    const untracked = runGateHarness(
+      [initRepo, "printf '%s\\n' stray > stray.md", cleanEvidence].join("\n"),
+      { AI_LOOP_COMMIT: "1", AI_LOOP_ALLOW_DIRTY: "0" },
+      "require_clean_cycle_start",
+    );
+    expect(untracked.status).toBe(1);
+    expect(untracked.output).toContain("AI_LOOP_ALLOW_DIRTY=1");
   });
 
   it("removes only cycle-created untracked paths across the repo", () => {

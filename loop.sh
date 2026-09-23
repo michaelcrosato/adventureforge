@@ -190,11 +190,29 @@ if [[ ! -d ui/node_modules ]]; then
   npm --prefix ui install
 fi
 
-require_clean_evidence_cycle_start() {
-  # Pure evidence must name one exact revision. The startup guard runs only once,
-  # so enforce this again at EVERY evidence-only cycle boundary; in particular,
-  # do not let continuous mode call a prior cycle's dirty tree another success.
-  [[ "${AI_LOOP_COMMIT:-0}" != "1" ]] || return 0
+require_clean_cycle_start() {
+  # The startup guard runs only once, so enforce cleanliness again at EVERY cycle
+  # boundary, in both modes (bug_0633).
+  #
+  # Commit mode: the same reset-safety the startup guard exists for. A red gate
+  # hard-resets to the cycle-start ref, so anything that dirtied the tree between
+  # cycles — another process writing into this checkout, or cleanup that could not
+  # remove every cycle-created path — would be destroyed or swept into the next
+  # provisional commit. This used to return early for commit mode, so only the FIRST
+  # cycle was protected. AI_LOOP_ALLOW_DIRTY=1 still opts out here, exactly as it does
+  # at startup: the operator has accepted that risk for the whole run.
+  if [[ "${AI_LOOP_COMMIT:-0}" == "1" ]]; then
+    [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] || return 0
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "Commit-mode cycle refuses to start on a dirty worktree: a failed cycle would"
+      echo "hard-reset tracked edits it did not make. Commit, stash, or discard them first,"
+      echo "or relaunch with AI_LOOP_ALLOW_DIRTY=1 to accept that risk."
+      return 1
+    fi
+    return 0
+  fi
+  # Evidence-only: pure evidence must name one exact revision, so do not let
+  # continuous mode call a prior cycle's dirty tree another success.
   if [[ -n "$(git status --porcelain)" ]]; then
     echo "Evidence-only cycle requires an exact-clean worktree at cycle start."
     echo "Commit, stash, or discard the pending work before collecting another baseline;"
@@ -636,8 +654,8 @@ run_cycle() {
   cycle_failure_reason="cycle returned without a classified gate failure"
   cycle_failure_start_ref=""
   cycle_failure_run_id=""
-  require_clean_evidence_cycle_start || {
-    mark_cycle_failure "clean-start" "evidence-only cycle started with a dirty worktree"
+  require_clean_cycle_start || {
+    mark_cycle_failure "clean-start" "cycle started with a dirty worktree"
     return 1
   }
   local start_ref untracked_snapshot
