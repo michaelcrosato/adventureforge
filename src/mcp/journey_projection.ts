@@ -239,7 +239,7 @@ function compactJourneyStoryChoiceOption(
   return Object.freeze({ ...option, consequence });
 }
 
-export function journeyStoryChoiceOptionById(
+function journeyStoryChoiceOptionById(
   prompt: JourneyStoryChoicePrompt,
   optionId: string,
 ): JourneyStoryChoiceOption {

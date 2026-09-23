@@ -9,15 +9,8 @@ to the game or harness.
 
 ## Why no API key
 
-There are two different ways a model touches this project, with different auth:
-
-|                     | Authoring (`adapt_story`)         | **Blind playing (this harness)**                    |
-| ------------------- | --------------------------------- | --------------------------------------------------- |
-| Who calls the model | the repo's own code, in-process   | an isolated external vendor CLI (`codex`, `claude`) |
-| Authentication      | none (keyless deterministic mock) | the selected CLI's existing subscription login      |
-| Needs a harness key | no                                | **no**                                              |
-
-This harness is the right-hand column: the model is an external player that reaches
+The repo's own code never calls a model. The player is an isolated external vendor
+CLI (`codex`, `claude`) using its existing subscription login, and it reaches
 the game **only** through the `mcp__adventureforge__*` MCP tools. That uses your
 subscription allowance, which is the best value — exactly per the project goal.
 
@@ -310,12 +303,8 @@ outside and non-overlapping with `ai-runs/fleet/<label>`.
   and game-direct fragment; or the strict prompt and strict fragment for Sol/Luna.
   A dirty tree, fingerprint drift, or Git/provenance error aborts launch.
   Untracked notes do not dirty this check.
-- **Persona**: pure live fleets enforce the neutral `default` first-time-player
-  persona. `explorer`, `speedrunner`, `breaker`, `casual`, `lore-reader`,
-  `cynical_veteran`, and `mixed` remain explicit structural experiments; their
-  prescribed behavior changes the retention measurement. Under `--mock` a
-  persona is a label only: the scripted mock agent discards its prompt, so
-  persona rotation there proves the structural plumbing, not persona behavior.
+- **Persona**: only the neutral `default` first-time-player persona ships;
+  prescribed play styles would change the retention measurement.
 - **Provider/model**: the live fleet default is Codex
   `gpt-5.3-codex-spark`, using the dedicated Spark allowance for ordinary blind
   feedback. Current plans accept only exact homogeneous
@@ -535,8 +524,6 @@ structural-only [`prompt.md`](./prompt.md) is a QA fixture.
   this anytime to verify the plumbing without spending budget.
 - `prompt-overworld.md` — the locked-down live new-player prompt.
 - `prompt.md` — the direct-quest prompt retained for non-LLM structural fixtures.
-- `prompt-loadtest.md` — retained historical structural workload prompt; the
-  Claude load-test runtime entrypoints are retired.
 - `prompt-grok-mcp-instant.md` — Grok's search_tool/use_tool transport contract
   and the same terminal pure-V2 interview contract.
 - `reports/` — run outputs (gitignored).

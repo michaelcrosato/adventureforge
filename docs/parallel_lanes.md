@@ -1,7 +1,7 @@
 # Parallel lanes — running several agents against this repo at once
 
 This is the protocol for operating multiple coding/playtest agents — from any
-vendor — against zork-unlimited **at the same time** without them destroying
+vendor — against adventureforge **at the same time** without them destroying
 each other's work. It exists because the failure mode is not hypothetical: a
 dev-loop cycle that goes red hard-resets tracked work and cleans cycle-created
 untracked paths, so two writers in one checkout revert each other mid-flight

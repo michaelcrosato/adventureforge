@@ -21,17 +21,11 @@ import {
   type RpgViewField,
   type RpgViewOptions,
 } from "./rpg_view_projection.js";
-import {
-  compactMcpActionLabel,
-  compactMcpTranscriptActionId,
-  MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
-} from "./action_labels.js";
+import { compactMcpActionLabel, compactMcpTranscriptActionId } from "./action_labels.js";
 import { classifyRpgJourneyDecision, excludedJourneyDecision } from "../world/journey_decision.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 
-export const REJECTED_ACTION_ID_TRANSCRIPT_LIMIT = MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT;
-
-export type RpgStepActionArgs = {
+type RpgStepActionArgs = {
   session_id: string;
   action_id: string;
   expected_state_hash?: string;

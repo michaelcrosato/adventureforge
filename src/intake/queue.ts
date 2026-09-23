@@ -3,11 +3,10 @@
  *
  * Tracked, not gitignored, and that is the point: the dev loop runs against a checkout,
  * so a submission that only exists on the machine that filed it is a submission the dev
- * loop cannot act on. Keeping the queue in the repo also puts a request's whole life —
- * filed, worked, done — next to the commits that closed it, which no external tracker
- * can do.
+ * loop cannot act on. Closed items are pruned from the tree once resolved; git history
+ * keeps each one next to the commits that closed it.
  *
- * The external tracker (GitHub Issues, see `github.ts`) is a MIRROR of this, not the
+ * The external tracker (Linear, see `linear.ts`) is a MIRROR of this, not the
  * other way round. That ordering is deliberate: the loop must keep working when the
  * network is down, when a token expires, when someone runs it offline. A queue whose
  * canonical copy lives behind an API is a loop with an outage dependency.
@@ -74,7 +73,7 @@ export function readQueue(dir: string = DEFAULT_QUEUE_DIR): {
  * every cycle with a dirty tree it never intended to produce. "Re-filing is safe and
  * expected" (docs/two_loop_workflow.md) has to mean byte-identical when nothing moved.
  *
- * `external` is the one lifecycle field a caller MAY supply: `intake:sync` calls this
+ * `external` is the one lifecycle field a caller MAY supply: a mirror sync calls this
  * immediately after creating an issue, precisely to record where it landed. Keeping
  * `existing.external` unconditionally discarded that every time, so the number was never
  * stored and each sync re-searched by marker instead of being the no-op it claims to be.
@@ -213,7 +212,7 @@ export function supersedePlaytestSubmission(
 }
 
 /** How long a work claim holds before another lane may take the item over. */
-export const DEFAULT_CLAIM_LEASE_HOURS = 24;
+const DEFAULT_CLAIM_LEASE_HOURS = 24;
 
 /**
  * Who is doing the claiming. `AI_LANE_ID` names one lane among several running the
@@ -231,7 +230,7 @@ export function claimLeaseHours(env: NodeJS.ProcessEnv = process.env): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_CLAIM_LEASE_HOURS;
 }
 
-export type ClaimResult =
+type ClaimResult =
   | { ok: false; reason: "missing" }
   /** Someone else's claim is younger than the lease and `force` was not given. */
   | { ok: false; reason: "held"; holder: string; heldHours: number; leaseHours: number }
@@ -293,7 +292,7 @@ export function claimSubmission(
   return { ok: true, outcome, submission: rewriteSubmission(next, dir), previousHolder, heldHours };
 }
 
-export type QueueSummary = {
+type QueueSummary = {
   total: number;
   open: number;
   byPriority: Record<string, number>;

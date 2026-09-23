@@ -50,7 +50,7 @@ import {
   type CrawlLocation,
 } from "./step_oracles.js";
 
-export type QuestCrawlOptions = {
+type QuestCrawlOptions = {
   seed: number;
   maxSteps: number;
   policy: PolicyName;
@@ -169,7 +169,7 @@ function replayEpisodeHashes(
 }
 
 /** Deterministic per-episode seed derived from the crawl seed and episode index. */
-export function episodeSeed(seed: number, episode: number): number {
+function episodeSeed(seed: number, episode: number): number {
   return (seed * 9973 + episode) >>> 0 || 1;
 }
 

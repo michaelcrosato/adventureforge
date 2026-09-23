@@ -13,12 +13,12 @@ import {
 } from "./opening_relief_oath.js";
 import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 
-export type OpeningReliefOathStandardPacketContext = Readonly<{
+type OpeningReliefOathStandardPacketContext = Readonly<{
   registration: OpeningRegistration;
   leadSource: OpeningLeadSource;
 }>;
 
-export const OPENING_RELIEF_OATH_CUSTOMIZE_REVEAL_ID = "customize_duty_and_evidence" as const;
+const OPENING_RELIEF_OATH_CUSTOMIZE_REVEAL_ID = "customize_duty_and_evidence" as const;
 export const OPENING_RELIEF_OATH_CUSTOMIZE_LABEL = "Choose promise and report separately" as const;
 export const OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION =
   "Compare all four field plans before choosing. This review selects nothing. You can then choose a promise and report separately." as const;

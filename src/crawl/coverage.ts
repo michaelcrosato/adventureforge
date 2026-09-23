@@ -13,7 +13,7 @@ export type OverworldCoverageSummary = {
   quests: { entered: string[]; total: number };
 };
 
-export type OverworldCoverageInput = {
+type OverworldCoverageInput = {
   world: OverworldManifest;
   visitedNodeIds: ReadonlySet<string>;
   traveledEdgeIds: ReadonlySet<string>;

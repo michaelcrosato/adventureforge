@@ -6,7 +6,7 @@ export function maneuverActionId(enemyId: string, maneuverId: string): string {
   return `maneuver_${enemyId}_${maneuverId}`;
 }
 
-export type UseActionIdentity = {
+type UseActionIdentity = {
   id: string;
   /** Accepted only as an input compatibility spelling; never a listed menu id. */
   inputAliases?: readonly string[];

@@ -27,7 +27,7 @@ const AUTHORED_TEXT = z
 
 export const CampaignServiceActionSchema = z.enum(["care", "rest", "resupply"]);
 
-export const CampaignServiceRegionRenownRequirementSchema = z
+const CampaignServiceRegionRenownRequirementSchema = z
   .object({
     region: z.string().min(1),
     at_least: z.number().int().positive().max(1_000),
@@ -363,7 +363,7 @@ export type CampaignServiceOffer = {
 
 type IdCollection = readonly string[] | ReadonlySet<string>;
 
-export type CampaignServiceRuleResolutionState = Readonly<{
+type CampaignServiceRuleResolutionState = Readonly<{
   rules: readonly CampaignServiceRule[];
   currentTownId: string;
   currentAreaId: string;
@@ -375,9 +375,9 @@ export type CampaignServiceRuleResolutionState = Readonly<{
   completedLocalJobOptions?: readonly CampaignServiceLocalJobOption[] | undefined;
 }>;
 
-export type CampaignServiceOfferProvider = Readonly<{ name: string }>;
+type CampaignServiceOfferProvider = Readonly<{ name: string }>;
 
-export type CampaignServiceOfferResolutionState = CampaignServiceRuleResolutionState &
+type CampaignServiceOfferResolutionState = CampaignServiceRuleResolutionState &
   Readonly<{
     providersById?: ReadonlyMap<string, CampaignServiceOfferProvider>;
   }>;
@@ -505,7 +505,7 @@ export function resolveActiveCampaignServiceRules(
 }
 
 /** Strip internal location and predicate state from one detached player offer. */
-export function campaignServiceOffer(
+function campaignServiceOffer(
   rule: CampaignServiceRule,
   providersById?: ReadonlyMap<string, CampaignServiceOfferProvider>,
 ): CampaignServiceOffer {

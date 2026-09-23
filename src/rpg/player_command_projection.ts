@@ -8,26 +8,24 @@ import {
 import type { RpgActionOption, RpgBlockedActionOption } from "./legal_actions.js";
 import { objectName, type RpgModelIndex } from "./model.js";
 
-export { normalizeRpgTopicCommand } from "./command_normalization.js";
-
-export type RpgPlayerCommand = {
+type RpgPlayerCommand = {
   option: RpgActionOption;
   command: string;
   aliases: string[];
   description?: string;
 };
 
-export type RpgPlayerCommandResolution =
+type RpgPlayerCommandResolution =
   | { kind: "resolved"; option: RpgActionOption }
   | { kind: "ambiguous"; reason: string }
   | { kind: "unmatched" };
 
-export type RpgPlayerCommandContext = {
+type RpgPlayerCommandContext = {
   index: RpgModelIndex;
   state: GameState;
 };
 
-export type RpgActiveDialoguePromptView = {
+type RpgActiveDialoguePromptView = {
   dialogue: { npc: string } | null;
   npcs_present: readonly { id: string; name: string }[];
 };

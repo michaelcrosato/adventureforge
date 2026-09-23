@@ -5,7 +5,6 @@
 AI_LOOP_STATE_ARCHIVE.md
 ADVENTUREFORGE_BUILD_SPEC.md
 docs/DECISION_LOG.md
-docs/archive/
 package-lock.json
 ui/package-lock.json
 content/world/new_york_overworld.json

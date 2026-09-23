@@ -12,14 +12,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { writePilotArtifactSafely } from "../../bin/certify-starting-slice.js";
+import { writePilotArtifactSafely } from "../../bin/starting-slice.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 
 describe("starting-slice pilot CLI", () => {
   it("requires one explicit fleet directory", () => {
-    const result = spawnSync(process.execPath, [TSX, "bin/check-starting-slice-pilot.ts"], {
+    const result = spawnSync(process.execPath, [TSX, "bin/starting-slice.ts", "pilot"], {
       cwd: ROOT,
       encoding: "utf8",
       timeout: 30_000,

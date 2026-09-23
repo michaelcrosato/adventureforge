@@ -7,7 +7,6 @@ import { buildCampaignCharacterState } from "../../src/world/campaign_character_
 import { buildCampaignCharacterView } from "../../src/world/campaign_character_view.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
 import {
   OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
@@ -1051,7 +1050,7 @@ describe("OverworldSession", () => {
     }
   });
 
-  it("renders June's optional departure lead as an exact talk action before and after preparation", async () => {
+  it("wires June's optional departure lead into the live action list and renders the recap", async () => {
     const session = new OverworldSession(world);
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
@@ -1119,8 +1118,7 @@ describe("OverworldSession", () => {
       server: { middlewareMode: true },
     });
     try {
-      const module = (await server.ssrLoadModule("/src/App.tsx")) as {
-        DepartureContactLead: unknown;
+      const module = (await server.ssrLoadModule("/src/DepartureRecap.tsx")) as {
         DepartureRecap: unknown;
       };
       const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
@@ -1130,25 +1128,6 @@ describe("OverworldSession", () => {
       const reactDomServer = requireFromUi("react-dom/server") as {
         renderToStaticMarkup: (element: unknown) => string;
       };
-      const initiallyReadyMarkup = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.DepartureContactLead, {
-          lead: initiallyReady,
-          onTalk: () => undefined,
-        }),
-      );
-      expect(initiallyReadyMarkup).toContain('aria-disabled="false"');
-      expect(initiallyReadyMarkup).not.toContain('disabled=""');
-      expect(initiallyReadyMarkup).toContain(
-        `aria-describedby="departure-contact-lead-${world.opening_ally!.id.replaceAll(":", "-")}"`,
-      );
-      expect(initiallyReadyMarkup).toContain("Optional second rider: Talking takes 15 minutes.");
-      expect(initiallyReadyMarkup).toContain(
-        "Let June Control Cattle Safety: 15 minutes additional, 30 minutes total",
-      );
-      expect(initiallyReadyMarkup).toContain("leave alone for The Wolf-Winter");
-      expect(initiallyReadyMarkup).toContain("Ask June Pike about riding");
-      expect(initiallyReadyMarkup).not.toContain("choose a field kit first");
-
       const recapMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.DepartureRecap, { recap }),
       );
@@ -1179,24 +1158,12 @@ describe("OverworldSession", () => {
       expect(recapMarkup).toContain("<summary>Review what is set and still optional</summary>");
       expect(recapMarkup).not.toMatch(/<details[^>]*\sopen(?:=|>)/);
       expect(recapMarkup).toContain(recap.entries[0]!.activeFieldTerm!.replaceAll("'", "&#x27;"));
-
-      const readyMarkup = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.DepartureContactLead, {
-          lead: ready,
-          onTalk: () => undefined,
-        }),
-      );
-      expect(readyMarkup).toContain('aria-disabled="false"');
-      expect(readyMarkup).toContain("Optional second rider: Talking takes 15 minutes.");
-      expect(readyMarkup).toContain("Travel Alone: no added time, 15 minutes total");
-      expect(readyMarkup).toContain("Ask June Pike about riding");
-      expect(readyMarkup).not.toContain("choose a field kit first");
     } finally {
       await server.close();
     }
   });
 
-  it("leads the Station board with departure and keeps support and commitments collapsed", async () => {
+  it("titles Station support actions and logs each story choice by its display summary", async () => {
     const session = new OverworldSession(world);
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
@@ -1223,8 +1190,6 @@ describe("OverworldSession", () => {
     });
     try {
       const module = (await server.ssrLoadModule("/src/App.tsx")) as {
-        StationDispatchBoard: unknown;
-        DepartureLaunchPanel: unknown;
         stationSupportActionTitle: (
           slot: "preparation" | "relief_allocation" | "field_team",
         ) => string;
@@ -1233,70 +1198,6 @@ describe("OverworldSession", () => {
           result: ReturnType<OverworldSession["chooseJourneyStory"]>,
         ) => string[];
       };
-      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
-      const react = requireFromUi("react") as {
-        createElement: (
-          type: unknown,
-          props: Record<string, unknown>,
-          ...children: unknown[]
-        ) => unknown;
-      };
-      const reactDomServer = requireFromUi("react-dom/server") as {
-        renderToStaticMarkup: (element: unknown) => string;
-      };
-      const renderCurrentBoard = (currentSession = session): string => {
-        const current = currentSession.view();
-        const currentBoard = current.stationDispatchBoard;
-        const currentQuest = current.quests.find(
-          (candidate) => candidate.id === currentBoard?.questId,
-        );
-        if (!currentBoard || !currentQuest?.launch) {
-          throw new Error("expected the current Station board and launch");
-        }
-        return reactDomServer.renderToStaticMarkup(
-          react.createElement(
-            module.StationDispatchBoard,
-            {
-              board: currentBoard,
-              recap: current.departureRecap,
-              onInspect: () => undefined,
-              onTalk: () => undefined,
-            },
-            react.createElement(module.DepartureLaunchPanel, {
-              quest: currentQuest,
-              areaName: current.currentArea!.name,
-              onStart: () => undefined,
-            }),
-          ),
-        );
-      };
-      const markup = renderCurrentBoard();
-      expect(markup).toContain(`${board.questTitle} field briefing`);
-      expect(markup).toContain(`${board.questTitle} departure plan`);
-      expect(markup).toContain("Optional support — field kit, relief wagon, or second rider");
-      expect(markup).toContain("Current departure plan");
-      expect(markup.indexOf("Depart now")).toBeLessThan(markup.indexOf("Optional support"));
-      expect(markup.indexOf("Optional support")).toBeLessThan(
-        markup.indexOf("Current departure plan"),
-      );
-      for (const support of board.support) {
-        expect(markup).toContain(support.label.replaceAll("'", "&#x27;"));
-        expect(markup).toContain(support.purpose.replaceAll("'", "&#x27;"));
-        expect(markup).toContain(support.detailHint.replaceAll("'", "&#x27;"));
-        if (support.action?.kind === "inspect") {
-          expect(markup).toContain(
-            `Review ${support.slot === "preparation" ? "field kit" : "relief wagon"}`,
-          );
-          expect(markup).not.toContain(`Inspect ${support.action.title.replaceAll("'", "&#x27;")}`);
-        }
-        if (support.action?.kind === "talk") {
-          expect(markup).toContain(`Ask ${support.action.contactName} about riding`);
-        }
-      }
-      expect(markup).toContain("Depart now");
-      for (const approach of board.launch.approaches) {
-        expect(markup).toContain(approach.title);
-      }
       expect(module.stationSupportActionTitle("preparation")).toBe("Field kit");
       expect(module.stationSupportActionTitle("relief_allocation")).toBe("Relief wagon");
       expect(module.stationSupportActionTitle("field_team")).toBe("Second rider");
@@ -1305,19 +1206,6 @@ describe("OverworldSession", () => {
       const allocation = world.opening_relief_allocation!;
       const ally = world.opening_ally!;
       session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
-      const preparedMarkup = renderCurrentBoard();
-      expect(preparedMarkup).toContain(
-        "You can leave now. Set: background, Wolf-Winter promise, report, and field kit. Optional: one relief wagon or second rider. They affect support, costs, or later results, not your field plan.",
-      );
-      expect(preparedMarkup).toContain("Optional support — relief wagon or second rider");
-      expect(preparedMarkup).not.toContain("Optional support — field kit");
-      expect(preparedMarkup).not.toContain("One field kit");
-      expect(preparedMarkup).toContain(preparation.profiles[0]!.title.replaceAll("'", "&#x27;"));
-      expect(preparedMarkup.match(/Open \(optional\)/g) ?? []).toHaveLength(2);
-      expect(preparedMarkup).not.toContain(
-        "field kit, relief wagon, and second rider remain optional",
-      );
-
       const sentWagonResult = session.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
       expect(module.journeyStoryChoiceLogEntries("relief_allocation", sentWagonResult)[0]).toBe(
         sentWagonResult.displaySummary,
@@ -1334,22 +1222,6 @@ describe("OverworldSession", () => {
         soloResult.displaySummary,
       );
       expect(soloResult.displaySummary).not.toContain(soloResult.consequence);
-      const fullySetMarkup = renderCurrentBoard();
-      expect(fullySetMarkup).toContain(
-        "You can leave now. Set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains.",
-      );
-      expect(fullySetMarkup).not.toContain("station-dispatch-support-details");
-      expect(fullySetMarkup).not.toContain("Optional support —");
-      expect(fullySetMarkup).not.toContain("Open (optional)");
-      expect(fullySetMarkup).not.toContain("Review what is already set");
-      for (const title of [
-        preparation.profiles[0]!.title,
-        allocation.options[0]!.title,
-        "Travel Alone",
-      ]) {
-        expect(fullySetMarkup).toContain(title.replaceAll("'", "&#x27;"));
-      }
-
       const openStationSupportSession = (): OverworldSession => {
         const supportSession = new OverworldSession(world);
         supportSession.scoutPoi(supportSession.view().pois[0]!.id);
@@ -1395,13 +1267,6 @@ describe("OverworldSession", () => {
       );
       expect(immediateLog[0]).not.toContain(packetResult.consequence);
       expect(immediateLog[1]).toBe(`Current goal: ${packetResult.goal.text}`);
-      moveToOpeningPreparation(packetSession);
-      const packetPromise = world.opening_relief_oath!.options.find(
-        (option) => option.id === doctrine.relief_oath_option_id,
-      )!;
-      const projectedPacketPromise = packetPromise.title.replace(/\bDuty\b/gu, "Promise");
-      const packetBoardMarkup = renderCurrentBoard(packetSession);
-      expect(packetBoardMarkup).toContain(projectedPacketPromise);
     } finally {
       await server.close();
     }
@@ -1475,7 +1340,7 @@ describe("OverworldSession", () => {
     }
   });
 
-  it("renders launch approaches inline with truthful projections and no extra start button", async () => {
+  it("splits the dispatch quest from the notice board and wires launch approaches inline", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
       root: uiRoot,
@@ -1487,8 +1352,6 @@ describe("OverworldSession", () => {
     });
     try {
       const module = (await server.ssrLoadModule("/src/App.tsx")) as {
-        DepartureLaunchPanel: unknown;
-        QuestNotice: unknown;
         splitQuestNotices: (view: {
           departureRecap: { questId: string } | null;
           quests: readonly OverworldQuestView[];
@@ -1497,13 +1360,6 @@ describe("OverworldSession", () => {
           departureQuest: OverworldQuestView | null;
           noticeBoardQuests: readonly OverworldQuestView[];
         };
-      };
-      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
-      const react = requireFromUi("react") as {
-        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
-      };
-      const reactDomServer = requireFromUi("react-dom/server") as {
-        renderToStaticMarkup: (element: unknown) => string;
       };
       const quest: OverworldQuestView = {
         id: "test_launch_quest",
@@ -1552,62 +1408,6 @@ describe("OverworldSession", () => {
           ],
         },
       };
-      const markup = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.QuestNotice, {
-          quest,
-          areaName: "Station Quarter",
-          onStart: () => undefined,
-        }),
-      );
-
-      expect(markup.match(/<button/g)).toHaveLength(2);
-      expect(markup.match(/ disabled=""/g)).toHaveLength(1);
-      expect(markup).toContain("Which road do you commit to?");
-      expect(markup).toContain(EMBEDDED_QUEST_CONTINUITY_EXPLANATION);
-      expect(markup.indexOf(EMBEDDED_QUEST_CONTINUITY_EXPLANATION)).toBeLessThan(
-        markup.indexOf("Take the Exposed Ridge"),
-      );
-      expect(markup).toContain("Take the Exposed Ridge");
-      expect(markup).toContain("Spend less supply but arrive winded.");
-      expect(markup).toContain("The ridge is fast and visible from the valley.");
-      expect(markup).toContain("Tradeoff:");
-      expect(markup).toContain(
-        "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
-      );
-      expect(markup).toContain("You accept the wind and reach the steading first.");
-      expect(markup).toContain("Cost: 30 min, 1 supply, fatigue +25.");
-      expect(markup).toContain(
-        "Arrival: Day 1, 08:30; 5 supplies remaining; fatigue 25; condition tired.",
-      );
-      expect(markup).toContain("Arrival time: Day 1, 09:15.");
-      expect(markup).toContain("Requires 2 supplies; you have 1.");
-      expect(markup).not.toMatch(/knowledge_|memory_|import:/i);
-
-      const optionlessMarkup = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.QuestNotice, {
-          quest: { ...quest, launch: undefined },
-          areaName: "Station Quarter",
-          onStart: () => undefined,
-        }),
-      );
-      expect(optionlessMarkup.match(/<button/g)).toHaveLength(1);
-      expect(optionlessMarkup).not.toContain("Which road do you commit to?");
-
-      const departureMarkup = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.DepartureLaunchPanel, {
-          quest,
-          areaName: "Station Quarter",
-          onStart: () => undefined,
-        }),
-      );
-      expect(departureMarkup.indexOf("Depart now")).toBeLessThan(
-        departureMarkup.indexOf("Which road do you commit to?"),
-      );
-      expect(departureMarkup).toContain(
-        "Choose an available road to leave now. Planning is optional.",
-      );
-      expect(departureMarkup.match(/<button/g)).toHaveLength(2);
-
       const otherQuest: OverworldQuestView = {
         ...quest,
         id: "test_other_quest",

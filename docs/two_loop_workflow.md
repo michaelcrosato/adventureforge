@@ -241,8 +241,8 @@ flowchart LR
     R["research / design agent"] --> Q
     C["crawler oracles"] --> Q
     H["a person"] --> Q[("intake/queue/<br/>one JSON per submission")]
-    Q <-->|"npm run intake:sync"| GH[("GitHub Issues<br/>mirror")]
-    H -.->|"files an issue<br/>from anywhere"| GH
+    Q <-->|"npm run intake:sync:linear"| LIN[("Linear<br/>mirror")]
+    H -.->|"files an issue<br/>from anywhere"| LIN
     Q ==>|"npm run work"| DEV["dev loop"]
 ```
 
@@ -262,7 +262,7 @@ cosmetic defect on the opening screen can outrank a severe one in content nobody
 ```bash
 npm run submit -- --source audit --kind refactor \
   --title "OverworldSession is a 4,000-line stateful class" \
-  --body-file finding.md --area src/world/session.ts --ref docs/REPO_AUDIT_2026-08.md
+  --body-file finding.md --area src/world/session.ts --ref src/world/session.ts
 
 cat plan.md | npm run submit -- --source research --kind feature --title "..." --body -
 ```
@@ -270,25 +270,14 @@ cat plan.md | npm run submit -- --source research --kind feature --title "..." -
 Re-filing is safe and expected. A submission's id is content-addressed on
 `source + kind + key`, so an agent that re-runs nightly **updates its own submissions
 instead of filing a hundred duplicates** — and lifecycle state the queue owns (`status`,
-and the issue it is mirrored to) survives a re-file, so re-filing never resets something a
+and the tracker issue it is mirrored to) survives a re-file, so re-filing never resets something a
 dev agent is already working.
 
-### GitHub Issues is a mirror, not the source of truth
+### Linear is a mirror, not the source of truth
 
-People should file requests in the tool they already have — labels, search, notifications,
-a phone app. But the loop must keep working when the network is down or a token expires,
-so the canonical copy is the files and `npm run intake:sync` reconciles both ways:
-
-- **push** — every local submission gets or updates its issue
-- **pull** — every issue _without_ a marker becomes a `human` submission; issue state
-  comes back, so closing an issue in the GitHub UI closes the work here
-
-Idempotency comes from a marker in the issue body — `<!-- af-submission-id: … -->` — so
-re-syncing updates the issue it already has. Matching on titles instead would fork one
-item into two the first time somebody reworded it.
-
-If `gh` is missing or logged out, sync says exactly which and **exits 0**. An outage in a
-mirror is not an outage in the work.
+People file and triage in Linear; the loop keeps working when the network is down, because
+the canonical copy is the files and `npm run intake:sync:linear` reconciles both ways. The
+full procedure is [`linear_workflow.md`](linear_workflow.md).
 
 ### Reading
 
@@ -350,8 +339,10 @@ carries the ticket into the queue from then on. A lead nobody can reproduce stay
 Floating the survey free of the commit introduced one genuinely new failure mode:
 findings acquire an age. A ticket last seen more than `STALE_AFTER_BUILDS` (8) builds ago
 drops out of view rather than sending the loop chasing something already fixed. It is
-marked `stale`, never deleted, and any fresh report revives it. Verified tickets never
-decay — a reproduction does not stop being true because nobody happened to hit it again.
+marked `stale`, and any fresh report revives it; a stale ticket nobody decided anything
+about later retires under the rule in `qa/tickets/README.md` ("Retention"). Verified
+tickets never decay — a reproduction does not stop being true because nobody happened to
+hit it again.
 
 ## Runbook: four terminals on one machine
 
@@ -378,7 +369,7 @@ cycle, and a player mid-run would be playing a build that no longer exists.
 each its own worktree; they share the object store, so it is nearly free:
 
 ```bash
-cd /c/dev/zork-unlimited
+cd /c/dev/adventureforge
 # NOT `git worktree add ../af-qa-a main` — that is refused, because main is already
 # checked out here. Each worktree needs its own branch off the same commit.
 git worktree add -b qa-a ../af-qa-a origin/main
@@ -391,7 +382,7 @@ Two things to do before the first launch, both of which cost you a wave otherwis
 
 - **Junction `node_modules` into each worktree.** `playtest-loop.sh` runs a full
   `npm install` in any worktree that lacks one. From an elevated PowerShell:
-  `New-Item -ItemType Junction -Path C:\dev\af-qa-a\node_modules -Target C:\dev\zork-unlimited\node_modules`
+  `New-Item -ItemType Junction -Path C:\dev\af-qa-a\node_modules -Target C:\dev\adventureforge\node_modules`
   (repeat per worktree).
 - **Exclude the corpus directory from Defender.** `writePlaytestSession` finalises a
   session by renaming its staging directory, and on Windows that fails with `EPERM`
@@ -455,7 +446,7 @@ wrong and a real cohort would have failed the same way.
 ### Terminal 1 — dev loop
 
 ```bash
-cd /d/zork-unlimited
+cd /d/adventureforge
 AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh \
 AI_LOOP_TRIAGE_STORE=/d/af-corpus \
 AI_LOOP_COMMIT=1 \
@@ -488,9 +479,8 @@ Two constraints the preflight now enforces up front, so a wave refuses instead o
 dispatching doomed players: the cohort may name only vendors this checkout can both
 prove blind and launch (`npm run doctor` prints the current table — today that is
 `codex` and `claude_code`; a `gemini_cli` cohort is refused with the ingest
-alternative), and live waves accept only the `default` persona — persona-directed
-play changes the thing retention measures. Rotate personas on the structural lanes
-instead (`PLAYTEST_MOCK=1`, or `npm run fleet:mock -- --personas ...`).
+alternative). Players always take the `default` persona — persona-directed play
+changes the thing retention measures.
 
 Vary the cohort per terminal — `codex:10`, `claude_code:10` — and pin the reference tier
 on **exactly one**:
@@ -506,9 +496,9 @@ A worked, verified volume wave (2026-08-31: 100/100 recorded in ~65 minutes at
 ~$2 nominal and ~3.5 minutes per player, corpus metrics-eligible went 0 → 80):
 
 ```bash
-git worktree add ../zork-wave -b wave/<label> origin/main
-cd ../zork-wave
-PLAYTEST_STORE="C:/dev/zork-unlimited/ai-runs/playtest/sessions" \
+git worktree add ../adventureforge-wave -b wave/<label> origin/main
+cd ../adventureforge-wave
+PLAYTEST_STORE="C:/dev/adventureforge/ai-runs/playtest/sessions" \
 PLAYTEST_COHORT="claude_code:100" \
 PLAYTEST_MODELS="claude_code=claude-sonnet-5" \
 PLAYTEST_CONCURRENCY=10 \
@@ -552,7 +542,7 @@ Desktop/web sessions still use the manual path:
 
 ```bash
 npm run playtest:ingest -- --provider grok_desktop --model grok-4.6 \
-  --persona cynical_veteran --seed 1234 --game-session-id o-… \
+  --persona default --seed 1234 --game-session-id o-… \
   --transcript run.jsonl --report report.md \
   --attested-by "you" --method "desktop client, AdventureForge MCP only"
 ```
@@ -613,7 +603,7 @@ Two things that will bite if you skip the doctor:
 | `./playtest-loop.sh`                   | playtest loop; cohorts across providers and personas |
 | `npm run work`                         | the next thing to build                              |
 | `npm run submit -- …`                  | file work from any source                            |
-| `npm run intake:sync`                  | reconcile the queue with GitHub Issues               |
+| `npm run intake:sync:linear`           | reconcile the queue with the Linear mirror           |
 | `npm run qa:bucket -- --summary`       | the playtest ticket bucket                           |
 | `npm run qa:bucket -- --store-summary` | the session corpus                                   |
 | `npm run qa:triage`                    | re-triage the corpus (pure; safe to re-run)          |

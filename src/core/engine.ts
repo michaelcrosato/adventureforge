@@ -50,7 +50,7 @@ export type Rules<A extends EngineAction = RpgAction> = {
   checkWin?: (state: GameState) => Effect[];
   /**
    * Optional: append extra events derived from the events a step just produced —
-   * engine *chrome*, not content. The canonical use is Zork-style score feedback:
+   * engine *chrome*, not content. The canonical use is classic text-adventure score feedback:
    * the RPG runner turns a `score` inc_var/dec_var event into a player-facing
    * "[Your score has gone up by N points…]" narration (the same generic-chrome idea
    * as the observation's "Final score: X of Y." closure). Pure: it sees the full,

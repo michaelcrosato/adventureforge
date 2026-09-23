@@ -46,7 +46,7 @@ import {
   localEventSceneRequirementsMet,
 } from "./local_event_scene.js";
 
-export type OverworldSessionAreaPlanState = {
+type OverworldSessionAreaPlanState = {
   areaId: string;
   areasById: ReadonlyMap<string, OverworldArea>;
   currentTownId: string;
@@ -56,14 +56,14 @@ export type OverworldSessionAreaPlanState = {
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
-export type OverworldSessionAreaTravelPlanState = {
+type OverworldSessionAreaTravelPlanState = {
   areaRouteId: string;
   currentArea: OverworldArea | null;
   areaExitsByAreaAndId: ReadonlyMap<string, ReadonlyMap<string, OverworldAreaExit>>;
   discoveredAreaIds: ReadonlySet<string>;
 };
 
-export type OverworldSessionAreaTravelPlan = {
+type OverworldSessionAreaTravelPlan = {
   currentArea: OverworldArea;
   edge: OverworldAreaExit;
 };
@@ -79,7 +79,7 @@ export type MutableOverworldSessionTownVisitState = {
   visitedIds: Set<string>;
 };
 
-export type OverworldSessionLocalJobPlanState = {
+type OverworldSessionLocalJobPlanState = {
   jobId: string;
   optionId?: string | undefined;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
@@ -99,7 +99,7 @@ export type OverworldSessionLocalJobPlanState = {
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
-export type OverworldSessionSitePlanState = {
+type OverworldSessionSitePlanState = {
   siteId: string;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
   currentTownId: string;
@@ -109,14 +109,14 @@ export type OverworldSessionSitePlanState = {
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
-export type OverworldSessionPoiScoutPlanState = {
+type OverworldSessionPoiScoutPlanState = {
   poiId: string;
   poisById: ReadonlyMap<string, OverworldPoi>;
   currentTown: OverworldNode;
   currentAreaId: () => string;
 };
 
-export type OverworldSessionContactTalkPlanState = {
+type OverworldSessionContactTalkPlanState = {
   character: CampaignCharacterState;
   characterId: string;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
@@ -127,7 +127,7 @@ export type OverworldSessionContactTalkPlanState = {
   currentAreaId: () => string;
 };
 
-export type OverworldSessionEventInvestigationPlanState = {
+type OverworldSessionEventInvestigationPlanState = {
   eventId: string;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   completedQuestIds: ReadonlySet<string>;
@@ -137,67 +137,64 @@ export type OverworldSessionEventInvestigationPlanState = {
   currentAreaId: () => string;
 };
 
-export type OverworldSessionLocalInteractionPlan<
+type OverworldSessionLocalInteractionPlan<
   Kind extends OverworldLocalActionKind = OverworldLocalActionKind,
 > = {
   action: OverworldLocalActionDescriptor<Kind>;
 };
 
-export type MutableOverworldSessionLocalJobState = OverworldActionJournalState & {
+type MutableOverworldSessionLocalJobState = OverworldActionJournalState & {
   completedJobIds: Set<string>;
   regionRenown: Map<string, number>;
 };
 
-export type MutableOverworldSessionAreaState = OverworldActionJournalState & {
+type MutableOverworldSessionAreaState = OverworldActionJournalState & {
   visitedAreaIds: Set<string>;
 };
 
-export type MutableOverworldSessionAreaTravelState = {
+type MutableOverworldSessionAreaTravelState = {
   currentAreaByTown: Map<string, string>;
   currentTownId: string;
   minutes: number;
 };
 
-export type MutableOverworldSessionSiteState = OverworldActionJournalState & {
+type MutableOverworldSessionSiteState = OverworldActionJournalState & {
   exploredSiteIds: Set<string>;
   regionRenown: Map<string, number>;
 };
 
-export type OverworldSessionPoiScoutState = OverworldActionJournalState &
+type OverworldSessionPoiScoutState = OverworldActionJournalState &
   OverworldSessionPoiScoutPlanState;
 
-export type OverworldSessionContactTalkState = OverworldActionJournalState &
+type OverworldSessionContactTalkState = OverworldActionJournalState &
   OverworldSessionContactTalkPlanState & {
     currentTownName: string;
   };
 
-export type OverworldSessionEventInvestigationState = OverworldActionJournalState &
+type OverworldSessionEventInvestigationState = OverworldActionJournalState &
   OverworldSessionEventInvestigationPlanState & {
     currentTownName: string;
   };
 
-export type OverworldSessionAreaState = Omit<OverworldSessionAreaPlanState, "journalEntries"> &
+type OverworldSessionAreaState = Omit<OverworldSessionAreaPlanState, "journalEntries"> &
   MutableOverworldSessionAreaState & {
     currentTownName: string;
     journalEntriesById: ReadonlyMap<string, OverworldJournalEntry>;
   };
 
-export type OverworldSessionLocalJobState = Omit<
-  OverworldSessionLocalJobPlanState,
-  "journalEntries"
-> &
+type OverworldSessionLocalJobState = Omit<OverworldSessionLocalJobPlanState, "journalEntries"> &
   MutableOverworldSessionLocalJobState & {
     currentTownName: string;
     journalEntriesById: ReadonlyMap<string, OverworldJournalEntry>;
   };
 
-export type OverworldSessionSiteState = Omit<OverworldSessionSitePlanState, "journalEntries"> &
+type OverworldSessionSiteState = Omit<OverworldSessionSitePlanState, "journalEntries"> &
   MutableOverworldSessionSiteState & {
     currentTownName: string;
     journalEntriesById: ReadonlyMap<string, OverworldJournalEntry>;
   };
 
-export type OverworldSessionAreaTravelState = OverworldSessionAreaTravelPlanState &
+type OverworldSessionAreaTravelState = OverworldSessionAreaTravelPlanState &
   MutableOverworldSessionAreaTravelState;
 
 export function planOverworldSessionArea(
@@ -206,7 +203,7 @@ export function planOverworldSessionArea(
   return planOverworldAreaExploration(state);
 }
 
-export function planOverworldSessionAreaTravel(
+function planOverworldSessionAreaTravel(
   state: OverworldSessionAreaTravelPlanState,
 ): OverworldSessionAreaTravelPlan {
   if (!state.currentArea) throw new Error("There is no current local area in this town.");
@@ -310,7 +307,7 @@ export function planOverworldSessionEventInvestigation(
   return { action: describeOverworldEventAction(event) };
 }
 
-export type OverworldOpportunityInteractionDiscoveryState = Readonly<{
+type OverworldOpportunityInteractionDiscoveryState = Readonly<{
   character: CampaignCharacterState;
   characters: readonly OverworldCharacter[];
   charactersById: ReadonlyMap<string, OverworldCharacter>;
@@ -325,7 +322,7 @@ export type OverworldOpportunityInteractionDiscoveryState = Readonly<{
   journalEntryIds: ReadonlySet<string>;
 }>;
 
-export type OverworldOpportunityInteractionDiscoveryPlan = Readonly<{
+type OverworldOpportunityInteractionDiscoveryPlan = Readonly<{
   sourceId: string;
   plan: OverworldSessionLocalInteractionPlan<"contact" | "event">;
 }>;
@@ -370,7 +367,7 @@ export function planOverworldOpportunityInteractionDiscovery(
   return null;
 }
 
-export function applyOverworldSessionLocalInteraction(
+function applyOverworldSessionLocalInteraction(
   state: OverworldActionJournalState,
   plan: OverworldSessionLocalInteractionPlan,
   townName: string,
@@ -408,7 +405,7 @@ export function applyOverworldSessionEventInvestigationFromState(
   );
 }
 
-export function applyOverworldSessionAreaTravel(
+function applyOverworldSessionAreaTravel(
   state: MutableOverworldSessionAreaTravelState,
   plan: OverworldSessionAreaTravelPlan,
 ): OverworldAppliedAreaTravel {
@@ -438,7 +435,7 @@ export function applyOverworldSessionTownVisit(
   });
 }
 
-export function applyOverworldSessionArea(
+function applyOverworldSessionArea(
   state: MutableOverworldSessionAreaState,
   plan: OverworldAreaExplorationPlan,
   townName: string,
@@ -475,7 +472,7 @@ export function applyOverworldSessionAreaFromState(
   );
 }
 
-export function applyOverworldSessionLocalJob(
+function applyOverworldSessionLocalJob(
   state: MutableOverworldSessionLocalJobState,
   plan: OverworldLocalJobCompletionPlan,
   townName: string,
@@ -524,7 +521,7 @@ export function applyOverworldSessionLocalJobFromState(
   );
 }
 
-export function applyOverworldSessionSite(
+function applyOverworldSessionSite(
   state: MutableOverworldSessionSiteState,
   plan: OverworldSiteExplorationPlan,
   townName: string,

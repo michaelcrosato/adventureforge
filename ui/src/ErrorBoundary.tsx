@@ -15,9 +15,9 @@
  */
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-export const CRASH_KICKER = "The game could not draw this screen";
-export const CRASH_TITLE = "Something went wrong";
-export const CRASH_EXPLANATION =
+const CRASH_KICKER = "The game could not draw this screen";
+const CRASH_TITLE = "Something went wrong";
+const CRASH_EXPLANATION =
   "Your saved journey has not been changed. Reloading replays the same saved journey, so if this keeps happening, discarding the save is the way back into the game.";
 
 /** A player-readable single line for an unknown thrown value. */
@@ -26,7 +26,7 @@ export function crashDetail(error: unknown): string {
   return trimmed.length > 0 ? trimmed : "The game stopped without reporting a reason.";
 }
 
-export type AppCrashScreenProps = {
+type AppCrashScreenProps = {
   detail: string;
   onReload: () => void;
   onDiscardSave: () => void;
@@ -37,7 +37,7 @@ export type AppCrashScreenProps = {
  * reuses the save-recovery styling rather than inventing a second look for the
  * same "the game stopped, here is your way out" moment.
  */
-export function AppCrashScreen({ detail, onReload, onDiscardSave }: AppCrashScreenProps) {
+function AppCrashScreen({ detail, onReload, onDiscardSave }: AppCrashScreenProps) {
   return (
     <main className="save-recovery-page">
       <section className="save-recovery-card" aria-labelledby="app-crash-title">
@@ -56,13 +56,13 @@ export function AppCrashScreen({ detail, onReload, onDiscardSave }: AppCrashScre
   );
 }
 
-export type AppErrorBoundaryProps = {
+type AppErrorBoundaryProps = {
   children: ReactNode;
   onReload: () => void;
   onDiscardSave: () => void;
 };
 
-export type AppErrorBoundaryState = { detail: string | null };
+type AppErrorBoundaryState = { detail: string | null };
 
 export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorBoundaryState> {
   override state: AppErrorBoundaryState = { detail: null };

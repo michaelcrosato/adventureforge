@@ -203,7 +203,7 @@ Options:
   --concurrency <n>                   Concurrent players (default: 4)
   --provider <id>                     Live provider from blind-tester/providers.json (default: codex)
   --model <exact-model>               Exact model from that provider's catalog
-  --personas <name>                   Structural mock persona
+  --personas <name>                   Persona overlay (only "default" ships)
   --target <overworld|quest:id>       Start surface (live: overworld only)
   --seed-base <n>                     First player seed (default: 1000)
   --mock                              Structural zero-token mode
@@ -217,21 +217,6 @@ Options:
   -h, --help                          Show this help without starting a fleet
 
 Unknown arguments abort before fleet work begins.`;
-
-// Rotation order for explicit structural `--mock --personas mixed`; live pure
-// fleets reject mixed/non-default personas. Every non-default file in
-// blind-tester/personas/ belongs here (fleet_args.test.ts holds the two in step).
-// The rotation is a LABEL on the structural path only: mock-agent.mjs reads and
-// discards its prompt, so a mock member plays identically whatever persona it
-// carries. It proves persona plumbing, never persona behavior.
-const PERSONA_ROTATION = [
-  "explorer",
-  "speedrunner",
-  "breaker",
-  "casual",
-  "lore-reader",
-  "cynical_veteran",
-];
 
 /** Throw a usage error for an out-of-range/non-integer numeric flag. `min` is
  * the sensible floor per the brief (count/concurrency >= 1, maxRetries >= 0);
@@ -1089,11 +1074,6 @@ function assertFleetTargetPolicy(opts) {
   // persona id and the content hash of the persona file, and retention metrics already
   // group by persona — so a "20-year cynical veteran" cohort is a segment to read, not
   // a contamination to prevent. What must never happen is a persona going unrecorded.
-  if (!opts.mock && opts.personas === "mixed") {
-    throw new Error(
-      "fleet: --personas mixed is a structural sampling mode; name the personas explicitly for a live cohort so every session records which one it ran",
-    );
-  }
   if (opts.mock && opts.allowDuplicateCohort != null) {
     throw new Error(
       "fleet: --allow-duplicate-cohort applies only to live pure cohorts, never --mock structural fleets",
@@ -1114,8 +1094,7 @@ export function planFleetRuns(opts) {
   const runs = [];
   for (let i = 0; i < opts.count; i++) {
     const seed = opts.seedBase + i;
-    const persona =
-      opts.personas === "mixed" ? PERSONA_ROTATION[i % PERSONA_ROTATION.length] : opts.personas;
+    const persona = opts.personas;
     const model = opts.model;
     if (!opts.mock && !isProviderModel(provider, model, false)) {
       throw new Error(

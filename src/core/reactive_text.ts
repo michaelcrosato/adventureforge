@@ -9,11 +9,11 @@
 import { evalConditions, type Condition } from "./conditions.js";
 import type { GameState } from "./state.js";
 
-export type ReactiveVariant = { when: Condition[] };
-export type TextVariant = ReactiveVariant & { text: string };
-export type NameVariant = ReactiveVariant & { name?: string | undefined };
+type ReactiveVariant = { when: Condition[] };
+type TextVariant = ReactiveVariant & { text: string };
+type NameVariant = ReactiveVariant & { name?: string | undefined };
 
-export function firstMatchingVariant<T extends ReactiveVariant>(
+function firstMatchingVariant<T extends ReactiveVariant>(
   variants: readonly T[] | undefined,
   state: GameState,
 ): T | undefined {

@@ -20,7 +20,7 @@ import {
   type OverworldServiceState,
 } from "./session_services.js";
 
-export type { OverworldServicePlan, OverworldServiceResult, OverworldSessionServiceApplication };
+export type { OverworldServiceResult, OverworldSessionServiceApplication };
 
 export type OverworldSessionTownServicePlanState = {
   currentTown: Pick<OverworldNode, "id" | "name" | "services">;
@@ -36,7 +36,7 @@ export type OverworldSessionTownServicePlanState = {
   fatigue: number;
 };
 
-export type OverworldSessionTownServiceState = OverworldSessionTownServicePlanState &
+type OverworldSessionTownServiceState = OverworldSessionTownServicePlanState &
   OverworldActionJournalState;
 
 export function resolveOverworldSessionTownServiceRules(
@@ -90,7 +90,7 @@ export function planOverworldSessionTownResupply(
   return planOverworldTownResupply(overworldSessionTownServiceState(state));
 }
 
-export function applyOverworldSessionTownServicePlan(
+function applyOverworldSessionTownServicePlan(
   state: OverworldActionJournalState,
   plan: OverworldServicePlan,
 ): OverworldSessionServiceApplication {

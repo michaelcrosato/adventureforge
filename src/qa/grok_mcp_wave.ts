@@ -19,8 +19,8 @@ export const GROK_MCP_WAVE_SURFACE = "mcp";
 export const GROK_MCP_WAVE_PROVIDER = "grok_cli";
 export const GROK_MCP_WAVE_PROMPT = "blind-tester/prompt-grok-mcp-instant.md";
 export const GROK_MCP_WAVE_LIVE_CHILD_CAP = 32;
-export const GROK_MCP_WAVE_SEED_BASE = 1_700_000_000;
-export const GROK_MCP_WAVE_MANIFEST = "ai-runs/playtest/grok-100-manifest.json";
+const GROK_MCP_WAVE_SEED_BASE = 1_700_000_000;
+const GROK_MCP_WAVE_MANIFEST = "ai-runs/playtest/grok-100-manifest.json";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -39,7 +39,7 @@ export type GrokMcpWavePlan = {
   planOnly: boolean;
 };
 
-export type GrokStreamingOutput = {
+type GrokStreamingOutput = {
   reportText: string;
   clientSessionId: string | null;
   gameToolCalls: number;
@@ -48,7 +48,7 @@ export type GrokStreamingOutput = {
   ended: boolean;
 };
 
-export type GrokMcpProjectConfigInput = {
+type GrokMcpProjectConfigInput = {
   repoRoot: string;
   evidencePath: string;
   seed: number;
@@ -78,7 +78,7 @@ function argFlag(argv: string[], flag: string): boolean {
   return argv.includes(flag);
 }
 
-export function grokMcpInstantThinkingSettings(): Record<string, string | number | boolean> {
+function grokMcpInstantThinkingSettings(): Record<string, string | number | boolean> {
   const provider = findPlaytestProvider(GROK_MCP_WAVE_PROVIDER);
   if (!provider) throw new Error(`missing provider ${GROK_MCP_WAVE_PROVIDER}`);
   const catalog = parsePlaytestCatalog(

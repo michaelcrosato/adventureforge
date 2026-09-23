@@ -12,7 +12,7 @@ import {
   applyCampaignConsequences,
 } from "./campaign_consequences.js";
 
-export const OPENING_LEAD_SOURCE_VERSION = 1 as const;
+const OPENING_LEAD_SOURCE_VERSION = 1 as const;
 export const OPENING_LEAD_SOURCE_MIN_OPTIONS = 3 as const;
 export const OPENING_LEAD_SOURCE_MAX_OPTIONS = 5 as const;
 
@@ -175,7 +175,7 @@ export type OpeningLeadSourceTerms = Readonly<{
   sponsorNote: string | null;
 }>;
 
-export type OpeningLeadSourceApplication = Readonly<{
+type OpeningLeadSourceApplication = Readonly<{
   characterAfter: CampaignCharacterState;
   option: OpeningLeadSourceOption;
   terms: OpeningLeadSourceTerms;

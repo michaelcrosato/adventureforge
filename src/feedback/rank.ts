@@ -30,12 +30,12 @@ export const BOTH_SOURCES_BONUS = 2;
  * signal rather than a product defect — the discount is deliberately soft (it demotes,
  * never suppresses) because a real defect will pick up a second family quickly.
  */
-export const REFERENCE_CONFIRMED_FACTOR = 2;
-export const REFERENCE_ONLY_FACTOR = 1.5;
-export const VOLUME_SINGLE_FAMILY_FACTOR = 0.5;
+const REFERENCE_CONFIRMED_FACTOR = 2;
+const REFERENCE_ONLY_FACTOR = 1.5;
+const VOLUME_SINGLE_FAMILY_FACTOR = 0.5;
 
 /** Distinct lineages required before a volume-only cluster is taken at face value. */
-export const VOLUME_CONSENSUS_FAMILIES = 2;
+const VOLUME_CONSENSUS_FAMILIES = 2;
 
 function hasBothSources(sources: readonly FeedbackSource[]): boolean {
   return sources.includes("crawler") && sources.includes("fleet");

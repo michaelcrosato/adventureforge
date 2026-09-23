@@ -153,7 +153,7 @@ function assertKnownJournalSource(
   }
 }
 
-export type ResolvedOverworldContactJournalPresentation = Readonly<{
+type ResolvedOverworldContactJournalPresentation = Readonly<{
   canonicalJournalId: string;
   presentation: OverworldContactPresentation;
 }>;

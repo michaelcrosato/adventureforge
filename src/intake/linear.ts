@@ -23,13 +23,10 @@ import {
   type SubmissionStatus,
 } from "./submission.js";
 
-export const LINEAR_GRAPHQL = "https://api.linear.app/graphql";
-export const LINEAR_API_ENDPOINT = LINEAR_GRAPHQL;
-export const LINEAR_TEAM_KEY = "MIC";
-export const LINEAR_PROJECT_SLUG = "adventureforge-59cb5298fba1";
-export const DEFAULT_LINEAR_TEAM = LINEAR_TEAM_KEY;
-export const DEFAULT_LINEAR_PROJECT = LINEAR_PROJECT_SLUG;
-export const LINEAR_INTAKE_LABEL = "intake-mirror";
+const LINEAR_GRAPHQL = "https://api.linear.app/graphql";
+export const DEFAULT_LINEAR_TEAM = "MIC";
+export const DEFAULT_LINEAR_PROJECT = "adventureforge-59cb5298fba1";
+const LINEAR_INTAKE_LABEL = "intake-mirror";
 
 /**
  * Which team and project a sync targets, given CLI flags and the environment.
@@ -146,7 +143,7 @@ export function linearCredentialsFromEnv(env: NodeJS.ProcessEnv = process.env): 
   };
 }
 
-export type LinearExistingIssue = { id: string; title: string; description?: string | null };
+type LinearExistingIssue = { id: string; title: string; description?: string | null };
 
 export function linearUpsertPlan(
   existing: readonly LinearExistingIssue[],
@@ -203,11 +200,11 @@ export type LinearIssueSnapshot = {
   updatedAt?: string;
 };
 
-export type LinearGraphqlResult<T> =
+type LinearGraphqlResult<T> =
   | { ok: true; data: T }
   | { ok: false; reason: string; status?: number };
 
-export async function linearGraphql<T>(
+async function linearGraphql<T>(
   authorization: string,
   query: string,
   variables: Record<string, unknown> = {},
@@ -585,7 +582,7 @@ export async function listLinearLabels(
   return { ok: true, data: listed.data.issueLabels.nodes };
 }
 
-export type LinearPushResult =
+type LinearPushResult =
   | { ok: true; action: "created" | "updated"; issue: LinearIssueSnapshot }
   | { ok: false; reason: string; status?: number };
 
@@ -666,13 +663,4 @@ export async function pushLinearIssue(
     return { ok: false, reason: "issueUpdate did not return an issue" };
   }
   return { ok: true, action: "updated", issue: snapshotIssue(issue) };
-}
-
-export function isOpenLinearState(state: string): boolean {
-  const normalized = state.toLowerCase();
-  return normalized !== "done" && normalized !== "canceled" && normalized !== "cancelled";
-}
-
-export function statusForLinearState(state: string): SubmissionStatus {
-  return isOpenLinearState(state) ? "open" : "done";
 }

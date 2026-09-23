@@ -18,7 +18,7 @@
  */
 import { execFileSync } from "node:child_process";
 
-export type BuildHistory = {
+type BuildHistory = {
   /** Commits reachable from HEAD, newest first. */
   commits: string[];
   /**

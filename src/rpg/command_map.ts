@@ -25,7 +25,7 @@ import {
 import { enumerateRpgBaseActions, useInteraction } from "./legal_actions.js";
 import { projectRpgPlayerCommands } from "./player_command_projection.js";
 
-export type ParseResult = { ok: true; action: RpgAction } | { ok: false; reason: string };
+type ParseResult = { ok: true; action: RpgAction } | { ok: false; reason: string };
 
 const DIRECTIONS: Record<string, string> = {
   north: "north",

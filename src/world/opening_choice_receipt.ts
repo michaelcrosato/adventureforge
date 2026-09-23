@@ -6,7 +6,7 @@ export function openingSelectionReceiptWordCount(value: string): number {
   return value.match(/\S+/g)?.length ?? 0;
 }
 
-export type OpeningChoiceOptionPresentation = Readonly<{
+type OpeningChoiceOptionPresentation = Readonly<{
   id: string;
   label: string;
   commitment: string;

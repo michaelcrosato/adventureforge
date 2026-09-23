@@ -5,7 +5,7 @@
  * quests still run through the existing deterministic engine, but they are now
  * local opportunities discovered at towns in the road graph.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { GameSession, type View } from "./engine.js";
 import {
@@ -25,7 +25,6 @@ import { NewJourneyTutorial } from "./NewJourneyTutorial.js";
 import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
 import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
-import { DepartureRecap } from "./DepartureRecap.js";
 import { QuestPlayScreen } from "./QuestPlayScreen.js";
 import type { NightWatchPanel } from "./NightWatchChrome.js";
 import {
@@ -36,8 +35,6 @@ import {
 import { presentServiceSection, primaryWorldSectionIds } from "./worldActionPresentation.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
-import { timeLabel } from "../../src/world/session_journal_codec.js";
-import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { OPENING_CHAPTER_HORIZON } from "../../src/world/journey_contract.js";
 import type {
   JourneyChoice,
@@ -97,7 +94,7 @@ function eventChoiceKey(eventId: string, optionId: string): string {
   return JSON.stringify([eventId, optionId]);
 }
 
-export type InitialWorldSession = {
+type InitialWorldSession = {
   session: OverworldSession;
   origin: "new" | "resume" | "blocked";
   notice: string | null;
@@ -439,122 +436,8 @@ function clearWorldSessionSave(): void {
   }
 }
 
-export function DepartureContactLead({
-  lead,
-  onTalk,
-}: {
-  lead: OverworldView["departureContactLeads"][number];
-  onTalk: () => void;
-}): JSX.Element {
-  const guidanceId = `departure-contact-lead-${lead.id.replaceAll(":", "-")}`;
-  const ready = lead.action !== null;
-  return (
-    <div className="departure-contact-lead">
-      <strong>{lead.title}</strong>
-      <p id={guidanceId}>{lead.guidance}</p>
-      <button
-        aria-describedby={guidanceId}
-        aria-disabled={!ready}
-        className="mini-command"
-        onClick={ready ? onTalk : undefined}
-        type="button"
-      >
-        {ready
-          ? `Ask ${lead.contactName} about riding`
-          : `Choose a field kit before asking ${lead.contactName}`}
-      </button>
-    </div>
-  );
-}
-
-export { DepartureRecap } from "./DepartureRecap.js";
-
 function suppliesLabel(value: number): string {
   return `${String(value)} ${value === 1 ? "supply" : "supplies"}`;
-}
-
-/**
- * The notice-board launch surface stays deliberately inline: choosing an
- * approach is the quest-start action itself, not a modal/story decision that
- * would add another journey beat. The view has already redacted persistent
- * effect and import ids, so this component renders only player-facing terms.
- */
-export function QuestNotice({
-  quest,
-  areaName,
-  onStart,
-}: {
-  quest: OverworldQuestView;
-  areaName: string;
-  onStart: (approachId?: string) => void;
-}): JSX.Element {
-  if (!quest.launch) {
-    return (
-      <li className="quest-notice">
-        <button onClick={() => onStart()}>
-          <span>{quest.title}</span>
-          <small>{quest.discovery}</small>
-          <small>Posted in {areaName}</small>
-        </button>
-      </li>
-    );
-  }
-
-  return (
-    <li className="quest-notice quest-notice-launch">
-      <div className="quest-notice-heading">
-        <strong>{quest.title}</strong>
-        <p>{quest.discovery}</p>
-        <small>Posted in {areaName}</small>
-      </div>
-      <fieldset className="quest-launch-fieldset">
-        <legend>{quest.launch.prompt}</legend>
-        <p className="quest-launch-continuity">{EMBEDDED_QUEST_CONTINUITY_EXPLANATION}</p>
-        <ul className="quest-launch-options">
-          {quest.launch.options.map((option) => {
-            const projection = option.projection;
-            const blockedReason = projection?.available === false ? projection.blockedReason : null;
-            const disabled = projection?.available === false;
-            return (
-              <li key={option.id}>
-                <button disabled={disabled} onClick={() => onStart(option.id)}>
-                  <strong>{option.title}</strong>
-                  <span>{option.summary}</span>
-                  <small>
-                    <b>Expected result:</b> {option.preview}
-                  </small>
-                  {option.tradeoffSummary ? (
-                    <small className="quest-launch-projection">
-                      <b>Tradeoff:</b> {option.tradeoffSummary}
-                    </small>
-                  ) : null}
-                  <small>
-                    <b>If chosen:</b> {option.consequence}
-                  </small>
-                  <small className="quest-launch-cost">
-                    Cost: {option.terms.minutes} min, {suppliesLabel(option.terms.supplies)},
-                    fatigue +{option.terms.fatigue}.
-                  </small>
-                  {projection?.available ? (
-                    <small className="quest-launch-projection">
-                      Arrival: {timeLabel(projection.minutesAfter)};{" "}
-                      {suppliesLabel(projection.suppliesAfter!)} remaining; fatigue{" "}
-                      {projection.fatigueAfter}; condition {projection.travelConditionAfter}.
-                    </small>
-                  ) : projection ? (
-                    <small className="quest-launch-projection">
-                      Arrival time: {timeLabel(projection.minutesAfter)}.
-                    </small>
-                  ) : null}
-                  {blockedReason && <small className="quest-launch-blocked">{blockedReason}</small>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </fieldset>
-    </li>
-  );
 }
 
 export function splitQuestNotices(
@@ -576,26 +459,6 @@ export function splitQuestNotices(
   };
 }
 
-export function DepartureLaunchPanel({
-  quest,
-  areaName,
-  onStart,
-}: {
-  quest: OverworldQuestView;
-  areaName: string;
-  onStart: (approachId?: string) => void;
-}): JSX.Element {
-  return (
-    <div className="departure-launch">
-      <h3>Depart now</h3>
-      <p>Choose an available road to leave now. Planning is optional.</p>
-      <ul className="quest-list">
-        <QuestNotice quest={quest} areaName={areaName} onStart={onStart} />
-      </ul>
-    </div>
-  );
-}
-
 type StationDispatchBoardView = NonNullable<OverworldView["stationDispatchBoard"]>;
 
 const STATION_SUPPORT_SLOT_LABELS: Readonly<
@@ -611,15 +474,6 @@ export function stationSupportActionTitle(
 ): string {
   const label = STATION_SUPPORT_SLOT_LABELS[slot];
   return `${label[0]!.toUpperCase()}${label.slice(1)}`;
-}
-
-function formatStationSupportLabels(
-  support: readonly StationDispatchBoardView["support"][number][],
-): string {
-  const labels = support.map((entry) => STATION_SUPPORT_SLOT_LABELS[entry.slot]);
-  if (labels.length === 1) return labels[0]!;
-  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
-  return `${labels.slice(0, -1).join(", ")}, or ${labels.at(-1)!}`;
 }
 
 type StationSupportTarget =
@@ -642,93 +496,6 @@ export function stationSupportPresentation(
       : false;
   });
   return support ? { summary: support.purpose, terms: support.detailHint } : null;
-}
-
-function stationDispatchStatus(support: StationDispatchBoardView["support"][number]): string {
-  if (support.selectedTitle) return `Selected: ${support.selectedTitle}`;
-  switch (support.status) {
-    case "open_optional":
-      return "Open (optional)";
-    case "available_after_preparation":
-      return "Choose a field kit first";
-    case "solo_default":
-      return "Leave alone now";
-    case "selected":
-      return "Selected";
-  }
-}
-
-/**
- * The Station leads with the live crisis and departure. Support stays present
- * behind an explicit optional disclosure; the board owns every action handle.
- */
-export function StationDispatchBoard({
-  board,
-  recap,
-  onInspect,
-  onTalk,
-  children,
-}: {
-  board: StationDispatchBoardView;
-  recap: OverworldView["departureRecap"];
-  onInspect: (storyChoiceId: string) => void;
-  onTalk: (characterId: string) => void;
-  children: ReactNode;
-}): JSX.Element {
-  const openSupport = board.support.filter(
-    (support) => support.status === "open_optional" && support.selectedTitle === null,
-  );
-  return (
-    <section className="station-dispatch-board" aria-label={`${board.questTitle} field briefing`}>
-      <h3>{board.questTitle} field briefing</h3>
-      <p>{board.guidance}</p>
-      {children}
-      {openSupport.length > 0 && (
-        <details className="station-dispatch-support-details">
-          <summary>Optional support — {formatStationSupportLabels(openSupport)}</summary>
-          <div className="station-dispatch-support">
-            {openSupport.map((support) => {
-              const action = support.action;
-              return (
-                <article className="station-dispatch-support-row" key={support.slot}>
-                  <h4>{support.label}</h4>
-                  <p>
-                    <b>Status:</b> {stationDispatchStatus(support)}
-                  </p>
-                  <p>{support.purpose}</p>
-                  <small>{support.detailHint}</small>
-                  {action?.kind === "inspect" && (
-                    <button
-                      className="mini-command"
-                      type="button"
-                      onClick={() => onInspect(action.storyChoiceId)}
-                    >
-                      Review {STATION_SUPPORT_SLOT_LABELS[support.slot]}
-                    </button>
-                  )}
-                  {action?.kind === "talk" && (
-                    <button
-                      className="mini-command"
-                      type="button"
-                      onClick={() => onTalk(action.characterId)}
-                    >
-                      Ask {action.contactName} about riding
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </details>
-      )}
-      {recap && (
-        <details className="station-dispatch-recap">
-          <summary>Current departure plan</summary>
-          <DepartureRecap recap={recap} entryScope="already_set" />
-        </details>
-      )}
-    </section>
-  );
 }
 
 type JourneyStoryChoiceLogResult = ReturnType<OverworldSession["chooseJourneyStory"]>;

@@ -123,7 +123,7 @@ export type OverworldSnapshotManifestIndex = {
   townNames: ReadonlySet<string>;
 };
 
-export type OverworldSnapshotManifestIndexSources = {
+type OverworldSnapshotManifestIndexSources = {
   areasById: ReadonlyMap<string, OverworldArea>;
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
   charactersById: ReadonlyMap<string, OverworldCharacter>;

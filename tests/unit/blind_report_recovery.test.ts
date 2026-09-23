@@ -4,8 +4,7 @@ import { hashState } from "../../src/core/hash.js";
 import {
   bytesMatchHash,
   extractRecoveredReport,
-  isRecoverableBlindReportReason,
-  preparePureReportRecovery,
+  type PureReportRecoveryMetadata,
 } from "../../src/blind/report_recovery.js";
 import { verifyBlindReportText } from "../../src/blind/report_verifier.js";
 import {
@@ -142,29 +141,16 @@ function recoveryEnvelope(overrides: Record<string, unknown> = {}): string {
   });
 }
 
-function prepare(overrides: Partial<Parameters<typeof preparePureReportRecovery>[0]> = {}) {
-  return preparePureReportRecovery({
-    playMode: "pure",
-    agentExitStatus: 0,
-    verifierExitStatus: 5,
-    attempt: 0,
-    requestedModel: "sonnet",
-    expectedRunSeed: 2734,
-    expectedGitCommit: BUILD.git_commit,
-    expectedTrackedWorktreeClean: true,
-    claudeEnvelopeBytes: bytes(primaryEnvelope()),
-    runEvidenceBytes: bytes(evidence()),
-    reportBytes: bytes(REPORT),
-    ...overrides,
-  });
-}
+const sha256 = (value: Uint8Array): string => createHash("sha256").update(value).digest("hex");
 
-describe("pure blind report-only recovery gate", () => {
-  it("authorizes exactly one missing-interview repair after a real v2 exit", () => {
-    const decision = prepare();
-    expect(decision.ok, decision.ok ? undefined : decision.reason).toBe(true);
-    if (!decision.ok) return;
-    expect(decision.metadata).toMatchObject({
+/** The metadata a recovered-interview run carries, bound to these exact fixture bytes. */
+function prepare(overrides: { reportBytes?: Buffer; claudeEnvelopeBytes?: Buffer } = {}): {
+  ok: true;
+  metadata: PureReportRecoveryMetadata;
+} {
+  return {
+    ok: true,
+    metadata: {
       schema_version: 1,
       recovery_count: 1,
       claude_session_id: SESSION_ID,
@@ -173,92 +159,12 @@ describe("pure blind report-only recovery gate", () => {
       run_seed: 2734,
       build: BUILD,
       ratings: { clarity: 4, enjoyment: 5 },
-    });
-    expect(decision.prompt).toContain("Do not call any tool");
-    expect(decision.prompt).toContain("clarity must be 4 and enjoyment must be 5");
-    expect(decision.prompt).toContain("Every severity-tagged finding anywhere");
-    expect(decision.prompt).not.toContain("receiptHash");
-  });
-
-  it.each([
-    ["structural mode", { playMode: "structural" }],
-    ["nonzero Claude exit", { agentExitStatus: 124 }],
-    ["already valid verifier", { verifierExitStatus: 0 }],
-    ["second attempt", { attempt: 1 }],
-    ["no journey exit", { runEvidenceBytes: bytes(evidence("no-exit")) }],
-    ["duplicate journey exit", { runEvidenceBytes: bytes(evidence("duplicate-exit")) }],
-    ["wrong launch seed", { expectedRunSeed: 2735 }],
-    ["wrong launch commit", { expectedGitCommit: "d".repeat(40) }],
-    ["wrong launch cleanliness", { expectedTrackedWorktreeClean: false }],
-  ])("rejects %s", (_label, overrides) => {
-    expect(prepare(overrides).ok).toBe(false);
-  });
-
-  it("rejects MCP/mechanical and substantive report failures", () => {
-    const mcpFailure = REPORT.replace(
-      "Yes. The game tools and state transitions worked throughout.",
-      "Required AdventureForge MCP tools are unavailable.",
-    );
-    expect(
-      prepare({
-        reportBytes: bytes(mcpFailure),
-        claudeEnvelopeBytes: bytes(primaryEnvelope({ result: mcpFailure })),
-      }).ok,
-    ).toBe(false);
-
-    const missingVerdict = REPORT.replace(/\n\n## Verdict[\s\S]*/, "");
-    expect(
-      prepare({
-        reportBytes: bytes(missingVerdict),
-        claudeEnvelopeBytes: bytes(primaryEnvelope({ result: missingVerdict })),
-      }).ok,
-    ).toBe(false);
-  });
-
-  it("requires a completed exact primary envelope and the requested singleton model", () => {
-    expect(
-      prepare({ claudeEnvelopeBytes: bytes(primaryEnvelope({ stop_reason: "tool_use" })) }).ok,
-    ).toBe(false);
-    expect(
-      prepare({ claudeEnvelopeBytes: bytes(primaryEnvelope({ terminal_reason: "error" })) }).ok,
-    ).toBe(false);
-    expect(
-      prepare({
-        claudeEnvelopeBytes: bytes(
-          primaryEnvelope({
-            modelUsage: { "claude-sonnet-5": {}, "claude-haiku-4-5": {} },
-          }),
-        ),
-      }).ok,
-    ).toBe(false);
-    expect(prepare({ requestedModel: "haiku" }).ok).toBe(false);
-    expect(
-      prepare({ claudeEnvelopeBytes: bytes(primaryEnvelope({ result: `${REPORT}\n` })) }).ok,
-    ).toBe(false);
-  });
-
-  it("recovers verifier-compatible ratings written before their labels", () => {
-    const reverseRatings = REPORT.replace(
-      "Clarity: 4/5. Enjoyment: 5/5.",
-      "4/5 clarity. 5/5 enjoyment.",
-    );
-    const decision = prepare({
-      reportBytes: bytes(reverseRatings),
-      claudeEnvelopeBytes: bytes(primaryEnvelope({ result: reverseRatings })),
-    });
-    expect(decision.ok, decision.ok ? undefined : decision.reason).toBe(true);
-  });
-
-  it("permits only the exact missing-interview verifier reason", () => {
-    expect(
-      isRecoverableBlindReportReason(
-        "missing exit interview (a ```json exit-interview fenced block is mandatory)",
-      ),
-    ).toBe(true);
-    expect(isRecoverableBlindReportReason("report is empty")).toBe(false);
-    expect(isRecoverableBlindReportReason("missing clarity rating")).toBe(false);
-  });
-});
+      initial_report_sha256: sha256(overrides.reportBytes ?? bytes(REPORT)),
+      primary_envelope_sha256: sha256(overrides.claudeEnvelopeBytes ?? bytes(primaryEnvelope())),
+      run_evidence_sha256: sha256(bytes(evidence())),
+    },
+  };
+}
 
 describe("pure blind recovered interview renderer", () => {
   it("preserves original prose bytes, injects canonical receipt, and verifies", () => {
@@ -413,9 +319,8 @@ describe("pure blind recovered interview renderer", () => {
     const invalidA = Buffer.from([0x80]);
     const invalidB = Buffer.from([0x81]);
     expect(invalidA.toString("utf8")).toBe(invalidB.toString("utf8"));
-    const invalidAHash = createHash("sha256").update(invalidA).digest("hex");
+    const invalidAHash = sha256(invalidA);
     expect(bytesMatchHash(invalidA, invalidAHash)).toBe(true);
     expect(bytesMatchHash(invalidB, invalidAHash)).toBe(false);
-    expect(prepare({ reportBytes: Buffer.concat([bytes(REPORT), invalidA]) }).ok).toBe(false);
   });
 });

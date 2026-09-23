@@ -3,10 +3,10 @@
 This is the entry point every coding agent (Codex, Claude, Gemini, …) reads
 first, and the single source of truth for how work happens here. Codex loads this
 file by convention; [`CLAUDE.md`](./CLAUDE.md) and [`GEMINI.md`](./GEMINI.md) are
-one-line pointers back to it so the other vendors land here too, because the dev
-loop runs on whichever agent a machine has installed and a charter only one vendor
-auto-loads is a charter the rest silently skip. Those pointers are deliberately not
-copies: duplicated rules drift, and a stale copy is worse than none.
+a single `@AGENTS.md` import each, so Claude Code and Gemini CLI auto-load this
+same file — the dev loop runs on whichever agent a machine has installed, and a
+charter only one vendor auto-loads is a charter the rest silently skip. Imports,
+not copies: duplicated rules drift, and a stale copy is worse than none.
 
 This project runs on **trust, but verify**.
 
@@ -34,10 +34,8 @@ Development and playtesting are **separate loops that run in parallel**, and
   bar. It does NOT play the game.
 - **Playtest loop** — `playtest-loop.sh`. Plays the published build over and
   over, across as many provable vendors as the operator's quota allows, and
-  promotes corroborated findings into the intake queue. Live pure waves take only
-  the `default` persona — persona-directed play changes the thing retention
-  measures — so the persona library rotates on the structural lanes instead
-  (`PLAYTEST_MOCK=1`, or `npm run fleet:mock -- --personas …`) — structurally only: the mock ignores persona prompts.
+  promotes corroborated findings into the intake queue. Players take only the
+  `default` persona — persona-directed play changes the thing retention measures.
 
 Other teams are optional and use the same intake: an audit agent, a research or
 design agent, the crawler, or a person. **Playtest feedback is not the only way
@@ -79,16 +77,11 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    cycle log and can never fail the cycle, `require_playtest_record` is gone from the
    driver, and the generated cycle prompt no longer asks for a blind run.
 
-   This was half-finished until 2026-08-29: the driver was migrated but
-   `loop:seal-feedback` still hard-required `ai-runs/<runId>/playtest.{md,evidence.jsonl,run.json}`,
-   so a cycle that trusted this section passed every gate and was then hard-reset at
-   the seal — and because only Codex could mint that sidecar, a Claude-driven loop
-   still needed Codex installed. The seal now treats those artifacts as **optional**:
-   absent, it seals the acceptance marker alone; present, it verifies them exactly as
-   it always did, including the pure-V2-sidecar-bound-to-the-provisional-commit check.
-   Publishing evidence or a sidecar _without_ a report is rejected as an incomplete
-   publication rather than silently skipped, so the weakest state cannot masquerade as
-   the strongest.
+   The seal treats playtest artifacts as **optional**: absent, it seals the
+   acceptance marker alone; present, it verifies them in full, including the
+   pure-V2-sidecar-bound-to-the-provisional-commit check. Evidence or a sidecar
+   published _without_ a report is rejected as incomplete, so the weakest state
+   cannot masquerade as the strongest.
 
    A dev cycle is therefore vendor-neutral end to end: any agent that reads STDIN,
    edits files and exits nonzero on failure can drive it, with no second vendor
@@ -137,7 +130,7 @@ ages findings out after `STALE_AFTER_BUILDS`; do not hand-wave past either.
 - Agents may change engine code, schemas, DSLs, mechanics, content, tooling, and docs.
 - Normal implementation decisions have no human-approval gate and no §14 ceremony
   (the retired engine-extension approval gate from the original numbered build
-  spec; its history lives in `docs/archive/`).
+  spec; its history lives in git history).
 - Keep changes scoped to the task and the repo's existing patterns.
 
 ## Verification Bar

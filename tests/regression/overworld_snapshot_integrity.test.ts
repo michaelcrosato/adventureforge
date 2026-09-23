@@ -8,11 +8,10 @@ import { createInitialCampaignCharacterState } from "../../src/world/campaign_ch
 import {
   overworldAreasAt,
   overworldEdgesFrom,
-  overworldExplorationSitesInArea,
-  overworldJobsAt,
   overworldQuestsAt,
   overworldRoadEventFor,
 } from "../../src/world/overworld.js";
+import { overworldExplorationSitesInArea, overworldJobsAt } from "./support/overworld_queries.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const api = () => createToolApi({ root: process.cwd() });

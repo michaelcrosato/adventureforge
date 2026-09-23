@@ -47,7 +47,7 @@ import { OpeningRegistrationSchema } from "./opening_registration.js";
 import { OverworldQuestLaunchSchema } from "./quest_launch.js";
 import { compareCaseFoldedCodeUnits, compareCodeUnits } from "./string_order.js";
 
-export const OverworldNodeKindSchema = z.enum([
+const OverworldNodeKindSchema = z.enum([
   "metropolis",
   "great_city",
   "major_city",
@@ -56,14 +56,14 @@ export const OverworldNodeKindSchema = z.enum([
   "town",
 ]);
 
-export const OverworldRoadClassSchema = z.enum([
+const OverworldRoadClassSchema = z.enum([
   "interstate",
   "parkway",
   "state_route",
   "regional_connector",
 ]);
 
-export const OverworldAreaKindSchema = z.enum([
+const OverworldAreaKindSchema = z.enum([
   "civic_core",
   "market",
   "transport_hub",
@@ -76,7 +76,7 @@ export const OverworldAreaKindSchema = z.enum([
   "outskirts",
 ]);
 
-export const OverworldLocalJobKindSchema = z.enum([
+const OverworldLocalJobKindSchema = z.enum([
   "civic_errand",
   "supply_run",
   "courier",
@@ -153,7 +153,7 @@ export const OverworldAreaEdgeSchema = z
   })
   .strict();
 
-export const OverworldRegionProfileSchema = z
+const OverworldRegionProfileSchema = z
   .object({
     id: z.string().min(1),
     name: z.string().min(1),
@@ -458,7 +458,7 @@ export const OverworldQuestCampaignExportSchema = z
     });
   });
 
-export const OverworldQuestCampaignExportsSchema = z
+const OverworldQuestCampaignExportsSchema = z
   .array(OverworldQuestCampaignExportSchema)
   .min(1)
   .superRefine((exports, ctx) => {
@@ -547,17 +547,14 @@ export const OverworldManifestSchema = z
 
 export type OverworldNode = z.infer<typeof OverworldNodeSchema>;
 export type OverworldEdge = z.infer<typeof OverworldEdgeSchema>;
-export type OverworldAreaKind = z.infer<typeof OverworldAreaKindSchema>;
 export type OverworldArea = z.infer<typeof OverworldAreaSchema>;
 export type OverworldAreaEdge = z.infer<typeof OverworldAreaEdgeSchema>;
 export type OverworldPoi = z.infer<typeof OverworldPoiSchema>;
-export type OverworldRegionProfile = z.infer<typeof OverworldRegionProfileSchema>;
 export type OverworldRegionalArc = z.infer<typeof OverworldRegionalArcSchema>;
 export type OverworldCharacterVariant = z.infer<typeof OverworldCharacterVariantSchema>;
 export type OverworldCharacter = z.infer<typeof OverworldCharacterSchema>;
 export type OverworldCharacterView = Omit<OverworldCharacter, "campaign_npc_id" | "variants">;
 export type OverworldLocalEvent = z.infer<typeof OverworldLocalEventSchema>;
-export type OverworldLocalJobKind = z.infer<typeof OverworldLocalJobKindSchema>;
 export type OverworldLocalJob = z.infer<typeof OverworldLocalJobSchema>;
 export type OverworldRoadEvent = z.infer<typeof OverworldRoadEventSchema>;
 export type OverworldExplorationSite = z.infer<typeof OverworldExplorationSiteSchema>;
@@ -706,30 +703,10 @@ export function overworldAreasAt(world: OverworldManifest, nodeId: string): Over
     );
 }
 
-export function overworldCharactersAt(
-  world: OverworldManifest,
-  nodeId: string,
-): OverworldCharacter[] {
-  return world.characters
-    .filter((character) => character.home === nodeId)
-    .sort((a, b) => compareCaseFoldedCodeUnits(a.name, b.name));
-}
-
 export function overworldEventsAt(world: OverworldManifest, nodeId: string): OverworldLocalEvent[] {
   return world.local_events
     .filter((event) => event.home === nodeId)
     .sort((a, b) => b.intensity - a.intensity || compareCaseFoldedCodeUnits(a.title, b.title));
-}
-
-export function overworldJobsAt(world: OverworldManifest, nodeId: string): OverworldLocalJob[] {
-  return world.local_jobs
-    .filter((job) => job.home === nodeId)
-    .sort(
-      (a, b) =>
-        a.difficulty - b.difficulty ||
-        a.minutes - b.minutes ||
-        compareCaseFoldedCodeUnits(a.title, b.title),
-    );
 }
 
 const roadEventCache = new WeakMap<OverworldManifest, Map<string, OverworldRoadEvent>>();
@@ -747,100 +724,10 @@ export function overworldRoadEventFor(
   return cache.get(edgeId) ?? null;
 }
 
-export function overworldExplorationSitesNear(
-  world: OverworldManifest,
-  nodeId: string,
-): OverworldExplorationSite[] {
-  return world.exploration_sites
-    .filter((site) => site.nearest_town === nodeId)
-    .sort((a, b) => b.danger - a.danger || compareCaseFoldedCodeUnits(a.title, b.title));
-}
-
-export function overworldExplorationSitesInArea(
-  world: OverworldManifest,
-  areaId: string,
-): OverworldExplorationSite[] {
-  return world.exploration_sites
-    .filter((site) => site.area === areaId)
-    .sort((a, b) => b.danger - a.danger || compareCaseFoldedCodeUnits(a.title, b.title));
-}
-
 export function overworldQuestsAt(world: OverworldManifest, nodeId: string): OverworldQuest[] {
   return world.quests
     .filter((quest) => quest.home === nodeId)
     .sort((a, b) => compareCaseFoldedCodeUnits(a.title, b.title));
-}
-
-export function planOverworldRoute(
-  world: OverworldManifest,
-  fromId: string,
-  destinationId: string,
-  allowedNodeIds?: ReadonlySet<string>,
-): OverworldRoutePlan | null {
-  const nodes = cachedOverworldNodesById(world);
-  const from = nodes.get(fromId);
-  if (!from) throw new Error(`Unknown overworld route start "${fromId}".`);
-  const destination = nodes.get(destinationId);
-  if (!destination) throw new Error(`Unknown overworld route destination "${destinationId}".`);
-  if (allowedNodeIds && (!allowedNodeIds.has(fromId) || !allowedNodeIds.has(destinationId))) {
-    return null;
-  }
-  if (fromId === destinationId) {
-    return { from, destination, steps: [], totalDistanceMi: 0, totalMinutes: 0 };
-  }
-
-  const distance = new Map<string, number>([[fromId, 0]]);
-  const previous = new Map<string, { from: string; edge: OverworldEdge }>();
-  const unsettled = new Set<string>(allowedNodeIds ? [...allowedNodeIds] : [...nodes.keys()]);
-
-  while (unsettled.size > 0) {
-    let current: string | null = null;
-    let best = Number.POSITIVE_INFINITY;
-    for (const candidate of unsettled) {
-      const candidateDistance = distance.get(candidate) ?? Number.POSITIVE_INFINITY;
-      if (candidateDistance < best) {
-        current = candidate;
-        best = candidateDistance;
-      }
-    }
-    if (current === null || best === Number.POSITIVE_INFINITY) break;
-    unsettled.delete(current);
-    if (current === destinationId) break;
-
-    for (const edge of overworldEdgesFrom(world, current)) {
-      const next = edge.destination.id;
-      if (!unsettled.has(next)) continue;
-      const nextDistance = best + edge.travel_minutes;
-      if (nextDistance >= (distance.get(next) ?? Number.POSITIVE_INFINITY)) continue;
-      distance.set(next, nextDistance);
-      previous.set(next, { from: current, edge });
-    }
-  }
-
-  if (!previous.has(destinationId)) return null;
-  const steps: OverworldRouteStep[] = [];
-  for (let cursor = destinationId; cursor !== fromId; ) {
-    const prev = previous.get(cursor);
-    if (!prev) return null;
-    const stepFrom = nodes.get(prev.from);
-    const stepTo = nodes.get(cursor);
-    if (!stepFrom || !stepTo) return null;
-    steps.unshift({
-      from: stepFrom,
-      to: stepTo,
-      edge: prev.edge,
-      roadEvent: overworldRoadEventFor(world, prev.edge.id),
-    });
-    cursor = prev.from;
-  }
-
-  return {
-    from,
-    destination,
-    steps,
-    totalDistanceMi: steps.reduce((sum, step) => sum + step.edge.distance_mi, 0),
-    totalMinutes: steps.reduce((sum, step) => sum + step.edge.travel_minutes, 0),
-  };
 }
 
 function assertNodesIntegrity(world: OverworldManifest, nodes: Map<string, OverworldNode>): void {

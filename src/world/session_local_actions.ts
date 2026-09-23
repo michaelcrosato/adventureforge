@@ -25,7 +25,7 @@ import { timeLabel } from "./session_journal_codec.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 
-export type OverworldJournalEntryLookup = {
+type OverworldJournalEntryLookup = {
   get(id: string): OverworldJournalEntry | undefined;
 };
 
@@ -43,7 +43,7 @@ export type OverworldAreaExplorationPlan =
       action: OverworldLocalActionDescriptor<"area">;
     };
 
-export type OverworldPlannedAreaExploration = Extract<
+type OverworldPlannedAreaExploration = Extract<
   OverworldAreaExplorationPlan,
   { alreadyKnown: false }
 >;
@@ -62,7 +62,7 @@ export type OverworldLocalJobCompletionPlan =
       };
     };
 
-export type OverworldPlannedLocalJobCompletion = Extract<
+type OverworldPlannedLocalJobCompletion = Extract<
   OverworldLocalJobCompletionPlan,
   { alreadyKnown: false }
 >;
@@ -77,7 +77,7 @@ export type OverworldSiteExplorationPlan =
       renown: number;
     };
 
-export type OverworldPlannedSiteExploration = Extract<
+type OverworldPlannedSiteExploration = Extract<
   OverworldSiteExplorationPlan,
   { alreadyKnown: false }
 >;
@@ -90,7 +90,7 @@ export type OverworldAreaTravelResult = {
   arrivedAt: string;
 };
 
-export type OverworldAreaTravelApplicationState = {
+type OverworldAreaTravelApplicationState = {
   currentAreaByTown: Map<string, string>;
   currentTownId: string;
   minutes: number;
@@ -102,27 +102,27 @@ export type OverworldAppliedAreaTravel = OverworldAreaTravelResult & {
   minutesAfter: number;
 };
 
-export type OverworldLocalRenownCompletionState = {
+type OverworldLocalRenownCompletionState = {
   completedIds: Set<string>;
   regionRenown: Map<string, number>;
 };
 
-export type OverworldAppliedLocalRenownCompletion = {
+type OverworldAppliedLocalRenownCompletion = {
   completedId: string;
   renownRegion: string;
   renownGained: number;
   renownAfter: number;
 };
 
-export type OverworldAreaExplorationApplicationState = {
+type OverworldAreaExplorationApplicationState = {
   visitedAreaIds: Set<string>;
 };
 
-export type OverworldAppliedAreaExploration = {
+type OverworldAppliedAreaExploration = {
   areaId: string;
 };
 
-export type OverworldCurrentAreaSelectionState = {
+type OverworldCurrentAreaSelectionState = {
   nodeId: string;
   localAreas: readonly Pick<OverworldArea, "id">[];
   currentAreaId: string | null;
@@ -135,7 +135,7 @@ export type OverworldAppliedCurrentAreaSelection = {
   stateChanged: boolean;
 };
 
-export type OverworldTownVisitApplicationState = OverworldCurrentAreaSelectionState & {
+type OverworldTownVisitApplicationState = OverworldCurrentAreaSelectionState & {
   discoveredIds: Set<string>;
   roadDestinationIds: readonly string[];
   visitedIds: Set<string>;
@@ -146,7 +146,7 @@ export type OverworldAppliedTownVisit = {
   stateChanged: boolean;
 };
 
-export type OverworldAreaExplorationState = {
+type OverworldAreaExplorationState = {
   areaId: string;
   areasById: ReadonlyMap<string, OverworldArea>;
   currentTownId: string;
@@ -156,7 +156,7 @@ export type OverworldAreaExplorationState = {
   journalEntries: OverworldJournalEntryLookup;
 };
 
-export type OverworldLocalJobCompletionState = {
+type OverworldLocalJobCompletionState = {
   jobId: string;
   optionId?: string | undefined;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
@@ -177,7 +177,7 @@ export type OverworldLocalJobCompletionState = {
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
-export type OverworldSiteExplorationState = {
+type OverworldSiteExplorationState = {
   siteId: string;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
   currentTownId: string;

@@ -5,13 +5,13 @@ import type {
 } from "./session_snapshot.js";
 import type { OverworldTravelTimelineIndex } from "./session_snapshot_timeline.js";
 
-export type OverworldRoadFrontierExit = {
+type OverworldRoadFrontierExit = {
   destination: {
     id: string;
   };
 };
 
-export type OverworldDiscoveredLocalSourcePrefixIndex = {
+type OverworldDiscoveredLocalSourcePrefixIndex = {
   discoveredAreaIds: ReadonlySet<string>;
   discoveredJobIds: ReadonlySet<string>;
   discoveredQuestIds: ReadonlySet<string>;
@@ -22,12 +22,12 @@ export type OverworldDiscoveredLocalSourcePrefixIndex = {
   sitesByArea: ReadonlyMap<string, readonly { id: string }[]>;
 };
 
-export type OverworldCurrentLocationSnapshot = {
+type OverworldCurrentLocationSnapshot = {
   currentId: string;
   currentAreaId: string | null;
 };
 
-export type OverworldCurrentLocationIndex = {
+type OverworldCurrentLocationIndex = {
   nodeIds: ReadonlySet<string>;
   areaIds: ReadonlySet<string>;
   areaHomes: ReadonlyMap<string, string>;
@@ -214,7 +214,7 @@ export function assertSnapshotDiscoveredAreaPrefix(
   }
 }
 
-export function assertSnapshotDiscoveredSourcePrefix(
+function assertSnapshotDiscoveredSourcePrefix(
   sourceLabel: string,
   discoveredIds: ReadonlySet<string>,
   orderedSources: readonly { id: string }[],
@@ -302,7 +302,7 @@ export function assertSnapshotCurrentAreaMapExact(
   }
 }
 
-export type OverworldCurrentAreaMapBindingIndex = OverworldCurrentLocationIndex;
+type OverworldCurrentAreaMapBindingIndex = OverworldCurrentLocationIndex;
 
 export function assertSnapshotCurrentAreaMapBindings(
   currentAreaByTown: ReadonlyMap<string, string>,

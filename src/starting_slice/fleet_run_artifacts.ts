@@ -20,11 +20,7 @@ import {
   type PureBlindRunSidecar,
 } from "../blind/run_evidence.js";
 import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
-import {
-  certifiedModelIdsForProvider,
-  certifiedModelTransport,
-  isCertifiedFleetModel,
-} from "../blind/providers.js";
+import { certifiedModelTransport, isCertifiedFleetModel } from "../blind/providers.js";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 
@@ -70,15 +66,10 @@ export const CertifiedCodexModelSchema = z
   .refine((id) => isCertifiedFleetModel("codex", id), {
     message: "model is not certified for the codex provider in this checkout's catalog",
   });
-export type CertifiedCodexModel = string;
+type CertifiedCodexModel = string;
 export type CertifiedClaudeModel = string;
 export type PureFleetProvider = string;
 export type CertifiedFleetModel = string;
-
-/** Certified codex model ids, derived from the catalog. Kept for callers that enumerate. */
-export function certifiedCodexModels(): string[] {
-  return certifiedModelIdsForProvider("codex");
-}
 
 const PureFleetPrimaryCodexEnvelopeSchema = z
   .object({
@@ -136,7 +127,7 @@ export interface PureFleetRunArtifactBytes {
   providerCapture: Uint8Array | null;
 }
 
-export interface PureFleetRunArtifactPaths {
+interface PureFleetRunArtifactPaths {
   report: string;
   runSidecar: string;
   runEvidence: string;
@@ -178,7 +169,7 @@ export interface PureFleetRunArtifactExpectation {
   expectedReasoningEffort?: string;
 }
 
-export interface PureFleetRunArtifactHashes {
+interface PureFleetRunArtifactHashes {
   report_sha256: string;
   run_sidecar_sha256: string;
   run_evidence_sha256: string;
@@ -192,7 +183,7 @@ export interface PureFleetRunArtifactHashes {
   provider_capture_sha256: string | null;
 }
 
-export interface PureFleetRunArtifactFacts {
+interface PureFleetRunArtifactFacts {
   run: Extract<PureBlindRunSidecar, { schema_version: 2 }>;
   game_session_id: string;
   provider: PureFleetProvider;
@@ -215,7 +206,7 @@ export interface PureFleetRunArtifactFacts {
   hashes: PureFleetRunArtifactHashes;
 }
 
-export type PureFleetRunArtifactValidation =
+type PureFleetRunArtifactValidation =
   | { ok: true; facts: PureFleetRunArtifactFacts }
   | { ok: false; reason: string };
 
@@ -343,10 +334,10 @@ const CodexCaptureReceiptSchema = z
   })
   .strict();
 
-export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1" as const;
-export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2" as const;
+const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1" as const;
+const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2" as const;
 export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1" as const;
-export const GAME_DIRECT_MCP_TRANSPORT_CONTRACT = "game-direct-mcp-v1" as const;
+const GAME_DIRECT_MCP_TRANSPORT_CONTRACT = "game-direct-mcp-v1" as const;
 export const SPARK_DIRECT_MCP_MODEL = "gpt-5.3-codex-spark" as const;
 
 const HistoricalStrictCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({

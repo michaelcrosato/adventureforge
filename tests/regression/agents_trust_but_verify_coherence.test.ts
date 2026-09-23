@@ -14,7 +14,7 @@
  * the charter grants — a stale map, not a harmless note.
  *
  * This guard scans the agent-facing code (agents/*.ts) with the SAME conservative
- * predicate the doc guard uses (src/afk/gate_coherence.ts). It is deliberately
+ * predicate the doc guard uses (tests/regression/support/gate_coherence.ts). It is deliberately
  * conservative: the many legitimate SPEC references to the §14 engine-extension gate
  * (e.g. debugger.ts's "(§14 testing strategy)") describe what §14 IS and must NOT be
  * flagged — only imperative human-gate phrasings are.
@@ -22,7 +22,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import { instructsRetiredGateAsLive } from "../../src/afk/gate_coherence.js";
+import { instructsRetiredGateAsLive } from "./support/gate_coherence.js";
 
 const root = process.cwd();
 const read = (rel: string): string => readFileSync(join(root, rel), "utf8");

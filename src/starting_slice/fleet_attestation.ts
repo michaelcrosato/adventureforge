@@ -23,14 +23,14 @@ export const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
 export const HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
 export const HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION = 8;
 export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 9;
-export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1" as const;
+const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1" as const;
 export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2" as const;
 export const PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1" as const;
 export const PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT = "game-direct-mcp-v1" as const;
 export const PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0" as const;
 export const PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0" as const;
 
-export const PureFleetClaudeAttestationSchema = z
+const PureFleetClaudeAttestationSchema = z
   .object({
     schema_version: z.literal(PURE_FLEET_ATTESTATION_SCHEMA_VERSION),
     run_seed: z.number().int().safe(),
@@ -595,7 +595,7 @@ const CurrentPureFleetCodexAttestationSchema = z.lazy(() =>
   currentPureFleetCodexAttestationSchema(),
 );
 
-export const PureFleetCodexAttestationSchema = z.union([
+const PureFleetCodexAttestationSchema = z.union([
   HistoricalPureFleetCodexAttestationSchema,
   HistoricalReceiptBoundPureFleetCodexAttestationSchema,
   HistoricalStrictPureFleetCodexAttestationSchema,
@@ -610,7 +610,7 @@ export const PureFleetAttestationSchema = z.union([
   PureFleetCodexAttestationSchema,
 ]);
 
-export type PureFleetAttestation = z.infer<typeof PureFleetAttestationSchema>;
+type PureFleetAttestation = z.infer<typeof PureFleetAttestationSchema>;
 
 export function pureFleetAttestationPathFor(reportMarkdownPath: string): string {
   return reportMarkdownPath.endsWith(".md")

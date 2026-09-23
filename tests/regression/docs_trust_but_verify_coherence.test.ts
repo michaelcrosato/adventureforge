@@ -24,7 +24,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 // The conservative predicate now lives in a shared module (bug_0050 reuses it to
 // guard agent-facing code comments as well as these current-process docs).
-import { instructsRetiredGateAsLive } from "../../src/afk/gate_coherence.js";
+import { instructsRetiredGateAsLive } from "./support/gate_coherence.js";
 
 const read = (rel: string): string => readFileSync(join(process.cwd(), rel), "utf8");
 

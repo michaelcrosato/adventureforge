@@ -9,7 +9,7 @@
  * so those repeat lines are truncated by the engine before we see them — the
  * per-turn narration is the full content and is shown untrimmed).
  */
-export function spectateTrim(text: string, max: number): string {
+function spectateTrim(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max)} … (+${text.length - max} chars)`;
 }
 

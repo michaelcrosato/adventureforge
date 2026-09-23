@@ -56,7 +56,7 @@ export const RoomSchema = z
   })
   .strict();
 
-export const BUILTIN_VERBS: ReadonlySet<string> = new Set([
+const BUILTIN_VERBS: ReadonlySet<string> = new Set([
   "look",
   "l",
   "examine",
@@ -291,7 +291,7 @@ export const DialogueNodeSchema = z
   })
   .strict();
 
-export const NpcVariantSchema = z
+const NpcVariantSchema = z
   .object({
     when: z.array(ConditionSchema).min(1),
     name: z.string().min(1).optional(),
@@ -326,7 +326,7 @@ export const NpcSchema = z
   })
   .strict();
 
-export const WinConditionEndingOverrideSchema = z
+const WinConditionEndingOverrideSchema = z
   .object({
     conditions: z.array(ConditionSchema).min(1),
     ending: z.string().min(1),
@@ -368,7 +368,7 @@ export const EndingSchema = z
  * at which the band replaces the previous band; authored order is therefore
  * both its display order and its deterministic threshold order.
  */
-export const RpgPressureBandSchema = z
+const RpgPressureBandSchema = z
   .object({
     min: z.number().finite(),
     label: z.string().min(1),
@@ -411,7 +411,7 @@ export const RpgPressureTrackSchema = z
  * letting authored combat mutate HP, score, routing, quest stages, or endings and
  * thereby escape the bounded combat proofs.
  */
-export const ManeuverResourceEffectSchema = z.union([
+const ManeuverResourceEffectSchema = z.union([
   z.object({ add_item: z.string().min(1) }).strict(),
   z.object({ remove_item: z.string().min(1) }).strict(),
 ]);
@@ -488,7 +488,7 @@ const SeededOpeningFlagsSchema = z
     });
   });
 
-export const RpgMetaSchema = z
+const RpgMetaSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
@@ -552,16 +552,12 @@ export type GameObject = z.infer<typeof ObjectSchema>;
 export type DialogueTopic = z.infer<typeof DialogueTopicSchema>;
 export type DialogueNodeVariant = z.infer<typeof DialogueNodeVariantSchema>;
 export type DialogueNode = z.infer<typeof DialogueNodeSchema>;
-export type NpcVariant = z.infer<typeof NpcVariantSchema>;
 export type Npc = z.infer<typeof NpcSchema>;
-export type WinConditionEndingOverride = z.infer<typeof WinConditionEndingOverrideSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;
 export type EndingVariant = z.infer<typeof EndingVariantSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
-export type RpgPressureBand = z.infer<typeof RpgPressureBandSchema>;
 export type RpgPressureTrack = z.infer<typeof RpgPressureTrackSchema>;
 export type EnemyManeuver = z.infer<typeof EnemyManeuverSchema>;
-export type ManeuverResourceEffect = z.infer<typeof ManeuverResourceEffectSchema>;
 export type Enemy = z.infer<typeof EnemySchema>;
 export type RpgPack = z.infer<typeof RpgPackSchema>;
 

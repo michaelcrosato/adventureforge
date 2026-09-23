@@ -42,19 +42,19 @@ type RpgSourceLoadCacheEntry = {
   result: RpgLoadResult;
 };
 
-export type GeneratedRpgCacheEntry = {
+type GeneratedRpgCacheEntry = {
   compiled: CompiledRpgSource;
   report: ValidationReport;
 };
 
-export type WorldQuestSourceEntry = {
+type WorldQuestSourceEntry = {
   title: string;
   playable: boolean;
   world: WorldBinding | null;
   world_quest_id: string;
 };
 
-export type RpgTraceSource =
+type RpgTraceSource =
   | {
       kind: "worldQuest";
       worldQuestId: string;
@@ -70,7 +70,7 @@ export type RpgTraceSource =
       compiled: CompiledRpgSource;
     };
 
-export type RpgWorldQuestPlayableSource = {
+type RpgWorldQuestPlayableSource = {
   questId: string;
   title: string;
   compiled: CompiledRpgSource;

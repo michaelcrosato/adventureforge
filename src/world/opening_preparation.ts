@@ -12,7 +12,7 @@ import {
   applyCampaignConsequences,
 } from "./campaign_consequences.js";
 
-export const OPENING_PREPARATION_VERSION = 1 as const;
+const OPENING_PREPARATION_VERSION = 1 as const;
 export const OPENING_PREPARATION_MIN_PROFILES = 3 as const;
 export const OPENING_PREPARATION_MAX_PROFILES = 5 as const;
 
@@ -48,7 +48,7 @@ export const OpeningPreparationCheckDisclosureSchema = z
   })
   .strict();
 
-export const OpeningPreparationTermsSchema = z
+const OpeningPreparationTermsSchema = z
   .object({
     minutes: z
       .number()
@@ -59,7 +59,7 @@ export const OpeningPreparationTermsSchema = z
   })
   .strict();
 
-export const OpeningPreparationSponsorSchema = z
+const OpeningPreparationSponsorSchema = z
   .object({
     memory_id: CampaignCharacterIdSchema,
     minutes: z
@@ -211,8 +211,6 @@ export const OpeningPreparationSchema = z
     });
   });
 
-export type OpeningPreparationTermsInput = z.infer<typeof OpeningPreparationTermsSchema>;
-export type OpeningPreparationSponsor = z.infer<typeof OpeningPreparationSponsorSchema>;
 export type OpeningPreparationCheckConsumer = z.infer<typeof OpeningPreparationCheckConsumerSchema>;
 export type OpeningPreparationCheckDisclosure = z.infer<
   typeof OpeningPreparationCheckDisclosureSchema
@@ -227,7 +225,7 @@ export type OpeningPreparationTerms = Readonly<{
   sponsorNote: string | null;
 }>;
 
-export type OpeningPreparationApplication = Readonly<{
+type OpeningPreparationApplication = Readonly<{
   characterAfter: CampaignCharacterState;
   profile: OpeningPreparationProfile;
   terms: OpeningPreparationTerms;

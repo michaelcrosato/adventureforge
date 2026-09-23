@@ -14,7 +14,6 @@ import {
   applyOpeningRegistrationProfile,
   cloneOpeningRegistration,
   getOpeningRegistrationProfile,
-  openingRegistrationProfileById,
   parseOpeningRegistration,
   type OpeningRegistration,
 } from "../../src/world/opening_registration.js";
@@ -308,12 +307,10 @@ describe("opening registration", () => {
   it("looks up detached profiles and returns null for an unknown id", () => {
     const scene = registration();
     const sceneBefore = structuredClone(scene);
-    const selected = openingRegistrationProfileById(scene, PROFILE_IDS[1]);
-    const selectedThroughAlias = getOpeningRegistrationProfile(scene, PROFILE_IDS[1]);
+    const selected = getOpeningRegistrationProfile(scene, PROFILE_IDS[1]);
 
     expect(selected).toEqual(scene.profiles[1]);
-    expect(selectedThroughAlias).toEqual(selected);
-    expect(openingRegistrationProfileById(scene, "background:not_authored")).toBeNull();
+    expect(getOpeningRegistrationProfile(scene, "background:not_authored")).toBeNull();
 
     selected!.title = "Mutated selection";
     selected!.character.health.current = 0;

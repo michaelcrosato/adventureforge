@@ -34,7 +34,7 @@ export const LEGACY_SAVE_VERSION = 1 as const;
 export const PREVIOUS_SAVE_VERSION = 2 as const;
 export const SAVE_VERSION = 3 as const;
 export const SAVE_MODE = "rpg" as const;
-export const EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION = 1 as const;
+const EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION = 1 as const;
 export type SaveMode = typeof SAVE_MODE;
 
 const UINT32_SEED_RANGE = 0x100000000;
@@ -214,7 +214,7 @@ export function assertWellFormedState(state: unknown): GameState {
   return wellFormedState;
 }
 
-export type SaveBundle = {
+type SaveBundle = {
   version: typeof SAVE_VERSION;
   contentHash: string;
   /** Canonical SHA-256 of `state`; a deterministic consistency check, not authentication. */
@@ -228,7 +228,7 @@ export type SaveBundle = {
   embedded_character_continuity?: EmbeddedQuestCharacterContinuitySave;
 };
 
-export type EmbeddedQuestCharacterContinuitySave = {
+type EmbeddedQuestCharacterContinuitySave = {
   version: typeof EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION;
   character_continuity: EmbeddedQuestCharacterContinuity;
 };

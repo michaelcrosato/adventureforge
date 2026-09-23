@@ -2,7 +2,7 @@
 # The PLAYTEST (QA) loop driver. Usage: ./playtest-loop.sh [--once]
 #
 # Runs completely independently of ./loop.sh. It plays the most recently published
-# build over and over, across as many vendors, models and personas as you point it at,
+# build over and over, across as many vendors and models as you point it at,
 # and turns what the players say into QA tickets the dev loop reads. It never blocks
 # the dev loop and the dev loop never blocks it — that separation is the entire reason
 # this file exists.
@@ -20,7 +20,6 @@
 #                                            Live waves take only live-capable
 #                                            providers; `npm run doctor` lists them.
 #   PLAYTEST_MODELS="codex=gpt-5.6-terra"    pin a model per provider [catalog default]
-#   PLAYTEST_PERSONAS="default,cynical_veteran,breaker"   rotated across players [default]
 #   PLAYTEST_CONCURRENCY=N                   players in flight at once [4]
 #   PLAYTEST_SEED_BASE=N                     first seed; each player gets base+i [epoch seconds]
 #   PLAYTEST_TRIAGE=1                        re-triage after each wave [1]
@@ -106,7 +105,6 @@ if [[ -z "$DEFAULT_COHORT_PROVIDER" ]]; then
   exit 1
 fi
 COHORT="${PLAYTEST_COHORT:-$DEFAULT_COHORT_PROVIDER:1}"
-PERSONAS="${PLAYTEST_PERSONAS:-default}"
 CONCURRENCY="${PLAYTEST_CONCURRENCY:-4}"
 DELAY="${PLAYTEST_DELAY_SECONDS:-30}"
 SEED_BASE="${PLAYTEST_SEED_BASE:-$(date +%s)}"
@@ -271,34 +269,8 @@ preflight_cohort() {
   return 1
 }
 
-# The persona gate mirrors run.sh's pure-run rule (persona-directed play changes
-# the thing retention measures, so live runs accept only `default`). Refusing the
-# wave here — like the drivability gate above — keeps a misconfigured live wave
-# from dispatching players run.sh then refuses one by one, each of which the
-# unconditional recorder would file as a `failed` session under a real vendor's
-# name. Personas remain available on the structural lanes.
-preflight_personas() {
-  local list=() persona blocked=()
-  # ${PERSONAS:-default}: the harness in tests/unit/doctor_cli.test.ts runs this
-  # gate section standalone under `set -u` with only COHORT/MOCK defined, and an
-  # unset persona list must mean the safe default, not an unbound-variable abort.
-  IFS=',' read -ra list <<< "${PERSONAS:-default}"
-  for persona in "${list[@]}"; do
-    [[ -z "$persona" || "$persona" == "default" ]] && continue
-    blocked+=("$persona")
-  done
-  (( ${#blocked[@]} == 0 )) && return 0
-  echo "Refusing the wave: PLAYTEST_PERSONAS names non-default personas (${blocked[*]})."
-  echo "Pure live players accept only the default persona; run.sh would refuse each of"
-  echo "these AFTER dispatch, and every refusal would be recorded as a failed vendor"
-  echo "session. Rotate personas on the structural lanes instead: PLAYTEST_MOCK=1 here,"
-  echo "or \`npm run fleet:mock -- --personas ...\`."
-  return 1
-}
-
 if [[ "$MOCK" != "1" ]]; then
   preflight_cohort || exit 1
-  preflight_personas || exit 1
 else
   # A wiring check drives run.sh's bundled scripted agent, so no vendor client is
   # launched and there is nothing to prove blind. Gating it would make the one free way
@@ -313,12 +285,6 @@ model_for() {
   for pair in "${pairs[@]}"; do
     [[ "${pair%%=*}" == "$provider" ]] && { echo "${pair#*=}"; return 0; }
   done
-}
-
-persona_at() {
-  local index="$1"
-  IFS=',' read -ra list <<< "$PERSONAS"
-  echo "${list[$((index % ${#list[@]}))]}"
 }
 
 run_player() {
@@ -413,7 +379,7 @@ run_wave() {
 
     local i
     for ((i = 0; i < count; i++)); do
-      run_player "$provider" "$((SEED_BASE + index))" "$(persona_at "$index")" "$model" &
+      run_player "$provider" "$((SEED_BASE + index))" default "$model" &
       pids+=($!)
       index=$((index + 1))
       # Bounded fan-out: the cap is about the vendor's rate limits and this machine's

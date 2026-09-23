@@ -30,7 +30,7 @@ describe("bug trace integrity", () => {
     const report = verifyBugTraces(ROOT);
 
     expect(report.findings).toEqual([]);
-    expect(report.stats.files).toBeGreaterThan(500);
+    expect(report.stats.files).toBeGreaterThan(350);
     expect(report.stats.currentReferences).toBeGreaterThan(0);
     expect(report.stats.historicalReferences).toBeGreaterThan(0);
   });

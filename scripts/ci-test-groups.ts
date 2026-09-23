@@ -25,8 +25,7 @@ import { filterTestFilesByLane, LANE_NAMES, type LaneName } from "./test-lanes.j
  * carries no entry at all and is packed as if trivial.
  *
  * `npm run test:durations` + `npm run test:census` re-measure every file so an entry here
- * can be refreshed from data rather than from memory; `docs/test_duration_census.md` is the
- * standing read of that measurement. The 2026-09-03 census found both failure directions
+ * can be refreshed from data rather than from memory. The 2026-09-03 census found both failure directions
  * live at once: `mcp_tools.test.ts` costs 56s alone against the 3s default for unlisted
  * files, and five of the six census proofs are 0.55-0.72x their frozen price here.
  */

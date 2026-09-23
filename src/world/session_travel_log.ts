@@ -7,7 +7,7 @@ import type {
 } from "./session_snapshot.js";
 import { resolveOverworldTravelLeg } from "./travel_mechanics.js";
 
-export type OverworldTravelApplicationState = {
+type OverworldTravelApplicationState = {
   minutes: number;
   supplies: number;
   fatigue: number;
@@ -22,7 +22,7 @@ export type OverworldAppliedTravelLeg = {
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
 };
 
-export type OverworldTravelLegRecordingState = {
+type OverworldTravelLegRecordingState = {
   travelLog: TravelLogEntry[];
 };
 
@@ -30,7 +30,7 @@ export type OverworldRecordedTravelLeg = Omit<OverworldAppliedTravelLeg, "pendin
   pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
 };
 
-export type OverworldTravelLogRestoreIndex = {
+type OverworldTravelLogRestoreIndex = {
   edgesById: ReadonlyMap<string, OverworldEdge>;
   nodesById: ReadonlyMap<string, OverworldNode>;
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;

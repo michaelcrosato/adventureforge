@@ -173,7 +173,7 @@ export function readStableClaudeFile(path, label, { maxBytes } = {}) {
  *
  * Verified by observation, not documentation, against real directories on this machine:
  *
- *   C:\dev\zork-unlimited                       → C--dev-zork-unlimited
+ *   C:\dev\adventureforge                       → C--dev-adventureforge
  *   C:\dev\rcproam\node_modules\@types\three    → C--dev-rcproam-node-modules--types-three
  *
  * The second is the interesting one: `_` and `@` both collapse to `-`, which rules out

@@ -3,9 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const SHELL_FREE_LAUNCHERS = [
   "blind-tester/fleet.mjs",
-  "scripts/assertion-shield.ts",
   "tests/acceptance/fleet_mock_pipeline.test.ts",
-  "tests/regression/author_cli_rpg_only.test.ts",
   "tests/regression/blind_runner_smoke_entrypoint.test.ts",
   "tests/regression/rpg_validation_bar.test.ts",
   "tests/regression/trace_cli_integrity.test.ts",

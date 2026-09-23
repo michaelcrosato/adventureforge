@@ -49,7 +49,7 @@ export type OverworldSessionQuestStartPlanState = {
   startedQuestIds: ReadonlySet<string>;
 };
 
-export type OverworldSessionQuestCompletionPlanState = {
+type OverworldSessionQuestCompletionPlanState = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
   character: CampaignCharacterState;
@@ -69,7 +69,7 @@ export type MutableOverworldSessionQuestStartState = OverworldActionJournalState
   startedQuestIds: Set<string>;
 };
 
-export type MutableOverworldSessionQuestCompletionState = OverworldActionJournalState & {
+type MutableOverworldSessionQuestCompletionState = OverworldActionJournalState & {
   completedQuestIds: Set<string>;
   regionRenown: Map<string, number>;
 };
@@ -77,14 +77,14 @@ export type MutableOverworldSessionQuestCompletionState = OverworldActionJournal
 export type OverworldSessionQuestStartState = OverworldSessionQuestStartPlanState &
   MutableOverworldSessionQuestStartState;
 
-export type OverworldAppliedSessionQuestStart = OverworldSessionActionApplication & {
+type OverworldAppliedSessionQuestStart = OverworldSessionActionApplication & {
   quest: OverworldQuestView;
   characterAfter: CampaignCharacterState;
   suppliesAfter: number;
   fatigueAfter: number;
 };
 
-export type OverworldAppliedSessionQuestCompletion = {
+type OverworldAppliedSessionQuestCompletion = {
   result: OverworldQuestCompletionResult;
   characterAfter: CampaignCharacterState;
   worldFactIds: readonly string[];

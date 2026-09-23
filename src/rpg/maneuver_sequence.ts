@@ -4,7 +4,7 @@ import type { Enemy, EnemyManeuver } from "./schema.js";
 export type ManeuverPhase = "opening" | "follow_through";
 
 /** Root openings share one cohort; children share the cohort of one parent. */
-export function maneuverCohort(enemy: Enemy, maneuver: EnemyManeuver): EnemyManeuver[] {
+function maneuverCohort(enemy: Enemy, maneuver: EnemyManeuver): EnemyManeuver[] {
   return (enemy.maneuvers ?? []).filter((candidate) => candidate.after === maneuver.after);
 }
 

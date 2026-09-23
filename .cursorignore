@@ -12,7 +12,6 @@ blind-tester/reports/
 .codex/*
 !.codex/config.toml
 saves/
-transcripts/
 *.log
 *.tmp
 *.tsbuildinfo

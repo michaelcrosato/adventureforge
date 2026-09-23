@@ -21,7 +21,7 @@ import {
   type QuestDispatchWindow,
 } from "./quest_dispatch_window.js";
 
-export type QuestStartPlanWithDispatchWindow = {
+type QuestStartPlanWithDispatchWindow = {
   quest: { id: string };
   dispatchWindow: QuestDispatchWindow;
 };

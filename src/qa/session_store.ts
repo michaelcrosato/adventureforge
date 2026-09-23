@@ -117,7 +117,7 @@ export function readPlaytestSession(sessionDir: string): {
   return { record, transcript };
 }
 
-export type PlaytestStoreEntry = {
+type PlaytestStoreEntry = {
   dir: string;
   record: PlaytestSessionRecord;
 };
@@ -157,7 +157,7 @@ export function listPlaytestSessions(storeRoot: string): {
   return { entries, unreadable };
 }
 
-export type PlaytestStoreSummary = {
+type PlaytestStoreSummary = {
   total: number;
   byOutcome: Record<string, number>;
   byProvider: Record<string, number>;

@@ -12,7 +12,7 @@ export type ObjectLocation =
   | { kind: "container"; container: string }
   | { kind: "nowhere" };
 
-export type ObjectPlacementIndex = {
+type ObjectPlacementIndex = {
   objects: Map<string, { locked?: boolean }>;
   homeRoom: Map<string, string>;
   containerOf: Map<string, string>;

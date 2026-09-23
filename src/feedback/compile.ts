@@ -198,7 +198,7 @@ function buildManifestIndex(root: string): Map<string, ManifestRow> {
   return index;
 }
 
-export type CollectedInterview = {
+type CollectedInterview = {
   /** Stable evidence `ref` every IssueRecord from this report cites. */
   ref: string;
   /** Stable cohort identity; pure sidecar copies and equivalent verified interviews share ids. */
@@ -208,7 +208,7 @@ export type CollectedInterview = {
   interview: ExitInterview;
 };
 
-export type CollectInputsResult = {
+type CollectInputsResult = {
   interviews: CollectedInterview[];
   crawlFindings: CrawlFinding[];
   /** Parallel to `crawlFindings` — `"<jsonl-basename>#<row-index>"` evidence refs. */
@@ -233,7 +233,7 @@ type ReportOutcome = ResolvedInterview | { rejected: true };
  * them from steering player-facing hot spots or experience metrics. Structural
  * smoke reports remain actionable QA evidence.
  */
-export function contributesToActionableFeedback(interview: ExitInterview): boolean {
+function contributesToActionableFeedback(interview: ExitInterview): boolean {
   return !(isStructuralExitInterviewV2(interview) && interview.structural_kind === "mock");
 }
 
@@ -443,7 +443,7 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
   };
 }
 
-export type FeedbackCohortInspection = {
+type FeedbackCohortInspection = {
   collected: CollectInputsResult;
   evidence: FeedbackEvidenceSummary;
   corpus: ReportCorpus;

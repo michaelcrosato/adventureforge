@@ -3,12 +3,12 @@ import { resolve } from "node:path";
 import { hashState } from "../core/hash.js";
 import { loadOverworldManifest } from "../world/source.js";
 
-export interface FleetGitProvenance {
+interface FleetGitProvenance {
   git_commit: string;
   tracked_worktree_clean: boolean;
 }
 
-export interface PureFleetBuild extends FleetGitProvenance {
+interface PureFleetBuild extends FleetGitProvenance {
   tracked_worktree_clean: true;
   world_id: string;
   world_hash: string;

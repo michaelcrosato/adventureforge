@@ -26,9 +26,30 @@
  *   --dry-run     print the plan and the chosen bar, touch nothing
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { gitHubAvailable } from "../src/intake/github.js";
 import { npmCliInvocation } from "./npm-cli.js";
 import { barForChangedFiles } from "./test-lanes.js";
+
+function gh(args: string[]): { ok: true } | { ok: false; reason: string } {
+  try {
+    execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, reason: message.split("\n").slice(0, 3).join(" ").trim() };
+  }
+}
+
+/**
+ * Is the GitHub CLI usable here? "gh is not installed" and "gh is installed but you are
+ * logged out" are different fixes, so the reason names which one this machine hit.
+ */
+function gitHubAvailable(): { ok: true } | { ok: false; reason: string } {
+  if (!gh(["--version"]).ok) return { ok: false, reason: "the GitHub CLI (`gh`) is not on PATH" };
+  const auth = gh(["auth", "status"]);
+  if (!auth.ok)
+    return { ok: false, reason: `\`gh\` is installed but not authenticated: ${auth.reason}` };
+  return { ok: true };
+}
 
 const PROTECTED_BRANCH = "main";
 /** The `verify` check is the repo's required gate; branch protection blocks the merge

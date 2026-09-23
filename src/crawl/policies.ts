@@ -11,12 +11,12 @@ import type { RpgActionOption } from "../rpg/legal_actions.js";
 export const POLICY_NAMES = ["random", "coverage", "mixed"] as const;
 export type PolicyName = (typeof POLICY_NAMES)[number];
 
-export type PolicyContext = {
+type PolicyContext = {
   visitedRooms: ReadonlySet<string>; // room ids seen this episode's quest so far
   triedActionIds: ReadonlySet<string>; // RpgActionOption.id values ever executed for this quest
 };
 
-export type Policy = {
+type Policy = {
   readonly name: PolicyName;
   pick(options: RpgActionOption[], ctx: PolicyContext): RpgActionOption;
 };

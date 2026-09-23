@@ -55,10 +55,10 @@ const {
   usageRecordFromVerifiedPrimaryEnvelope,
 } = fleetUsage;
 
-export const STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION = 2 as const;
-export const STARTING_SLICE_AUTHORITY_COUNT = 100 as const;
-export const STARTING_SLICE_PILOT_COUNT = 10 as const;
-export const STARTING_SLICE_INITIAL_GOAL = Object.freeze({
+const STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION = 2 as const;
+const STARTING_SLICE_AUTHORITY_COUNT = 100 as const;
+const STARTING_SLICE_PILOT_COUNT = 10 as const;
+const STARTING_SLICE_INITIAL_GOAL = Object.freeze({
   version: INITIAL_JOURNEY_GOAL.version,
   id: INITIAL_JOURNEY_GOAL.id,
 });
@@ -68,7 +68,7 @@ export type WolfStrategy =
   | "lure_and_divert"
   | "drive_and_evacuate"
   | "fortify_and_outlast";
-export type WolfStrategyVariant =
+type WolfStrategyVariant =
   | "clean_diversion"
   | "cattle_scattered"
   | "hybrid_recovery"
@@ -146,7 +146,7 @@ export const WOLF_WINTER_STRATEGY_BY_ENDING = Object.freeze({
   Readonly<{ strategy: WolfStrategy; variant: WolfStrategyVariant }>
 >);
 
-export type PureRunBuild = z.infer<typeof PureRunBuildSchema>;
+type PureRunBuild = z.infer<typeof PureRunBuildSchema>;
 type CanonicalQuestOutcomes = z.infer<typeof CanonicalQuestOutcomesSchema>;
 
 export interface StartingSliceIssueInput {
@@ -181,14 +181,14 @@ export interface StartingSliceEvaluationRun {
   issues: readonly StartingSliceIssueInput[];
 }
 
-export interface StartingSliceEvaluationOptions {
+interface StartingSliceEvaluationOptions {
   root: string;
   runs: readonly StartingSliceEvaluationRun[];
   /** Defaults to runs.length. The filesystem path fixes this to the planned fleet count. */
   expectedCount?: number;
 }
 
-export interface StartingSliceMetrics {
+interface StartingSliceMetrics {
   total_runs: number;
   evaluated_runs: number;
   completed_runs: number;
@@ -219,7 +219,7 @@ export interface StartingSliceMetrics {
  */
 export const STARTING_SLICE_MAX_TYPICAL_FIRST_GOAL_DECISIONS = 45;
 
-export interface StartingSliceGates {
+interface StartingSliceGates {
   completion_at_least_90_percent: boolean;
   completion_p50_at_most_45_decisions: boolean;
   got_stuck_at_most_5_percent: boolean;
@@ -232,7 +232,7 @@ export interface StartingSliceGates {
   no_in_scope_s2_cluster_at_or_above_5_percent: boolean;
 }
 
-export interface StartingSliceBlockingCluster {
+interface StartingSliceBlockingCluster {
   key: string;
   max_severity: IssueSeverity;
   affected_reports: number;
@@ -242,7 +242,7 @@ export interface StartingSliceBlockingCluster {
   tokens: string[];
 }
 
-export interface StartingSliceFleetIdentity {
+interface StartingSliceFleetIdentity {
   label: string;
   stamp: string;
   fleet_dir: string;
@@ -250,7 +250,7 @@ export interface StartingSliceFleetIdentity {
   manifest_rows: number;
 }
 
-export interface StartingSliceCertificationResult {
+interface StartingSliceCertificationResult {
   schema_version: typeof STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION;
   valid: boolean;
   passed: boolean;
@@ -271,30 +271,30 @@ interface StartingSliceFleetPathOptions {
   fleetDir: string;
 }
 
-export type CertifyStartingSliceAuthorityOptions = StartingSliceFleetPathOptions;
+type CertifyStartingSliceAuthorityOptions = StartingSliceFleetPathOptions;
 
-export type ValidateStartingSlicePilotOptions = StartingSliceFleetPathOptions;
+type ValidateStartingSlicePilotOptions = StartingSliceFleetPathOptions;
 
-export interface StartingSlicePilotGates {
+interface StartingSlicePilotGates {
   all_10_recognized_wolf_outcomes: boolean;
   at_least_3_top_level_strategies: boolean;
   no_strategy_above_7_of_10: boolean;
 }
 
-export interface StartingSlicePilotEvaluation {
+interface StartingSlicePilotEvaluation {
   evaluation: StartingSliceCertificationResult;
   pilot_passed: boolean;
   pilot_gate_failures: (keyof StartingSlicePilotGates)[];
   pilot_gates: StartingSlicePilotGates;
 }
 
-export interface StartingSliceAuthorityResult extends StartingSliceCertificationResult {
+interface StartingSliceAuthorityResult extends StartingSliceCertificationResult {
   cohort_kind: "authority";
   expected_count: typeof STARTING_SLICE_AUTHORITY_COUNT;
   authority_certified: boolean;
 }
 
-export interface StartingSlicePilotResult extends StartingSliceCertificationResult {
+interface StartingSlicePilotResult extends StartingSliceCertificationResult {
   cohort_kind: "pilot";
   expected_count: typeof STARTING_SLICE_PILOT_COUNT;
   authority_certified: false;

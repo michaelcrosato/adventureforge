@@ -73,7 +73,7 @@ export type QuestDispatchWindowReceipt = Readonly<{
   juneCommitment: SelectedOptionReceipt | DeclinedAtLaunchReceipt;
 }>;
 
-export type QuestDispatchPresentationReceipt = Readonly<{
+type QuestDispatchPresentationReceipt = Readonly<{
   reliefOath: QuestDispatchWindowReceipt["reliefOath"];
   leadSource: QuestDispatchWindowReceipt["leadSource"];
   preparation: SelectedPreparationReceipt | OpenOptionalReceipt;
@@ -108,7 +108,7 @@ export type OpenQuestDispatchPresentation = Readonly<{
 
 export type QuestDispatchPresentationWindow = QuestDispatchWindow | OpenQuestDispatchPresentation;
 
-export type QuestDispatchWindowInputs = Readonly<{
+type QuestDispatchWindowInputs = Readonly<{
   questId: string;
   journalEntries?: readonly OverworldJournalEntry[];
   openingRegistration?: OpeningRegistration | null;

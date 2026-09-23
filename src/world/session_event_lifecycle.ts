@@ -17,7 +17,7 @@ import {
 import { applyOverworldSessionRegionalArcCompletionsForRegion } from "./session_route_progress.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export type OverworldSessionEventResolutionPlanState = {
+type OverworldSessionEventResolutionPlanState = {
   eventId: string;
   optionId?: string | undefined;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
@@ -34,7 +34,7 @@ export type OverworldSessionEventResolutionPlanState = {
   charactersByArea: ReadonlyMap<string, readonly OverworldCharacter[]>;
 };
 
-export type MutableOverworldSessionEventResolutionState = OverworldActionJournalState & {
+type MutableOverworldSessionEventResolutionState = OverworldActionJournalState & {
   resolvedEventIds: Set<string>;
   resolvedEventHomeIds: Set<string>;
   regionRenown: Map<string, number>;
@@ -42,7 +42,7 @@ export type MutableOverworldSessionEventResolutionState = OverworldActionJournal
   completedRegionalArcIds: Set<string>;
 };
 
-export type OverworldSessionEventResolutionState = Omit<
+type OverworldSessionEventResolutionState = Omit<
   OverworldSessionEventResolutionPlanState,
   "journalEntries"
 > &
@@ -54,7 +54,7 @@ export function planOverworldSessionEventResolution(
   return planOverworldEventResolution(state);
 }
 
-export function applyOverworldSessionEventResolution(
+function applyOverworldSessionEventResolution(
   state: MutableOverworldSessionEventResolutionState,
   plan: OverworldEventResolutionPlan,
 ): OverworldSessionActionApplication {

@@ -36,16 +36,16 @@ export type EmbeddedOverworldQuestStartContext = {
   launchOverlay?: EmbeddedLaunchOverlay;
 };
 
-export type OverworldStartedRpgSession = {
+type OverworldStartedRpgSession = {
   session_id: string;
 };
 
-export type OverworldQuestStartSync<Payload extends OverworldStartedRpgSession> = {
+type OverworldQuestStartSync<Payload extends OverworldStartedRpgSession> = {
   quest: OverworldJourneyQuestStartResult;
   rpgSession: Payload;
 };
 
-export type OverworldQuestCompletionSync = {
+type OverworldQuestCompletionSync = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
 };

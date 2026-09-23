@@ -66,8 +66,8 @@ produce the same state hash.
 - `src/mcp/server.ts` owns the registered public MCP tool names, descriptions,
   and argument schemas.
 - `src/mcp/tools.ts` owns the tested, transport-independent ToolApi handlers.
-- `bin/validate.ts`, `bin/replay.ts`, `bin/inspect.ts`, `bin/rpg_play.ts`,
-  `bin/author.ts`, and `bin/assess.ts` are operator surfaces.
+- `bin/validate.ts`, `bin/replay.ts`, `bin/inspect.ts`, `bin/rpg_play.ts`, and
+  `bin/assess.ts` are operator surfaces.
 - `agents/`, `src/ai-loop.ts`, and `src/afk/` (the assessor) coordinate
   autonomous improvement cycles; `src/gen/` mints procedural eval packs;
   `src/blind/` verifies blind-playtest reports.
@@ -142,46 +142,21 @@ Required patterns:
 - Cap compact inventory, flag, journal, action, and transcript arrays with omitted
   counts when needed.
 - Keep `AI_LOOP_STATE.md` to the tested live window; superseded planning docs
-  move to `docs/archive/`, and detail not worth keeping in the tree belongs in
-  git history or ignored local artifacts.
+  are deleted, and detail not worth keeping in the tree belongs in git history
+  or ignored local artifacts.
 - Keep raw logs, blind reports, generated evidence, and run output out of tracked
   files unless they are curated bug artifacts.
 
-## Verification Bar
+## Verification
 
-`npm run health` is the bar for anything that lands (see `AGENTS.md`, the single
-authoritative description). It chains nine steps, in this order (package.json's
-`health` script): verifier integrity, bug-trace integrity, the opening-density budget,
-typecheck, lint, format check, UI typecheck, quest validation (`npm run validate`), and
-finally the full test suite (`npm test`) — so do not run those again on top of health;
-the granular scripts are for fast iteration only.
+`npm run health` is the bar for anything that lands. `AGENTS.md` is the single
+authoritative description of it (it already chains `npm run validate` and
+`npm test`), of the bug and regression rules, and of the two loops. Do not weaken
+tests, validators, protected assets, or `scripts/verify-integrity.ts` to make a
+change pass.
 
-Do not weaken tests, validators, protected assets, or `scripts/verify-integrity.ts`
-to make a change pass.
-
-## Bug And Regression Rules
-
-When fixing a bug:
-
-- Reproduce it with the smallest deterministic trace or unit fixture available.
-- Add or keep a regression test.
-- Add a curated `traces/bugs/` artifact when the surrounding workflow calls for
-  trace evidence.
-- Verify the full bar before commit.
-
-## Agent Cycle
-
-The autonomous cycle is owned by `docs/afk_loop.md` (the protocol) and `loop.sh`
-(the driver); `AGENTS.md` is the charter. In short: assess, make one focused
-change, blind-playtest, pass `npm run health`, record a terse `AI_LOOP_STATE.md`
-entry, and commit only green (commit/push are env-gated by `loop.sh`).
-
-## Consolidation Audit (passed 2026-07-06)
-
-The consolidation goal was audited complete on 2026-07-06: no active CYOA or
-semantic-command runtime, content tree, binary, or test fixture remains; public
+The 2026-07-06 consolidation audit's results are standing invariants: no active
+CYOA or semantic-command runtime, content tree, binary, or test fixture; public
 shipped play starts through `world_quest_id`; shipped content is discoverable
-through the contiguous world graph; saves, traces, and sessions are RPG-mode
-only; and the full bar passed on the final state. These are now standing
-invariants — regressions against any of them are bugs, and the do-not-rebuild
-rules above stay binding.
+through the contiguous world graph; and saves, traces, and sessions are RPG-mode
+only. A regression against any of them is a bug.

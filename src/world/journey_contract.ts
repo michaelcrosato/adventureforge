@@ -48,7 +48,7 @@ export type JourneyDecisionClassification = Readonly<
   | { countsTowardJourney: false; reason: JourneyExcludedDecisionReason }
 >;
 
-export type JourneyAcceptedDecision = Readonly<{
+type JourneyAcceptedDecision = Readonly<{
   surface: JourneyDecisionSurface;
   actionId: string;
   reason: JourneyCountedDecisionReason;
@@ -66,7 +66,7 @@ export type JourneyDecisionProof = Readonly<{
   last: JourneyDecisionProofLast | null;
 }>;
 
-export type JourneyGoalIdentity = Readonly<{
+type JourneyGoalIdentity = Readonly<{
   version: number;
   id: string;
 }>;
@@ -151,7 +151,7 @@ export type JourneyChoiceOption = Readonly<{
  * Read-only authored terms for the next mandatory story decision. A retention
  * pause may show these terms, but it never makes the contained options legal.
  */
-export type JourneyContinuationPreview = Readonly<{
+type JourneyContinuationPreview = Readonly<{
   id: string;
   message: string;
   options: readonly [JourneyStoryChoiceOption, JourneyStoryChoiceOption];
@@ -508,7 +508,7 @@ const JourneyCountedDecisionReasonSchema = z.enum([
   "situation_changed",
 ]);
 
-export const JourneyGoalDefinitionSchema = z
+const JourneyGoalDefinitionSchema = z
   .object({
     version: POSITIVE_SAFE_INT,
     id: z.string().min(1),

@@ -50,7 +50,7 @@ export type OverworldRouteRoadEventState = {
   travelLog: readonly TravelLogEntry[];
 };
 
-export type OverworldDiscoveredRouteOptionsState = {
+type OverworldDiscoveredRouteOptionsState = {
   routePlannerIndex: OverworldRoutePlannerIndex;
   current: OverworldNode;
   currentId: string;

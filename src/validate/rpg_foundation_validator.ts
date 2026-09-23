@@ -82,7 +82,7 @@ const rangeText = (min: number, max: number): string => {
  * mechanic genuinely sets (enemy `defeat_flag`, on_defeat / skill-check `set_flag`),
  * so a defeat flag that no condition anywhere reads is correctly flagged inert.
  */
-export type ValidateRpgFoundationOptions = {
+type ValidateRpgFoundationOptions = {
   extraSettableFlags?: string[];
   /** Flags a higher-layer mechanic reads implicitly (for example a maneuver's
    * automatic one-shot result-flag gate). Keeps INERT_FLAG aware of runtime

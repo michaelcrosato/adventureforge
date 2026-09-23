@@ -15,7 +15,7 @@ type Room = RpgPack["rooms"][number];
 type GameObject = RpgPack["objects"][number];
 type WinCondition = RpgPack["win_conditions"][number];
 
-export type StaleReactiveRoomItemSite = {
+type StaleReactiveRoomItemSite = {
   worldQuestId: string;
   roomId: string;
   objectId: string;
@@ -23,7 +23,7 @@ export type StaleReactiveRoomItemSite = {
   matchedTerm: string;
 };
 
-export type StaleReactiveAudit = {
+type StaleReactiveAudit = {
   sites: StaleReactiveRoomItemSite[];
 };
 

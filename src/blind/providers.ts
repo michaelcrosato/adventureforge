@@ -62,7 +62,7 @@ import { z } from "zod";
 const REPO_ROOT_URL = new URL("../../", import.meta.url);
 
 /** How the harness obtains a playing client. */
-export const PlaytestProviderKindSchema = z.enum([
+const PlaytestProviderKindSchema = z.enum([
   /** The runner spawns a headless CLI it controls end to end. */
   "headless_cli",
   /**
@@ -104,7 +104,7 @@ export const PlaytestIsolationSchema = z.enum([
   /** The intended boundary is attested, but no client-log reader proves the offered tools. */
   "operator_attested",
 ]);
-export type PlaytestIsolation = z.infer<typeof PlaytestIsolationSchema>;
+type PlaytestIsolation = z.infer<typeof PlaytestIsolationSchema>;
 
 /**
  * Cost/capability tier, and the reason the fleet is deliberately lopsided.
@@ -145,7 +145,7 @@ export type PlaytestTier = z.infer<typeof PlaytestTierSchema>;
  * provider's default declares one, and it declares it as DATA, next to the model id it
  * belongs to, where an operator editing a catalog can see it.
  */
-export const PlaytestModelTransportSchema = z
+const PlaytestModelTransportSchema = z
   .object({
     /**
      * Which attestation field this transport's contract is recorded under.
@@ -207,10 +207,9 @@ export const PlaytestModelTransportSchema = z
       }
     }
   });
-export type PlaytestModelTransport = z.infer<typeof PlaytestModelTransportSchema>;
 
 /** One playable model within a provider's catalog. */
-export const PlaytestCatalogModelSchema = z
+const PlaytestCatalogModelSchema = z
   .object({
     /** Exact model id as the provider names it. No aliases: they resolve differently over time. */
     id: z.string().min(1),
@@ -276,18 +275,18 @@ export const PlaytestCatalogModelSchema = z
     notes: z.string().optional(),
   })
   .strict();
-export type PlaytestCatalogModel = z.infer<typeof PlaytestCatalogModelSchema>;
+type PlaytestCatalogModel = z.infer<typeof PlaytestCatalogModelSchema>;
 
-export const PlaytestCatalogSchema = z
+const PlaytestCatalogSchema = z
   .object({
     provider: z.string().min(1),
     models: z.array(PlaytestCatalogModelSchema).min(1),
   })
   .strict();
-export type PlaytestCatalog = z.infer<typeof PlaytestCatalogSchema>;
+type PlaytestCatalog = z.infer<typeof PlaytestCatalogSchema>;
 
 /** How to spawn a `headless_cli` provider. */
-export const PlaytestLaunchSchema = z
+const PlaytestLaunchSchema = z
   .object({
     /** Executable that must resolve on PATH (or be pinned by the provider's env override). */
     executable: z.string().min(1),
@@ -302,10 +301,9 @@ export const PlaytestLaunchSchema = z
     binaryOverrideEnv: z.string().min(1),
   })
   .strict();
-export type PlaytestLaunch = z.infer<typeof PlaytestLaunchSchema>;
 
 /** How the runner learns which session id its launch produced. */
-export const PlaytestSessionIdSourceSchema = z.enum([
+const PlaytestSessionIdSourceSchema = z.enum([
   /**
    * The runner picks the id and hands it to the client at launch, so the log's path is
    * known BEFORE the process starts. This is the stronger shape: the runner is reading
@@ -322,7 +320,6 @@ export const PlaytestSessionIdSourceSchema = z.enum([
    */
   "discovered",
 ]);
-export type PlaytestSessionIdSource = z.infer<typeof PlaytestSessionIdSourceSchema>;
 
 /**
  * Where a client writes the private per-session log the runner reads its proof from.
@@ -333,7 +330,7 @@ export type PlaytestSessionIdSource = z.infer<typeof PlaytestSessionIdSourceSche
  * vendor's own reader module, because the instant this file learns one vendor's naming
  * rule it stops being a seam and becomes the switch statement the registry replaced.
  */
-export const PlaytestSessionLogSchema = z
+const PlaytestSessionLogSchema = z
   .object({
     /**
      * Env var that relocates the client's private state root, when the vendor offers
@@ -351,7 +348,6 @@ export const PlaytestSessionLogSchema = z
     pathTemplate: z.string().min(1),
   })
   .strict();
-export type PlaytestSessionLog = z.infer<typeof PlaytestSessionLogSchema>;
 
 /**
  * What the runner can actually WITNESS for this vendor — the evidence half of the seam.
@@ -438,7 +434,7 @@ export type PlaytestIsolationReasonCode =
   /** The capture block describes a reader this checkout does not contain. */
   | "capture_reader_module_missing";
 
-export interface PlaytestIsolationDerivation {
+interface PlaytestIsolationDerivation {
   isolation: PlaytestIsolation;
   code: PlaytestIsolationReasonCode;
   /** One sentence, written to be printed verbatim by `bin/doctor.ts`. */
@@ -723,7 +719,7 @@ export const PlaytestProviderSchema = z
   });
 export type PlaytestProvider = z.infer<typeof PlaytestProviderSchema>;
 
-export const PlaytestProviderRegistrySchema = z
+const PlaytestProviderRegistrySchema = z
   .array(PlaytestProviderSchema)
   .min(1)
   .superRefine((providers, ctx) => {
@@ -750,13 +746,11 @@ export const PlaytestProviderRegistrySchema = z
  * file works everywhere; a TS import does not. Keeping ONE source of truth that both the
  * typed module and the shell resolver read is what stops the two from drifting apart.
  */
-export const PLAYTEST_REGISTRY_PATH = "blind-tester/providers.json";
+const PLAYTEST_REGISTRY_PATH = "blind-tester/providers.json";
 
 const REGISTRY_FILE = new URL(PLAYTEST_REGISTRY_PATH, REPO_ROOT_URL);
 
-export const PlaytestRegistryFileSchema = z
-  .object({ providers: PlaytestProviderRegistrySchema })
-  .strict();
+const PlaytestRegistryFileSchema = z.object({ providers: PlaytestProviderRegistrySchema }).strict();
 
 /**
  * The shipped registry.
@@ -860,7 +854,7 @@ export function findCatalogModel(catalog: PlaytestCatalog, modelId: string): Pla
 }
 
 /** Read and validate one provider's catalog off disk. */
-export function loadPlaytestCatalog(provider: PlaytestProvider): PlaytestCatalog {
+function loadPlaytestCatalog(provider: PlaytestProvider): PlaytestCatalog {
   return parsePlaytestCatalog(
     provider,
     JSON.parse(readFileSync(new URL(provider.catalogPath, REPO_ROOT_URL), "utf8")),
@@ -875,7 +869,7 @@ export function loadPlaytestCatalog(provider: PlaytestProvider): PlaytestCatalog
  * paths — so no consumer has to know that "spark uses a different transport from the
  * rest of its own provider" is a thing that can be true.
  */
-export interface ResolvedModelTransport {
+interface ResolvedModelTransport {
   kind: "direct_mcp" | "code_mode";
   contract: string;
   requiredCliVersion: string | null;
@@ -884,7 +878,7 @@ export interface ResolvedModelTransport {
   fragment: string | null;
 }
 
-export function resolveModelTransport(
+function resolveModelTransport(
   provider: PlaytestProvider,
   model: PlaytestCatalogModel,
 ): ResolvedModelTransport {
@@ -903,7 +897,7 @@ export function resolveModelTransport(
 }
 
 /** One certified (provider, model) pair admitted to the pure fleet. */
-export interface CertifiedFleetEntry {
+interface CertifiedFleetEntry {
   provider: string;
   /** Launch id — the exact string handed to the client's `--model`. */
   model: string;
@@ -971,10 +965,7 @@ export function certifiedFleetModels(): CertifiedFleetEntry[] {
  * every consumer has to normalize for itself — the shape that produced the duplicate
  * alias list in the first place.
  */
-export function findCertifiedFleetModel(
-  providerId: string,
-  modelId: string,
-): CertifiedFleetEntry | null {
+function findCertifiedFleetModel(providerId: string, modelId: string): CertifiedFleetEntry | null {
   return (
     certifiedFleetModels().find(
       (entry) =>

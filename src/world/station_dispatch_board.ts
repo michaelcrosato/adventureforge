@@ -13,7 +13,7 @@ import type {
 /** A read-only, coverage-complete index of the current Station dispatch. */
 export const STATION_DISPATCH_BOARD_VERSION = 6 as const;
 export const STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT = 240;
-export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
+const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
 export const STATION_DISPATCH_SUPPORT_REVEAL_ID =
   "station_dispatch:review_optional_support" as const;
 
@@ -95,7 +95,7 @@ const SUPPORT_COPY: Readonly<
   },
 });
 
-export type StationDispatchBoardAction =
+type StationDispatchBoardAction =
   | Readonly<{
       kind: "inspect";
       tool: "inspect_overworld_session_story";

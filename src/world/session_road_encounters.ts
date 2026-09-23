@@ -27,7 +27,7 @@ export type OverworldRoadEncounterResult = {
   entry: OverworldJournalEntry;
 };
 
-export type OverworldRoadEncounterResourceState = {
+type OverworldRoadEncounterResourceState = {
   supplies: number;
   fatigue: number;
   minutes: number;
@@ -41,7 +41,7 @@ export type OverworldRoadEncounterResolution = {
   minutesAfter: number;
 };
 
-export type OverworldRoadEncounterApplicationState = OverworldRoadEncounterResourceState & {
+type OverworldRoadEncounterApplicationState = OverworldRoadEncounterResourceState & {
   region: string;
   regionRenown: Map<string, number>;
   journalEntries: OverworldJournalEntry[];
@@ -53,7 +53,7 @@ export type OverworldAppliedRoadEncounter = OverworldRoadEncounterResolution & {
   regionRenownAfter: number;
 };
 
-export type OverworldPendingRoadEncounterRestoreIndex = {
+type OverworldPendingRoadEncounterRestoreIndex = {
   activeGoalId: string;
   completedQuestIds: ReadonlySet<string>;
   currentId: string;

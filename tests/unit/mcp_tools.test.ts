@@ -2646,23 +2646,6 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).toThrow(/not pack_path/);
   });
 
-  it("adapt_story authors a green RPG pack from a premise (§12.1–3)", async () => {
-    const r = await api().adapt_story({ premise: "A keeper relights a dead lighthouse." });
-    expect(r.ok).toBe(true);
-    expect("mode" in r).toBe(false);
-    expect(r.report.ok).toBe(true);
-    expect("pack" in r).toBe(false);
-    expect(r.content_hash).toMatch(/^[0-9a-f]{64}$/);
-    expect(r.classifications.length).toBeGreaterThanOrEqual(3);
-
-    const withPack = await api().adapt_story({
-      premise: "A keeper relights a dead lighthouse.",
-      include_pack: true,
-    });
-    expect(withPack.pack?.meta.id).toBe("lighthouse_rpg_v1");
-    expect(JSON.stringify(r).length).toBeLessThan(JSON.stringify(withPack).length);
-  });
-
   it("retired pack-named validation/loading tools are absent", () => {
     const tools = api() as unknown as Record<string, unknown>;
     expect(tools.validate_pack).toBeUndefined();

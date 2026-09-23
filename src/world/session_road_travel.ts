@@ -15,7 +15,7 @@ import {
 } from "./session_travel_log.js";
 import type { OverworldRoadEncounterStrategy } from "./travel_mechanics.js";
 
-export type OverworldSessionRoadEncounterState = {
+type OverworldSessionRoadEncounterState = {
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   current: OverworldNode;
   minutes: number;
@@ -26,7 +26,7 @@ export type OverworldSessionRoadEncounterState = {
   journalEntriesById: Map<string, OverworldJournalEntry>;
 };
 
-export type OverworldSessionRoadTravelState = {
+type OverworldSessionRoadTravelState = {
   activeGoalId: string;
   completedQuestIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
@@ -40,10 +40,10 @@ export type OverworldSessionRoadTravelState = {
   travelLog: OverworldRecordedTravelLeg["entry"][];
 };
 
-export type OverworldSessionRoadTravelArrivalState = OverworldSessionRoadTravelState &
+type OverworldSessionRoadTravelArrivalState = OverworldSessionRoadTravelState &
   Omit<MutableOverworldSessionTownVisitState, "nodeId">;
 
-export type OverworldRecordedRoadTravelArrival = OverworldRecordedTravelLeg & {
+type OverworldRecordedRoadTravelArrival = OverworldRecordedTravelLeg & {
   currentAreaIdAfter: string | null;
   stateChanged: true;
 };
@@ -109,7 +109,7 @@ export function applyOverworldSessionRoadEncounter(
   });
 }
 
-export function applyOverworldSessionRoadTravel(
+function applyOverworldSessionRoadTravel(
   state: OverworldSessionRoadTravelState,
   edgeId: string,
 ): OverworldRecordedTravelLeg {

@@ -52,7 +52,7 @@ import {
 export const CLI_JOURNEY_SAVE_KIND = "adventureforge_cli_journey" as const;
 export const CLI_JOURNEY_SAVE_VERSION = 1 as const;
 
-export type CliEmbeddedQuestPhase = "active" | "suspended" | "terminal";
+type CliEmbeddedQuestPhase = "active" | "suspended" | "terminal";
 export type CliJourneyPhase = "overworld" | `quest_${CliEmbeddedQuestPhase}`;
 
 type CliEmbeddedQuest = {
@@ -67,7 +67,7 @@ type CliEmbeddedQuest = {
   state: GameState;
 };
 
-export type CliEmbeddedQuestView = Readonly<{
+type CliEmbeddedQuestView = Readonly<{
   worldQuestId: string;
   title: string;
   contentHash: string;
@@ -79,7 +79,7 @@ export type CliEmbeddedQuestView = Readonly<{
   actions: readonly RpgActionOption[];
 }>;
 
-export type CliQuestStepResult = {
+type CliQuestStepResult = {
   ok: boolean;
   rejectionReason: string | null;
   events: readonly GameEvent[];
@@ -155,7 +155,7 @@ export type EmbeddedQuestChildRecord = CliJourneySaveChild;
 export const EmbeddedQuestChildRecordSchema = CliJourneySaveChildSchema;
 
 /** The live state an embedded child record is written from. */
-export type EmbeddedQuestChildSource = Readonly<{
+type EmbeddedQuestChildSource = Readonly<{
   worldQuestId: string;
   title: string;
   contentHash: string;
@@ -184,7 +184,7 @@ export function embeddedQuestChildRecord(
 }
 
 /** A child whose record survived every restore check, ready to be bound to a live parent. */
-export type RestoredEmbeddedQuestChild = Readonly<{
+type RestoredEmbeddedQuestChild = Readonly<{
   worldQuestId: string;
   title: string;
   contentHash: string;
@@ -203,7 +203,7 @@ export function unfinishedEmbeddedQuestIds(parent: OverworldSession): string[] {
   return unfinishedQuestIds(parent);
 }
 
-export class CliJourneyIntegrityError extends Error {
+class CliJourneyIntegrityError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = "CliJourneyIntegrityError";

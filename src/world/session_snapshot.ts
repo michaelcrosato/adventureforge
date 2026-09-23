@@ -21,7 +21,7 @@ import type { QuestDispatchLaunchSeal } from "./quest_dispatch_window.js";
  * Structural compatibility contract for overworld saves. Authored content
  * revisions do not change this value; incompatible state-shape changes do.
  */
-export const OVERWORLD_WORLD_SCHEMA_VERSION = 11 as const;
+const OVERWORLD_WORLD_SCHEMA_VERSION = 11 as const;
 export const OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION = 10 as const;
 export const OVERWORLD_SESSION_SAVE_VERSION = OVERWORLD_WORLD_SCHEMA_VERSION;
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { planOverworldRoute } from "../../src/world/overworld.js";
+import { planOverworldRoute } from "./support/overworld_queries.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";

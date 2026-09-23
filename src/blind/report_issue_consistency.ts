@@ -8,7 +8,7 @@ type ProseFinding = Readonly<{
   tokens: ReadonlySet<string>;
 }>;
 
-export type ReportIssueConsistencyResult = { ok: true } | { ok: false; reason: string };
+type ReportIssueConsistencyResult = { ok: true } | { ok: false; reason: string };
 
 const BUGS_HEADING =
   /^\s*(?:#{1,6}\s*)?(?:5[.)]\s*)?(?:\*\*)?Bugs or design flaws(?:\*\*)?(?:\s*[,.:\-\u2014]\s*(.*))?\s*$/iu;

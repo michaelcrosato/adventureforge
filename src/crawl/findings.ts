@@ -39,7 +39,7 @@ export const CrawlLocationSchema = z
   })
   .strict();
 
-export const CrawlReproSchema = z
+const CrawlReproSchema = z
   .object({
     kind: z.enum(["rpg-trace", "overworld-actions", "none"]),
     trace: z.unknown().nullable(),

@@ -19,7 +19,7 @@ evidence:
     uncertainty, all in the Claude lineage. Source review and captured action
     results confirm that the ridge descent correctly increments cattle_alarm by
     1 independently of fodder relief. This is not a mechanics defect.
-  additional_record: "https://github.com/michaelcrosato/zork-unlimited/blob/8dd46fc80b16f585f2dbb01b5ed3ae933740437a/20260905T095859Z__claude_code__claude-sonnet-5__400ba1f45bca/session.json"
+  additional_record: "https://github.com/michaelcrosato/adventureforge/blob/8dd46fc80b16f585f2dbb01b5ed3ae933740437a/20260905T095859Z__claude_code__claude-sonnet-5__400ba1f45bca/session.json"
   captured_alarm_sequence: >
     In the additional published 0d2ed693 session, ridge descent changes alarm
     from 0 to 1; the successful first feed leaves it at 1; the second feed

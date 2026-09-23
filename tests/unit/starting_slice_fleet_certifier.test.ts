@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { bindPureCodexReceipt } from "../../src/blind/receipt_binding.js";
 import { extractRecoveredReport } from "../../src/blind/report_recovery.js";
 import { hashState } from "../../src/core/hash.js";
-import { writeCertificationArtifactSafely } from "../../bin/certify-starting-slice.js";
+import { writeCertificationArtifactSafely } from "../../bin/starting-slice.js";
 import {
   PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
   PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,

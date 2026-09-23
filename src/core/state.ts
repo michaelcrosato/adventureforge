@@ -24,7 +24,7 @@ export function isRuntimeSeed(seed: unknown): seed is number {
   return typeof seed === "number" && Number.isSafeInteger(seed);
 }
 
-export function runtimeSeedValidationMessage(label: string, seed: unknown): string {
+function runtimeSeedValidationMessage(label: string, seed: unknown): string {
   return `${label} must be an integer within JavaScript's safe range, got ${JSON.stringify(seed)}.`;
 }
 
@@ -111,7 +111,7 @@ export type GameState = {
   embeddedLaunchOverlayReceipt?: EmbeddedLaunchOverlayReceipt;
 };
 
-export type InitOptions = {
+type InitOptions = {
   seed: number;
   start: string;
   varsInit?: Record<string, number>;

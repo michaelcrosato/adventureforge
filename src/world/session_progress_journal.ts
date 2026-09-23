@@ -10,7 +10,7 @@ export type OverworldProgressJournalSourceIndex = {
   visitedAreaIds: ReadonlySet<string>;
 };
 
-export type MutableOverworldProgressJournalSourceIndex = {
+type MutableOverworldProgressJournalSourceIndex = {
   completedJobIds: Set<string>;
   completedQuestIds: Set<string>;
   completedRegionalArcIds: Set<string>;

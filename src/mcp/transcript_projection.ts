@@ -62,7 +62,7 @@ type TranscriptCompactMore = readonly [
   flags?: number,
   journal?: number,
 ];
-export type TranscriptCompactSummary = Omit<
+type TranscriptCompactSummary = Omit<
   TranscriptSummary,
   "ending_id" | "inventory" | "flags" | "journal"
 > & {
@@ -72,7 +72,7 @@ export type TranscriptCompactSummary = Omit<
   journal?: string[];
   more?: TranscriptCompactMore;
 };
-export type TranscriptSummarySource = Omit<
+type TranscriptSummarySource = Omit<
   TranscriptSummary,
   "scenes" | "inventory" | "flags" | "journal"
 > & {
@@ -210,23 +210,6 @@ export function compactTranscriptSummary(
   };
 }
 
-export function transcriptSummaryFor<Args extends TranscriptArgs>(
-  sessions: SessionStore,
-  session: Session,
-  args: Args,
-  summary: TranscriptSummary,
-): TranscriptSummaryFor<Args> {
-  return (
-    args.compact_summary
-      ? sessions.transcriptSummaryProjection(
-          session.id,
-          TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
-          () => compactTranscriptSummary(summary),
-        )
-      : summary
-  ) as TranscriptSummaryFor<Args>;
-}
-
 type PublicTranscriptSummary = TranscriptSummary | TranscriptCompactSummary;
 
 export function cloneTranscriptSummary<Summary extends PublicTranscriptSummary>(
@@ -306,7 +289,7 @@ function cloneTranscriptTurn<Turn extends TranscriptFullTurn | TranscriptCompact
   } as Turn;
 }
 
-export function cloneTranscriptTurns<Args extends TranscriptArgs>(
+function cloneTranscriptTurns<Args extends TranscriptArgs>(
   turns: readonly TranscriptTurnFor<Args>[],
 ): TranscriptTurnFor<Args>[] {
   return turns.map((turn) =>

@@ -68,14 +68,14 @@ const ExitInterviewFields = {
   verdict: z.string().min(20).max(EXIT_INTERVIEW_MAX_VERDICT),
 } as const;
 
-export const ISSUE_CONSISTENCY_VERSION = 1 as const;
+const ISSUE_CONSISTENCY_VERSION = 1 as const;
 const IssueConsistencyVersionField = {
   issue_consistency_version: z.literal(ISSUE_CONSISTENCY_VERSION).optional(),
 } as const;
 
 /** Pre-contract reports. Absence of schema_version is the durable legacy tag. */
 export const SubjectiveExitInterviewSchema = z.object(ExitInterviewFields).strict();
-export const LegacyExitInterviewSchema = SubjectiveExitInterviewSchema;
+const LegacyExitInterviewSchema = SubjectiveExitInterviewSchema;
 
 const HistoricalJourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed"]);
 const CurrentJourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed", "character_died"]);
@@ -151,7 +151,7 @@ function validateRetentionEventShape(
   }
 }
 
-export const HistoricalJourneyRetentionEventSchema = z
+const HistoricalJourneyRetentionEventSchema = z
   .object({
     ...JourneyRetentionEventCommonFields,
     reasons: z.array(HistoricalJourneyChoiceReasonSchema).min(1).max(2),
@@ -189,11 +189,6 @@ export const CurrentJourneyRetentionEventSchema = z
       });
     }
   });
-
-export const JourneyRetentionEventSchema = z.union([
-  HistoricalJourneyRetentionEventSchema,
-  CurrentJourneyRetentionEventSchema,
-]);
 
 type ReceiptTimeline = {
   acceptedDecisions: number;
@@ -526,7 +521,7 @@ export const PureExitInterviewV2Schema = z
   })
   .strict();
 
-export const StructuralExitInterviewV2Schema = z
+const StructuralExitInterviewV2Schema = z
   .object({
     schema_version: z.literal(2),
     ...IssueConsistencyVersionField,
@@ -544,9 +539,8 @@ export const ExitInterviewSchema = z.union([
   LegacyExitInterviewSchema,
 ]);
 
-export type LegacyExitInterview = z.infer<typeof LegacyExitInterviewSchema>;
 export type PureExitInterviewV2 = z.infer<typeof PureExitInterviewV2Schema>;
-export type StructuralExitInterviewV2 = z.infer<typeof StructuralExitInterviewV2Schema>;
+type StructuralExitInterviewV2 = z.infer<typeof StructuralExitInterviewV2Schema>;
 export type ExitInterview = z.infer<typeof ExitInterviewSchema>;
 
 export function isPureExitInterviewV2(interview: ExitInterview): interview is PureExitInterviewV2 {

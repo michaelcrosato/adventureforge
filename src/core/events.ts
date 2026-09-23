@@ -19,15 +19,3 @@ export type GameEvent =
   | { type: "rejected"; reason: string };
 
 /** Allowed `type` values, per §8.3 — handy for tests and exhaustiveness. */
-export const EVENT_TYPES = [
-  "state_change",
-  "narration",
-  "open_object",
-  "close_object",
-  "move",
-  "take",
-  "drop",
-  "dialogue",
-  "ending",
-  "rejected",
-] as const;

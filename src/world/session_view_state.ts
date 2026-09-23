@@ -68,7 +68,7 @@ type OverworldSessionViewLocalContentState = Pick<
   "poisByArea" | "charactersByArea" | "eventsByArea" | "sitesByArea"
 >;
 
-export type OverworldSessionViewModelState = {
+type OverworldSessionViewModelState = {
   character: CampaignCharacterView;
   worldName: string;
   worldTownCount: number;
@@ -105,7 +105,7 @@ export type OverworldSessionViewModelState = {
   ids: OverworldCompactSessionIdState;
 };
 
-export type OverworldSessionFullViewModelState = OverworldSessionViewModelState & {
+type OverworldSessionFullViewModelState = OverworldSessionViewModelState & {
   regionalArcs: readonly OverworldRegionalArcProgress[];
 };
 
@@ -148,7 +148,7 @@ export type OverworldSessionViewModelSourceState = {
   ids: OverworldCompactSessionIdState;
 };
 
-export type OverworldSessionFullViewModelSourceState = OverworldSessionViewModelSourceState & {
+type OverworldSessionFullViewModelSourceState = OverworldSessionViewModelSourceState & {
   regionalArcs: readonly OverworldRegionalArc[];
   regionalArcAnchorTownsById: ReadonlyMap<string, readonly OverworldNode[]>;
   resolvedEventHomeIds: ReadonlySet<string>;
@@ -401,7 +401,7 @@ export function buildOverworldSessionViewModelState(
   };
 }
 
-export function buildOverworldSessionFullViewModelState(
+function buildOverworldSessionFullViewModelState(
   source: OverworldSessionFullViewModelSourceState,
 ): OverworldSessionFullViewModelState {
   const state = buildOverworldSessionViewModelState(source);
@@ -478,7 +478,7 @@ export function buildOverworldSessionCompactViewFromSource(
   return buildOverworldSessionCompactViewFromState(buildOverworldSessionViewModelState(source));
 }
 
-export function buildOverworldSessionViewFromState(
+function buildOverworldSessionViewFromState(
   state: OverworldSessionFullViewModelState,
 ): OverworldView {
   return buildOverworldSessionView({

@@ -940,40 +940,11 @@ describe("fleet planning", () => {
     }
   });
 
-  it("rotates personas only for explicit structural mocks and honors seed base", () => {
-    const runs = planFleetRuns(
-      parseFleetArgs(["--mock", "--count", "7", "--personas", "mixed", "--seed-base", "100"]),
-    );
-    expect(runs.map((r: { seed: number }) => r.seed)).toEqual([100, 101, 102, 103, 104, 105, 106]);
-    expect(runs[0].persona).toBe("explorer");
-    expect(runs[5].persona).toBe("cynical_veteran");
-    expect(runs[6].persona).toBe("explorer"); // 6 % 6 wraps
-    expect(new Set(runs.map((r: { persona: string }) => r.persona)).size).toBe(6);
-  });
-
-  // cynical_veteran shipped as a persona file but was never added to the rotation, so
-  // `--mock --personas mixed` silently never exercised it. Pin the rotation to the
-  // persona library itself so the next persona cannot be left out the same way.
-  it("rotates through every non-default persona file", () => {
-    const library = readdirSync(join(process.cwd(), "blind-tester", "personas"))
-      .filter((name) => name.endsWith(".md") && name !== "default.md")
-      .map((name) => name.slice(0, -".md".length))
-      .sort();
-    const runs = planFleetRuns(
-      parseFleetArgs(["--mock", "--count", String(library.length), "--personas", "mixed"]),
-    );
-    expect(runs.map((r: { persona: string }) => r.persona).sort()).toEqual(library);
-  });
-
-  it("allows named personas on live fleets but refuses unrecorded sampling", () => {
-    // A persona is a segment to read, not a contamination: every session record carries
-    // its persona id and the persona file's content hash, and retention already groups
-    // by persona. What is still refused is "mixed", where the harness picks per member
-    // and the cohort's composition is not stated up front.
+  it("records a named persona as given", () => {
+    // Every session record carries its persona id and the persona file's content hash;
+    // run.sh is what refuses a name with no file behind it.
     expect(parseFleetArgs(["--personas", "breaker"]).personas).toBe("breaker");
     expect(parseFleetArgs(["--personas", "cynical_veteran"]).personas).toBe("cynical_veteran");
-    expect(() => parseFleetArgs(["--personas", "mixed"])).toThrow(/structural sampling mode/i);
-    expect(parseFleetArgs(["--mock", "--personas", "mixed"]).personas).toBe("mixed");
   });
   it("refuses an unregistered provider id and names the real ones", () => {
     // "claude" is a near-miss for the registered `claude_code`. A near-miss must be

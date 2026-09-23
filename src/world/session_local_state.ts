@@ -60,31 +60,31 @@ export type OverworldSessionAreaContent = {
   sites: readonly OverworldExplorationSite[];
 };
 
-export type OverworldSessionCurrentAreaResolution = {
+type OverworldSessionCurrentAreaResolution = {
   area: OverworldArea | null;
   applied: OverworldAppliedCurrentAreaSelection | null;
 };
 
-export type OverworldSessionLocalDiscoveryApplication = {
+type OverworldSessionLocalDiscoveryApplication = {
   discovery: OverworldLocalDiscoveryResult;
   stateChanged: boolean;
 };
 
-export function overworldSessionLocalAreas(
+function overworldSessionLocalAreas(
   state: Pick<MutableOverworldSessionLocalState, "areasByTown">,
   nodeId: string,
 ): readonly OverworldArea[] {
   return state.areasByTown.get(nodeId) ?? [];
 }
 
-export function overworldSessionAreaById(
+function overworldSessionAreaById(
   state: Pick<MutableOverworldSessionLocalState, "areasById">,
   areaId: string,
 ): OverworldArea | null {
   return state.areasById.get(areaId) ?? null;
 }
 
-export function applyOverworldSessionCurrentAreaForTown(
+function applyOverworldSessionCurrentAreaForTown(
   state: MutableOverworldSessionLocalState,
   nodeId: string,
 ): OverworldAppliedCurrentAreaSelection {
@@ -131,28 +131,28 @@ export function requireOverworldSessionCurrentAreaId(area: OverworldArea | null)
   return area.id;
 }
 
-export function currentOverworldSessionAreaPois(
+function currentOverworldSessionAreaPois(
   state: Pick<MutableOverworldSessionLocalState, "poisByArea">,
   currentAreaId: string,
 ): readonly OverworldPoi[] {
   return state.poisByArea.get(currentAreaId) ?? [];
 }
 
-export function currentOverworldSessionAreaCharacters(
+function currentOverworldSessionAreaCharacters(
   state: Pick<MutableOverworldSessionLocalState, "charactersByArea">,
   currentAreaId: string,
 ): readonly OverworldCharacter[] {
   return state.charactersByArea.get(currentAreaId) ?? [];
 }
 
-export function currentOverworldSessionAreaEvents(
+function currentOverworldSessionAreaEvents(
   state: Pick<MutableOverworldSessionLocalState, "eventsByArea">,
   currentAreaId: string,
 ): readonly OverworldLocalEvent[] {
   return state.eventsByArea.get(currentAreaId) ?? [];
 }
 
-export function currentOverworldSessionAreaSites(
+function currentOverworldSessionAreaSites(
   state: Pick<MutableOverworldSessionLocalState, "sitesByArea">,
   currentAreaId: string,
 ): readonly OverworldExplorationSite[] {

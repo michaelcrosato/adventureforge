@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "1908a7fcad53dff7",
   "title": "src/starting_slice/causal_matrix.ts has zero production callers — the slice contract never participates in certification",
-  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nWiring it in means editing bin/certify-starting-slice.ts or bin/check-starting-slice-pilot.ts (bin/ is outside my ownership), and it is a product decision: making the shipped active_unproven matrix a hard gate changes what can certify. I fixed the narrow in-ownership half (the duplicated decision budget now has a drift pin); the rest needs the repo owner.",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nWiring it in means editing bin/starting-slice.ts or bin/starting-slice.ts (bin/ is outside my ownership), and it is a product decision: making the shipped active_unproven matrix a hard gate changes what can certify. I fixed the narrow in-ownership half (the duplicated decision budget now has a drift pin); the rest needs the repo owner.",
   "source": "audit",
   "kind": "bug",
   "priority": "P1",

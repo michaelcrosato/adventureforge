@@ -5,9 +5,9 @@
  * GameState.vars. Keeping that state convention here prevents each runtime from
  * re-owning the same hidden loop bookkeeping.
  */
-export type DialogueNodeLike = { id: string };
+type DialogueNodeLike = { id: string };
 
-export type DialogueNpcLike = {
+type DialogueNpcLike = {
   id: string;
   dialogue: {
     nodes: readonly DialogueNodeLike[];

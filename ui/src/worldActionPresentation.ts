@@ -11,7 +11,7 @@ function assertNever(value: never, context: string): never {
  * Keep authored service expansion fail-visible. A new canonical action must get
  * an explicit label and engine call instead of silently becoming "Resupply".
  */
-export function serviceActionTitle(action: ProjectedServiceAction): string {
+function serviceActionTitle(action: ProjectedServiceAction): string {
   switch (action) {
     case "care":
       return "Receive care";

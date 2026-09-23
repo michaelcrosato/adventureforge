@@ -47,7 +47,7 @@ import { resolveLocalJobSceneOption } from "./local_job_scene.js";
 import { resolveLocalEventSceneOption } from "./local_event_scene.js";
 import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 
-export type OverworldResourceReplaySourceIndex = {
+type OverworldResourceReplaySourceIndex = {
   areaHomes: ReadonlyMap<string, string>;
   campaignServiceRulesById: ReadonlyMap<string, OverworldCampaignServiceRule>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
@@ -105,7 +105,7 @@ export type OverworldRoadJournalResolutionEntry = {
   recordedAt: number;
 };
 
-export type OverworldRoadJournalResolutionIndex = {
+type OverworldRoadJournalResolutionIndex = {
   byKey: ReadonlyMap<string, OverworldRoadJournalResolutionEntry>;
   entries: readonly OverworldRoadJournalResolutionEntry[];
   requiredKeys: ReadonlySet<string>;
@@ -121,11 +121,11 @@ export type OverworldServiceJournalReplayIndex = {
   entries: readonly OverworldServiceJournalReplayEntry[];
 };
 
-export type OverworldResourceReplayJournalTimeline = {
+type OverworldResourceReplayJournalTimeline = {
   roadJournalEntries: readonly OverworldRoadJournalResolutionEntry[];
 };
 
-export type OverworldResourceReplayLocalActionIndex = {
+type OverworldResourceReplayLocalActionIndex = {
   entries: readonly {
     entry: OverworldJournalEntry;
     recordedAt: number;

@@ -14,7 +14,7 @@ import {
 } from "../starting_slice/fleet_run_artifacts.js";
 import { certifiedModelIdsForProvider } from "./providers.js";
 
-export type AdjacentPureArtifactGate =
+type AdjacentPureArtifactGate =
   | { ok: true; provider: PureFleetProvider | "legacy" }
   | { ok: false; reason: string };
 

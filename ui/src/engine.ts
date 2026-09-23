@@ -110,7 +110,7 @@ export type View = {
   characterContinuity?: EmbeddedQuestCharacterContinuity;
 };
 
-export type StepOutcome = {
+type StepOutcome = {
   ok: boolean;
   narration: string[];
   rejection: string | null;
@@ -118,7 +118,7 @@ export type StepOutcome = {
   journeyActionId: string | null;
 };
 
-export type ReplayedEmbeddedQuestDecision = {
+type ReplayedEmbeddedQuestDecision = {
   actionId: string;
   classification: JourneyDecisionClassification;
   checkpointSafeBoundary: boolean;

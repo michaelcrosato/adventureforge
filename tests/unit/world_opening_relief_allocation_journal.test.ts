@@ -13,7 +13,6 @@ import {
   type OpeningReliefAllocation,
 } from "../../src/world/opening_relief_allocation.js";
 import {
-  allOpeningReliefAllocationJournalDrafts,
   openingReliefAllocationJournalEntry,
   openingReliefAllocationJournalId,
   openingReliefAllocationOfferJournalDraft,
@@ -258,25 +257,13 @@ describe("opening relief allocation journal proof", () => {
   it("creates immutable canonical offer and selection copies with named exposure", () => {
     const scene = reliefAllocationScene();
     const offer = openingReliefAllocationOfferJournalDraft(scene);
-    const drafts = allOpeningReliefAllocationJournalDrafts(scene, characterAfterPreparation());
-
     expect(offer).toEqual({
       id: "relief_allocation_offer:albany:wolf_relief_allocation",
       kind: "relief_allocation_offer",
       title: scene.title,
       text: scene.message,
     });
-    expect(drafts).toHaveLength(3);
-    expect(drafts[0]).toMatchObject({
-      id: openingReliefAllocationJournalId(scene.id, "albany:relief_cade_steading"),
-      kind: "relief_allocation",
-      title: "Allocated relief: Cover Cade's Steading",
-    });
-    expect(drafts[0]!.text).toMatch(
-      /protects: Cade's byre.*leaves exposed: Albany's resident counter.*actual cost: 10 minutes/i,
-    );
     expect(Object.isFrozen(offer)).toBe(true);
-    expect(Object.isFrozen(drafts)).toBe(true);
   });
 
   it("replays no evidence, a pending offer, and one exact paid allocation", () => {

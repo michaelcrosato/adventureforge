@@ -73,18 +73,17 @@ export const FeedbackAcceptanceStateSchema = z
   });
 
 export type FeedbackAcceptanceState = z.infer<typeof FeedbackAcceptanceStateSchema>;
-export type PendingCycleReport = z.infer<typeof PendingCycleReportSchema>;
 
-export const FeedbackCycleSelectionSchema = z
+const FeedbackCycleSelectionSchema = z
   .object({
     run_id: z.string().regex(CYCLE_RUN_ID_RE),
     selected_recommendation_id: z.string().min(1).max(200).nullable(),
   })
   .strict();
 
-export type FeedbackCycleSelection = z.infer<typeof FeedbackCycleSelectionSchema>;
+type FeedbackCycleSelection = z.infer<typeof FeedbackCycleSelectionSchema>;
 
-export type FeedbackCycleSelectionParse =
+type FeedbackCycleSelectionParse =
   | { ok: true; selection: FeedbackCycleSelection | null }
   | { ok: false; reason: string };
 
@@ -154,7 +153,7 @@ export const EMPTY_FEEDBACK_ACCEPTANCE_STATE: FeedbackAcceptanceState = {
   pending_cycle_reports: [],
 };
 
-export type FeedbackAcceptanceParse =
+type FeedbackAcceptanceParse =
   | { ok: true; found: boolean; state: FeedbackAcceptanceState }
   | { ok: false; reason: string };
 

@@ -21,7 +21,7 @@ const NAN_WORD = /\bNaN\b/;
 const UNRESOLVED_TEMPLATE = /\{\{|\}\}|\$\{/;
 
 /** Returns a defect description or null. Pure string check — no engine access. */
-export function textDefect(text: string): string | null {
+function textDefect(text: string): string | null {
   if (text.trim().length === 0) return "empty or whitespace-only text";
   if (UNDEFINED_WORD.test(text))
     return `text contains a literal "undefined": ${JSON.stringify(text)}`;

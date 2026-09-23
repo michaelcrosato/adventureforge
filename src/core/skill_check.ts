@@ -32,7 +32,7 @@ export const SkillCheckSchema = z
   })
   .strict();
 
-export type SkillCheck = z.infer<typeof SkillCheckSchema>;
+type SkillCheck = z.infer<typeof SkillCheckSchema>;
 
 /**
  * Resolve a skill check: roll d20 + the named skill var against `difficulty`.

@@ -24,8 +24,8 @@ import type {
   OverworldJournalEntry,
 } from "./session_snapshot.js";
 
-export const OPENING_ALLY_JOURNAL_PREFIX = "ally:" as const;
-export const OPENING_ALLY_OFFER_JOURNAL_PREFIX = "ally_offer:" as const;
+const OPENING_ALLY_JOURNAL_PREFIX = "ally:" as const;
+const OPENING_ALLY_OFFER_JOURNAL_PREFIX = "ally_offer:" as const;
 
 export type OpeningAllyJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">

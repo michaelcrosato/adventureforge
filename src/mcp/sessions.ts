@@ -64,7 +64,7 @@ export type TranscriptSummary = {
 export type RpgStep = (state: GameState, action: RpgAction) => StepResult;
 
 export const MCP_SESSION_STORE_LIMIT = 64;
-export const MCP_SESSION_TRANSCRIPT_TURN_LIMIT = 128;
+const MCP_SESSION_TRANSCRIPT_TURN_LIMIT = 128;
 
 export type TranscriptStats = {
   readonly turns: number;

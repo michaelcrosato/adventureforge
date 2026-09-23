@@ -8,8 +8,6 @@ import {
 } from "./overworld.js";
 import {
   applyCampaignConsequences,
-  deriveCampaignWorldFactIds,
-  type CampaignConsequenceApplication,
   type CampaignConsequenceEffect,
 } from "./campaign_consequences.js";
 import {
@@ -47,7 +45,7 @@ export type OverworldQuestCompletionOutcome = {
   death: boolean;
 };
 
-export type OverworldQuestStartState = {
+type OverworldQuestStartState = {
   questId: string;
   questsById: ReadonlyMap<string, OverworldQuest>;
   areasById: ReadonlyMap<string, OverworldArea>;
@@ -58,7 +56,7 @@ export type OverworldQuestStartState = {
   startedQuestIds: ReadonlySet<string>;
 };
 
-export type OverworldQuestPrepareState = OverworldQuestStartState & {
+type OverworldQuestPrepareState = OverworldQuestStartState & {
   approachId?: string;
   sessionFingerprint?: string;
   minutes: number;
@@ -74,7 +72,7 @@ export type OverworldQuestPrepareState = OverworldQuestStartState & {
   openingAlly?: OpeningAlly | null;
 };
 
-export type OverworldQuestCompletionState = {
+type OverworldQuestCompletionState = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
   character: CampaignCharacterState;
@@ -122,20 +120,20 @@ export type OverworldQuestCompletionPlan = {
   entryDraft: Omit<OverworldJournalEntry, "recordedAt">;
 };
 
-export type OverworldQuestStartApplicationState = {
+type OverworldQuestStartApplicationState = {
   startedQuestIds: Set<string>;
 };
 
-export type OverworldQuestCompletionApplicationState = {
+type OverworldQuestCompletionApplicationState = {
   completedQuestIds: Set<string>;
   regionRenown: Map<string, number>;
 };
 
-export type OverworldAppliedQuestLifecycle = {
+type OverworldAppliedQuestLifecycle = {
   questId: string;
 };
 
-export type OverworldAppliedQuestCompletion = OverworldAppliedQuestLifecycle & {
+type OverworldAppliedQuestCompletion = OverworldAppliedQuestLifecycle & {
   renownRegion: string;
   renownGained: number;
   renownAfter: number;
@@ -166,7 +164,7 @@ export const QUEST_COMPLETION_RENOWN = 8;
 // quest's elapsed time to the reward-economy constant above: rebalancing renown
 // 8 → 10 would have re-timed the whole game by +30 minutes each and invalidated
 // journal text that quotes elapsed minutes. Two unrelated numbers, two constants.
-export const QUEST_COMPLETION_LOCAL_WORK_MINUTES = 120;
+const QUEST_COMPLETION_LOCAL_WORK_MINUTES = 120;
 
 export function questCompletionMinutes(
   quest: OverworldQuest,
@@ -207,43 +205,7 @@ export function questCampaignEffectGroupsForOutcomes(
     });
 }
 
-/** Replay trusted exports in completion order so party removal and promise resolution stay causal. */
-export function replayQuestCampaignConsequences(args: {
-  character: CampaignCharacterState;
-  questsById: ReadonlyMap<string, OverworldQuest>;
-  questOutcomeIds: ReadonlyMap<string, string>;
-  questOutcomeOrder?: readonly string[];
-}): CampaignConsequenceApplication {
-  const order = args.questOutcomeOrder ?? [...args.questOutcomeIds.keys()].sort();
-  if (
-    new Set(order).size !== order.length ||
-    order.length !== args.questOutcomeIds.size ||
-    order.some((questId) => !args.questOutcomeIds.has(questId))
-  ) {
-    throw new Error("Quest consequence replay order must name every completed quest exactly once.");
-  }
-  const effectGroups: CampaignConsequenceEffect[][] = [];
-  let characterAfter = cloneCampaignCharacterState(args.character);
-  for (const questId of order) {
-    const quest = args.questsById.get(questId);
-    if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
-    const endingId = args.questOutcomeIds.get(questId)!;
-    const campaignExport = questCampaignExportForEnding(quest, endingId);
-    if (!campaignExport) continue;
-    const effects = [...overworldQuestCampaignEffectsForCharacter(campaignExport, characterAfter)];
-    effectGroups.push(effects);
-    characterAfter = applyCampaignConsequences({
-      character: characterAfter,
-      effects,
-    }).characterAfter;
-  }
-  return {
-    characterAfter,
-    worldFactIds: deriveCampaignWorldFactIds(effectGroups),
-  };
-}
-
-export function questCompletionJournalEntryDraft(args: {
+function questCompletionJournalEntryDraft(args: {
   quest: OverworldQuest;
   endingId: string;
   endingTitle: string;
@@ -373,21 +335,6 @@ export function previewOverworldQuestStart(state: OverworldQuestPrepareState): O
     state.character.knowledge,
     dispatchWindow,
   );
-}
-
-export function planOverworldQuestStart(state: OverworldQuestStartState): OverworldQuestStartPlan {
-  const quest = questForOverworldQuestStart(state);
-  return {
-    minutes: 0,
-    quest: questView(quest),
-    entryDraft: {
-      id: `quest:${quest.id}`,
-      kind: "quest",
-      town: state.currentTownName,
-      title: `Started ${quest.title}`,
-      text: `Lead: ${quest.discovery}`,
-    },
-  };
 }
 
 /**

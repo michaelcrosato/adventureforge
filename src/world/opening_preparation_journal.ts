@@ -19,8 +19,8 @@ import type {
   OverworldJournalEntry,
 } from "./session_snapshot.js";
 
-export const OPENING_PREPARATION_JOURNAL_PREFIX = "preparation:" as const;
-export const OPENING_PREPARATION_OFFER_JOURNAL_PREFIX = "preparation_offer:" as const;
+const OPENING_PREPARATION_JOURNAL_PREFIX = "preparation:" as const;
+const OPENING_PREPARATION_OFFER_JOURNAL_PREFIX = "preparation_offer:" as const;
 
 export type OpeningPreparationJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -57,7 +57,7 @@ export function openingPreparationOfferJournalDraft(
   });
 }
 
-export function openingPreparationJournalDraft(args: {
+function openingPreparationJournalDraft(args: {
   scene: OpeningPreparation;
   character: CampaignCharacterState;
   profileId: string;
@@ -75,18 +75,6 @@ export function openingPreparationJournalDraft(args: {
     title: `Prepared: ${applied.profile.title}`,
     text: `${applied.profile.summary} ${applied.profile.preview} Actual cost: ${formatOpeningPreparationCost(applied.terms)}.${sponsorship} ${applied.profile.consequence}`,
   });
-}
-
-export function allOpeningPreparationJournalDrafts(
-  scene: OpeningPreparation,
-  character: CampaignCharacterState,
-): readonly OpeningPreparationJournalDraft[] {
-  const parsed = parseOpeningPreparation(scene);
-  return Object.freeze(
-    parsed.profiles.map((profile) =>
-      openingPreparationJournalDraft({ scene: parsed, character, profileId: profile.id }),
-    ),
-  );
 }
 
 function freezeBoundary(

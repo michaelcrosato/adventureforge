@@ -1,10 +1,10 @@
 import type { GameState } from "../core/state.js";
 
-export type PublicVarsOptions = {
+type PublicVarsOptions = {
   hideInternal?: boolean;
 };
 
-export type PublicInventoryOptions = {
+type PublicInventoryOptions = {
   sort?: boolean;
 };
 

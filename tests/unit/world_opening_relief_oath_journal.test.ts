@@ -13,7 +13,6 @@ import {
   type OpeningReliefOath,
 } from "../../src/world/opening_relief_oath.js";
 import {
-  allOpeningReliefOathJournalDrafts,
   openingReliefOathJournalEntry,
   openingReliefOathJournalId,
   openingReliefOathOfferJournalDraft,
@@ -306,29 +305,13 @@ describe("opening relief-oath journal proof", () => {
   it("creates canonical detached offer and access-duty-cost selection evidence", () => {
     const fixture = selectedFixture();
     const offer = openingReliefOathOfferJournalDraft(fixture.scene);
-    const drafts = allOpeningReliefOathJournalDrafts(fixture.scene, fixture.character);
-
     expect(offer).toEqual({
       id: "relief_oath_offer:albany:wolf_winter_relief_oath",
       kind: "relief_oath_offer",
       title: fixture.scene.title,
       text: fixture.scene.message,
     });
-    expect(drafts).toHaveLength(3);
-    expect(drafts[0]).toMatchObject({
-      id: openingReliefOathJournalId(fixture.scene.id, "albany:oath_official_relief"),
-      kind: "relief_oath",
-      title: "Relief oath: Swear the official relief oath",
-    });
-    expect(drafts[0]!.text).toContain(
-      "Access: Municipal depots, dispatch books, and a board hearing.",
-    );
-    expect(drafts[0]!.text).toContain(
-      "Duty: Answer one lawful winter-relief dispatch before leaving Albany.",
-    );
-    expect(drafts[0]!.text).toContain("Actual cost: 12 minutes.");
     expect(Object.isFrozen(offer)).toBe(true);
-    expect(Object.isFrozen(drafts)).toBe(true);
     expect(Object.isFrozen(fixture.entries[0])).toBe(true);
     expect(Object.isFrozen(fixture.entries[0]!.storyChoiceBoundary)).toBe(true);
   });

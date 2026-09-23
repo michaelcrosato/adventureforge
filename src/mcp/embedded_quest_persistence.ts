@@ -37,7 +37,7 @@ import type { SessionStore } from "./sessions.js";
 
 export type { EmbeddedQuestChildRecord };
 
-export type EmbeddedQuestPersistenceDeps = {
+type EmbeddedQuestPersistenceDeps = {
   sessions: SessionStore;
   rpgRuntime: RpgMcpSessionRuntime;
   rpgSources: RpgSourceRuntime;
@@ -45,7 +45,7 @@ export type EmbeddedQuestPersistenceDeps = {
 };
 
 /** What a restore that re-bound a child adds to its response. */
-export type EmbeddedQuestRestoreFields = {
+type EmbeddedQuestRestoreFields = {
   rpg_session_id: string;
   rpg_state_hash: string;
 };

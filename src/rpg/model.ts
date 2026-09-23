@@ -13,7 +13,6 @@ import {
   isOpen,
   locateObject,
   visibleObjectIds as coreVisibleObjectIds,
-  type ObjectLocation,
 } from "../core/object_locations.js";
 import { evalConditions } from "../core/conditions.js";
 import { appendMatchingText, reactiveName, reactiveText } from "../core/reactive_text.js";
@@ -141,8 +140,6 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
   };
 }
 
-export type Location = ObjectLocation;
-
 export { isOpen, locateObject };
 
 export function roomDescription(room: Room, state: GameState): string {
@@ -228,7 +225,7 @@ export function visibleObjectIds(index: RpgModelIndex, state: GameState, room: s
   return coreVisibleObjectIds(index, state, room).filter((id) => worldVisible(id));
 }
 
-export { dlgVar, nodeByOrdinal, nodeOrdinal };
+export { dlgVar, nodeOrdinal };
 
 export function activeDialogue(
   index: RpgModelIndex,
@@ -288,7 +285,7 @@ export function initStateForRpgModel(
   return initStateForRpgModelWithOpeningFlag(index, seed, selected, campaignImport, launchOverlay);
 }
 
-export type RpgOpeningInitialState = Readonly<{
+type RpgOpeningInitialState = Readonly<{
   /** Null for a legacy pack with no seeded opening alternatives. */
   seededOpeningFlag: string | null;
   state: GameState;

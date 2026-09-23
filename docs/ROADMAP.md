@@ -1,8 +1,7 @@
 # AdventureForge Roadmap
 
-This roadmap is current operational guidance. Historical multi-mode plans live in
-`docs/archive/` (the convention for superseded planning docs) and git history,
-not in the active roadmap.
+This roadmap is current operational guidance and the durable router to the
+milestone contract. Superseded plans live in git history, not in the tree.
 
 AdventureForge is converging on one product: a deterministic, text-based,
 open-world RPG engine whose shipped content is placed through a contiguous world
@@ -36,14 +35,13 @@ graph.
   checks.
 - `docs/STARTING_SLICE.md` is the active durable product milestone and
   `docs/starting_slice_causal_matrix.json` is its machine-readable proof ledger.
-- `docs/CURRENT_PLAN.md` is the durable short router to the milestone contract,
-  matrix, loop history, and current local evidence. An ultraplan writes its sole
-  fresh-implementer handoff to ignored
+- `AI_LOOP_STATE.md` is the rotating per-cycle result log (machine-parsed); the
+  exact unconsumed feedback manifest/hotspots digest it names is the current
+  experiential evidence (the generated artifacts stay ignored and local).
+- An ultraplan writes its sole fresh-implementer handoff to ignored
   `ai-runs/<cycle>/current-plan.md` and records that path as `currentPlanRecord`
-  in `ai-runs/latest-cycle.json`; it never overwrites the router.
-  `AI_LOOP_STATE.md` is the rotating per-cycle result log (machine-parsed).
-  Superseded planning docs move to `docs/archive/`; detail not worth keeping
-  goes to git history.
+  in `ai-runs/latest-cycle.json`; the handoff never goes into a tracked doc.
+  Superseded planning docs are deleted; git history keeps them.
 
 ## Priority Order
 
@@ -72,9 +70,8 @@ until its contract in `docs/STARTING_SLICE.md` is proven.
 - Keep routine pure-blind evidence flowing from clean, frozen builds: the
   playtest loop (`playtest-loop.sh`) plays each landed build independently of
   the dev loop, which no longer plays a journey per cycle (`docs/two_loop_workflow.md`);
-  compile when at least three new verified reports exist. Treat the tracked feedback ledger as a historical snapshot;
-  current decisions must use the intended local report set and newest compiled
-  hot spots.
+  compile when at least three new verified reports exist. Current decisions use
+  the intended local report set and newest compiled hot spots.
 - Use accumulated evidence to reduce repeated Albany setup and Station-planning
   density and to test the observed strategy skew without deleting causal
   choices. All four Wolf-Winter strategy families and all 16 accepted non-death

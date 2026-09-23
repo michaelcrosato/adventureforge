@@ -59,11 +59,10 @@ const ULTRAPLAN_TIMEOUT_SECONDS = Number(process.env.AI_LOOP_ULTRAPLAN_TIMEOUT_S
 // content_fix cycles keep the lean default (a one-spot prose fix never needs more).
 const AUTHORING_TIMEOUT_SECONDS = Number(process.env.AI_LOOP_AUTHORING_TIMEOUT_SECONDS ?? 3600);
 const SATURATION_STATE_FILE = join("ai-runs", "saturation-state.json");
-const CURRENT_PLAN_DOC = "docs/CURRENT_PLAN.md";
-// CURRENT_PLAN_DOC is a durable strategic router. Each ultraplan writes its sole
-// fresh-agent handoff to ignored ai-runs/<cycle>/current-plan.md instead of
-// replacing that router. The append-only decision log remains the reviewers'
-// "already closed" boundary across cycles.
+// docs/ROADMAP.md is the durable strategic router. Each ultraplan writes its sole
+// fresh-agent handoff to ignored ai-runs/<cycle>/current-plan.md, never into a
+// tracked doc. The append-only decision log remains the reviewers' "already
+// closed" boundary across cycles.
 const DECISION_LOG_DOC = "docs/DECISION_LOG.md";
 
 /** Pure decision: should THIS cycle run an ultraplan? Saturated AND off cooldown. */
@@ -807,9 +806,8 @@ export function buildUltraplanPrompt(ctx: {
     "- LOCAL ONLY — do NOT use web search, web fetch, or any network/external tool. Web",
     "  tools force an interactive approval prompt that STALLS this unattended loop. Ground",
     "  the re-aim entirely in the repo itself (source, tests, validators, generated RPG quests).",
-    `- Ground it in docs/archive/ULTRAPLAN-2026-06-02.md, docs/ROADMAP.md, ${CURRENT_PLAN_DOC}`,
-    "  (the durable strategic router), and recent AI_LOOP_STATE.md — advance them, do not",
-    `  restart from zero. Do not overwrite ${CURRENT_PLAN_DOC}.`,
+    "- Ground it in docs/ROADMAP.md (the durable strategic router) and recent",
+    "  AI_LOOP_STATE.md — advance them, do not restart from zero.",
     "",
     "## STEP 2 — Persist the decision and the ignored per-cycle handoff",
     `- APPEND a dated entry to ${DECISION_LOG_DOC} recording the gaps you CONFIRMED CLOSED`,
@@ -818,7 +816,7 @@ export function buildUltraplanPrompt(ctx: {
     `- Write the synthesis + chosen next move to ${currentPlanRecord} (tight and`,
     "  actionable: what, why, the exact files, and the acceptance check — which must state",
     "  that the outer `npm run health` gate is mandatory, not best-effort). This ignored",
-    `  per-cycle artifact is the ONLY fresh-agent handoff. Never edit ${CURRENT_PLAN_DOC}.`,
+    "  per-cycle artifact is the ONLY fresh-agent handoff. Never write it into a tracked doc.",
     "",
     "## STEP 3 — Implement in a FRESH context",
     `- Spawn a FRESH implementation agent (whatever fresh-context mechanism your harness`,

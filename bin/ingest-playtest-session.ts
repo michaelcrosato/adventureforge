@@ -16,7 +16,7 @@
  *
  * Usage:
  *   npm run playtest:ingest -- \
- *     --provider grok_desktop --model grok-4.6 --persona cynical_veteran \
+ *     --provider grok_desktop --model grok-4.6 --persona default \
  *     --seed 1234 --game-session-id o-… \
  *     --transcript run.jsonl --report report.md \
  *     --attested-by "michael" --method "desktop client, AdventureForge MCP only"

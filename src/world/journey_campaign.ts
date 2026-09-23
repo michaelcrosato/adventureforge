@@ -152,7 +152,7 @@ export type BreakingWeirCampaignOutcome =
   | "race_held_fields_given"
   | "held";
 
-export type BreakingWeirCampaignOutcomeContext = Readonly<{
+type BreakingWeirCampaignOutcomeContext = Readonly<{
   id: BreakingWeirCampaignOutcome;
   endingId: BreakingWeirCampaignEndingId;
   romeDispatchContext: string;
@@ -197,7 +197,7 @@ export type WolfWinterCampaignOutcome =
   | "timber_saved"
   | "held";
 
-export type WolfWinterCampaignOutcomeContext = Readonly<{
+type WolfWinterCampaignOutcomeContext = Readonly<{
   id: WolfWinterCampaignOutcome;
   endingId: string;
   albanyReturnContext: string;
@@ -410,7 +410,7 @@ export type JourneyCampaignStoryChoiceOptionId =
   | TannersFeverAccountabilityChoiceId
   | RomePostWeirDispatchChoiceId;
 
-export type JourneyCampaignStoryChoiceOption<
+type JourneyCampaignStoryChoiceOption<
   ChoiceId extends JourneyCampaignStoryChoiceOptionId = JourneyCampaignStoryChoiceOptionId,
 > = Readonly<{
   id: ChoiceId;
@@ -430,27 +430,27 @@ type JourneyCampaignStoryChoiceDefinition<
   ];
 }>;
 
-export type AlbanyDawnDispatchStoryChoice = JourneyCampaignStoryChoiceDefinition<
+type AlbanyDawnDispatchStoryChoice = JourneyCampaignStoryChoiceDefinition<
   typeof ALBANY_DAWN_DISPATCH_ID,
   AlbanyDawnDispatchChoiceId
 >;
 
-export type TannersFeverAccountabilityStoryChoice = JourneyCampaignStoryChoiceDefinition<
+type TannersFeverAccountabilityStoryChoice = JourneyCampaignStoryChoiceDefinition<
   typeof TANNERS_FEVER_ACCOUNTABILITY_ID,
   TannersFeverAccountabilityChoiceId
 >;
 
-export type RomePostWeirDispatchStoryChoice = JourneyCampaignStoryChoiceDefinition<
+type RomePostWeirDispatchStoryChoice = JourneyCampaignStoryChoiceDefinition<
   typeof ROME_POST_WEIR_DISPATCH_ID,
   RomePostWeirDispatchChoiceId
 >;
 
-export type JourneyCampaignStoryChoice =
+type JourneyCampaignStoryChoice =
   | AlbanyDawnDispatchStoryChoice
   | TannersFeverAccountabilityStoryChoice
   | RomePostWeirDispatchStoryChoice;
 
-export type JourneyCampaignStoryChoiceSelection =
+type JourneyCampaignStoryChoiceSelection =
   | Readonly<{
       storyChoiceId: typeof ALBANY_DAWN_DISPATCH_ID;
       choiceId: AlbanyDawnDispatchChoiceId;
@@ -467,7 +467,7 @@ export type JourneyCampaignStoryChoiceSelection =
       goal: JourneyCampaignGoalDefinition;
     }>;
 
-export type JourneyCampaignJournalCopy = Readonly<{
+type JourneyCampaignJournalCopy = Readonly<{
   title: string;
   text: string;
 }>;
@@ -623,7 +623,7 @@ export function assertJourneyCampaignQuestOutcome(questId: string, endingId: str
   );
 }
 
-export function albanyDawnDispatchGoal(
+function albanyDawnDispatchGoal(
   choiceId: AlbanyDawnDispatchChoiceId,
 ): JourneyCampaignGoalDefinition {
   return ALBANY_DAWN_DISPATCH_GOALS[choiceId];
@@ -652,7 +652,7 @@ export function albanyDawnDispatchStoryChoice(
   });
 }
 
-export function tannersFeverAccountabilityGoal(
+function tannersFeverAccountabilityGoal(
   choiceId: TannersFeverAccountabilityChoiceId,
 ): JourneyCampaignGoalDefinition {
   return TANNERS_FEVER_ACCOUNTABILITY_GOALS[choiceId];
@@ -678,7 +678,7 @@ export function tannersFeverAccountabilityStoryChoice(): TannersFeverAccountabil
   });
 }
 
-export function romePostWeirDispatchGoal(
+function romePostWeirDispatchGoal(
   choiceId: RomePostWeirDispatchChoiceId,
 ): JourneyCampaignGoalDefinition {
   return ROME_POST_WEIR_DISPATCH_GOALS[choiceId];
@@ -1179,7 +1179,7 @@ function currentGoalTargetsBreakingWeir(journey: JourneyContractSnapshot): boole
   return journeyCampaignGoalDefinition(journey.goal)?.targetQuestId === "breaking_weir";
 }
 
-export type JourneyCampaignPendingStoryStep =
+type JourneyCampaignPendingStoryStep =
   | "albany_dawn_dispatch"
   | "tanners_fever_accountability"
   | "rome_post_weir_dispatch";
@@ -1245,7 +1245,7 @@ function awaitsRomePostWeirDispatch(journey: JourneyContractSnapshot): boolean {
   );
 }
 
-export type JourneyCampaignPresentationContext = Readonly<{
+type JourneyCampaignPresentationContext = Readonly<{
   completionContext: string;
   preRetentionTeaser: string | null;
   continueLabel?: string;

@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-export const LOCAL_EVENT_SCENE_VERSION = 1 as const;
-export const LOCAL_EVENT_SCENE_MIN_OPTIONS = 2 as const;
-export const LOCAL_EVENT_SCENE_MAX_OPTIONS = 4 as const;
-export const LOCAL_EVENT_SCENE_MAX_REQUIREMENTS = 8 as const;
-export const LOCAL_EVENT_SCENE_MAX_MINUTES = 24 * 60;
-export const LOCAL_EVENT_SCENE_MAX_RENOWN = 10;
+const LOCAL_EVENT_SCENE_VERSION = 1 as const;
+const LOCAL_EVENT_SCENE_MIN_OPTIONS = 2 as const;
+const LOCAL_EVENT_SCENE_MAX_OPTIONS = 4 as const;
+const LOCAL_EVENT_SCENE_MAX_REQUIREMENTS = 8 as const;
+const LOCAL_EVENT_SCENE_MAX_MINUTES = 24 * 60;
+const LOCAL_EVENT_SCENE_MAX_RENOWN = 10;
 
 const NON_BLANK_TEXT = z
   .string()
@@ -14,7 +14,7 @@ const NON_BLANK_TEXT = z
     message: "Authored local-event scene text cannot be blank.",
   });
 
-export const LocalEventSceneTermsSchema = z
+const LocalEventSceneTermsSchema = z
   .object({
     minutes: z.number().int().positive().max(LOCAL_EVENT_SCENE_MAX_MINUTES),
     renown: z.number().int().min(1).max(LOCAL_EVENT_SCENE_MAX_RENOWN),
@@ -143,7 +143,6 @@ export const LocalEventSceneSchema = z
 
 export type LocalEventScene = z.infer<typeof LocalEventSceneSchema>;
 export type LocalEventSceneOption = z.infer<typeof LocalEventSceneOptionSchema>;
-export type LocalEventSceneTerms = z.infer<typeof LocalEventSceneTermsSchema>;
 
 export type LocalEventSceneConditionState = Readonly<{
   completedQuestIds: ReadonlySet<string>;
@@ -151,7 +150,7 @@ export type LocalEventSceneConditionState = Readonly<{
   worldFactIds?: ReadonlySet<string> | undefined;
 }>;
 
-export type LocalEventSceneLegalTuple = readonly [
+type LocalEventSceneLegalTuple = readonly [
   id: string,
   title: string,
   preview: string,

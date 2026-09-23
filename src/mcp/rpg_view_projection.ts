@@ -39,7 +39,7 @@ export type RpgBlockedActionRows<Args extends RpgLegalActionsArgs> = Args extend
   ? Array<readonly [id: string, reason: string]>
   : McpBlockedActionOption[];
 
-export type PublicObservationOptions = { compactActions?: boolean };
+type PublicObservationOptions = { compactActions?: boolean };
 
 export type RpgObservationViewOptions = Pick<
   ObservationOptions,
@@ -51,9 +51,7 @@ const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v2";
 const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v2";
 const BLOCKED_ACTION_ROWS_PROJECTION = "blocked-action-rows:v1";
 
-export function publicObservationOptions(args: {
-  compact_actions?: boolean;
-}): PublicObservationOptions {
+function publicObservationOptions(args: { compact_actions?: boolean }): PublicObservationOptions {
   return args.compact_actions ? { compactActions: true } : {};
 }
 
@@ -143,7 +141,7 @@ export function publicObservation(
   });
 }
 
-export function cloneMcpObservation(obs: McpObservation): McpObservation {
+function cloneMcpObservation(obs: McpObservation): McpObservation {
   return {
     ...obs,
     ...(obs.world !== undefined ? { world: obs.world ? { ...obs.world } : null } : {}),

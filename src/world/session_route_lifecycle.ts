@@ -10,9 +10,7 @@ import {
 } from "./session_routes.js";
 import { withOverworldSessionRouteEstimate } from "./session_route_progress.js";
 
-export type { OverworldRoutePlannerIndex, OverworldSessionRoutePlan };
-
-export type OverworldSessionRoadRoutePlanState = {
+type OverworldSessionRoadRoutePlanState = {
   destinationId: string;
   routePlannerIndex: OverworldRoutePlannerIndex;
   currentId: string;

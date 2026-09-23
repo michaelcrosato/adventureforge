@@ -209,11 +209,10 @@ ASSESS → isSaturated?  ── no ──▶ standard cycle (as above)
    1. Workflow ultraplan (≈4-6 agents: LOCAL repo reviewers + synthesis — NO web
       researchers; web tools force an interactive approval prompt that stalls the
       unattended loop) picks the single highest-value STRUCTURAL move, grounded in
-      docs/archive/ULTRAPLAN-*.md and docs/ROADMAP.md (advance them, don't restart).
+      docs/ROADMAP.md and recent AI_LOOP_STATE.md (advance them, don't restart).
    2. Writes the sole fresh-agent handoff to ignored
       ai-runs/<cycle>/current-plan.md; latest-cycle.json records it as
-      currentPlanRecord. docs/CURRENT_PLAN.md remains a durable short router and is
-      never overwritten by the loop.
+      currentPlanRecord. The handoff never goes into a tracked doc.
    3. A FRESH implementation subagent reads ONLY that per-cycle handoff + the files
       it names (clean context, not the whole repo) and makes the one change.
    4. Same provisional-commit → outer green bar → final ledger-commit sequence
@@ -264,11 +263,8 @@ fourth piece of the reviewer subagent contract — _objective · output format �
   turns both crawler findings and blind reports into ranked hot spots. The crawl
   gate is mandatory around every change. The blind playtest is **not** a per-cycle
   gate — that coupling is exactly what the two-loop split removed
-  (`docs/two_loop_workflow.md`), and as of 2026-08-29 the removal is complete on
-  both sides: `require_playtest_record` is gone from `loop.sh`, the cycle prompt no
-  longer asks for a blind run, and `loop:seal-feedback` treats the cycle playtest
-  artifacts as optional — verifying them in full when they are present, sealing the
-  acceptance marker alone when they are not.
+  (`docs/two_loop_workflow.md`); `loop:seal-feedback` verifies cycle playtest
+  artifacts in full when present and seals the acceptance marker alone when not.
 - **Externalized state + one change per cycle**: `AI_LOOP_STATE.md` is the durable
   history; `ai-runs/<id>/` holds ignored per-cycle evidence, playtest report, and any
   ultraplan fresh-agent handoff.

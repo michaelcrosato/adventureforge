@@ -33,7 +33,7 @@ export function sortedNumberRecord(values: ReadonlyMap<string, number>): Record<
   return record;
 }
 
-export function compareStringId(left: string, right: string): number {
+function compareStringId(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 

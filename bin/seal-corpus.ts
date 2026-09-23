@@ -1,7 +1,6 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/seal-corpus — seal the held-out generator corpus (bug_0163, docs/CURRENT_PLAN.md
- * "HELD-OUT CORPUS PERSISTENCE").
+ * bin/seal-corpus — seal the held-out generator corpus (bug_0163).
  *
  * The procedural RPG generator already mints fresh, schema-valid, validator-clean packs the
  * assessor checks every cycle — but those windows are minted-and-DISCARDED in memory. This CLI

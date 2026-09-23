@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { instructsRetiredGateAsLive } from "../../src/afk/gate_coherence.js";
+import { instructsRetiredGateAsLive } from "../regression/support/gate_coherence.js";
 
 describe("instructsRetiredGateAsLive", () => {
   it("returns empty array for coherent text (no retired gate instruction)", () => {

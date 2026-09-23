@@ -62,12 +62,12 @@ import {
  * active development. Verified tickets are exempt: a reproduction does not decay
  * just because nobody happened to hit it again.
  */
-export const STALE_AFTER_BUILDS = 8;
+const STALE_AFTER_BUILDS = 8;
 
 /** A confusion carries no severity of its own; rate it low rather than guess. */
 const CONFUSION_SEVERITY: TicketSeverity = "S1";
 
-export type TriageInput = {
+type TriageInput = {
   sessions: readonly PlaytestSessionRecord[];
   locationIndex: LocationIndex;
   /** Newest build first — the recency spine used for staleness. */
@@ -409,7 +409,7 @@ function isRetireable(ticket: QaTicket): boolean {
   return ticket.status === "stale" && ticket.notes === undefined && !ticket.superseded_by;
 }
 
-export type TriageResult = {
+type TriageResult = {
   tickets: QaTicket[];
   /** Tickets the dev loop may pick up right now, highest priority first. */
   actionable: QaTicket[];

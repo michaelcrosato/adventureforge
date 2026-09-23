@@ -180,7 +180,7 @@ jobs:
 
   # Every other job here is ubuntu-only, and that blind spot shipped a real defect:
   # four CLIs derived the repo root as `resolve(new URL("..", import.meta.url).pathname)`,
-  # which on win32 yields "C:\C:\dev\zork-unlimited". Five tests failed on Windows,
+  # which on win32 yields "C:\C:\dev\adventureforge". Five tests failed on Windows,
   # `npm run health` was red there, and loop.sh — which gates every cycle on health —
   # could not land a change on that platform, while CI stayed green the whole time.
   #

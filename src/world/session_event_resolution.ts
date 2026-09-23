@@ -23,12 +23,12 @@ import {
   type LocalEventSceneOption,
 } from "./local_event_scene.js";
 
-export type OverworldRegionalArcCompletionIndex = {
+type OverworldRegionalArcCompletionIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   regionalArcs: readonly OverworldRegionalArc[];
 };
 
-export const OVERWORLD_EVENT_RESOLUTION_PREREQUISITES = [
+const OVERWORLD_EVENT_RESOLUTION_PREREQUISITES = [
   {
     id: "scout_poi",
     label: "scout a local point of interest",
@@ -43,32 +43,32 @@ export const OVERWORLD_EVENT_RESOLUTION_PREREQUISITES = [
   },
 ] as const;
 
-export type OverworldEventResolutionPrerequisite =
+type OverworldEventResolutionPrerequisite =
   (typeof OVERWORLD_EVENT_RESOLUTION_PREREQUISITES)[number]["id"];
 
-export type OverworldJournalEntryPresence = {
+type OverworldJournalEntryPresence = {
   has(id: string): boolean;
 };
 
-export type OverworldEventResolutionReadinessIndex = {
+type OverworldEventResolutionReadinessIndex = {
   event: Pick<OverworldLocalEvent, "area" | "authored_scene" | "id">;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
   charactersByArea: ReadonlyMap<string, readonly OverworldCharacter[]>;
   journalEntryIds: OverworldJournalEntryPresence;
 };
 
-export type OverworldEventResolutionReadiness = {
+type OverworldEventResolutionReadiness = {
   scoutedPoi: boolean;
   talkedContact: boolean;
   investigatedEvent: boolean;
   missing: OverworldEventResolutionPrerequisite[];
 };
 
-export type OverworldJournalEntryReadIndex = OverworldJournalEntryPresence & {
+type OverworldJournalEntryReadIndex = OverworldJournalEntryPresence & {
   get(id: string): OverworldJournalEntry | undefined;
 };
 
-export type OverworldEventResolutionPlanState = {
+type OverworldEventResolutionPlanState = {
   eventId: string;
   optionId?: string | undefined;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
@@ -109,18 +109,18 @@ export type OverworldEventResolutionPlan =
   | OverworldEventResolutionActionPlan
   | OverworldEventResolutionAlreadyKnownPlan;
 
-export type OverworldPlannedEventResolution = Extract<
+type OverworldPlannedEventResolution = Extract<
   OverworldEventResolutionPlan,
   { alreadyKnown: false }
 >;
 
-export type OverworldEventResolutionApplicationState = {
+type OverworldEventResolutionApplicationState = {
   resolvedEventIds: Set<string>;
   resolvedEventHomeIds: Set<string>;
   regionRenown: Map<string, number>;
 };
 
-export type OverworldAppliedEventResolution = {
+type OverworldAppliedEventResolution = {
   eventId: string;
   eventHome: string;
   renownRegion: string;
@@ -128,7 +128,7 @@ export type OverworldAppliedEventResolution = {
   renownAfter: number;
 };
 
-export type OverworldEventResolutionDescription = Readonly<{
+type OverworldEventResolutionDescription = Readonly<{
   title: string;
   text: string;
   minutes: number;
@@ -412,7 +412,7 @@ export function assertSnapshotEventResolutionProofs(
   }
 }
 
-export type RegionalArcResolutionProof = {
+type RegionalArcResolutionProof = {
   completionProofAt: number;
   resolvedCount: number;
 };

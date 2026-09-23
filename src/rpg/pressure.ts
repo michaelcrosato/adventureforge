@@ -24,10 +24,7 @@ export type RpgPressureTrackView = {
  * threshold is the sole current band. Values below the authored floor use the
  * first band defensively; semantic validation rejects that state at quest start.
  */
-export function resolveRpgPressureTrack(
-  track: RpgPressureTrack,
-  state: GameState,
-): RpgPressureTrackView {
+function resolveRpgPressureTrack(track: RpgPressureTrack, state: GameState): RpgPressureTrackView {
   // readVar, not a bare index: defense in depth against an authored var name
   // that collides with an Object.prototype key (the validator already requires
   // the var to be declared, which gives it an own key).

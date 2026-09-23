@@ -19,8 +19,8 @@ import type {
   OverworldJournalEntry,
 } from "./session_snapshot.js";
 
-export const OPENING_RELIEF_OATH_JOURNAL_PREFIX = "relief_oath:" as const;
-export const OPENING_RELIEF_OATH_OFFER_JOURNAL_PREFIX = "relief_oath_offer:" as const;
+const OPENING_RELIEF_OATH_JOURNAL_PREFIX = "relief_oath:" as const;
+const OPENING_RELIEF_OATH_OFFER_JOURNAL_PREFIX = "relief_oath_offer:" as const;
 
 export type OpeningReliefOathJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -57,7 +57,7 @@ export function openingReliefOathOfferJournalDraft(
   });
 }
 
-export function openingReliefOathJournalDraft(args: {
+function openingReliefOathJournalDraft(args: {
   scene: OpeningReliefOath;
   character: CampaignCharacterState;
   optionId: string;
@@ -77,22 +77,6 @@ export function openingReliefOathJournalDraft(args: {
       `Access: ${applied.option.access} Duty: ${applied.option.duty} ` +
       `Actual cost: ${formatOpeningReliefOathCost(applied.terms)}. ${applied.option.consequence}`,
   });
-}
-
-export function allOpeningReliefOathJournalDrafts(
-  scene: OpeningReliefOath,
-  character: CampaignCharacterState,
-): readonly OpeningReliefOathJournalDraft[] {
-  const parsed = parseOpeningReliefOath(scene);
-  return Object.freeze(
-    parsed.options.map((option) =>
-      openingReliefOathJournalDraft({
-        scene: parsed,
-        character,
-        optionId: option.id,
-      }),
-    ),
-  );
 }
 
 function freezeBoundary(

@@ -676,8 +676,8 @@ describe("buildUltraplanPrompt drops the blind-playtest mandate", () => {
     expect(prompt).not.toContain("FULL authority");
     expect(prompt).toContain(currentPlanRecord);
     expect(prompt).toContain("ONLY fresh-agent handoff");
-    expect(prompt).toContain("Never edit docs/CURRENT_PLAN.md");
-    expect(prompt).not.toContain("Overwrite docs/CURRENT_PLAN.md");
+    expect(prompt).toContain("Never write it into a tracked doc");
+    expect(prompt).not.toContain("CURRENT_PLAN");
     expect(prompt).toContain("npm run feedback:status");
     expect(prompt).toContain("compile only when it reports ready");
     expect(prompt).toContain("Deterministic structural mocks never meet the threshold");

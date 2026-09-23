@@ -162,7 +162,7 @@ function severityRank(severity: IssueSeverity): number {
 }
 
 /** S0-S1 minor, S2 moderate, S3-S4 severe. */
-export function severityBand(severity: IssueSeverity): SeverityBand {
+function severityBand(severity: IssueSeverity): SeverityBand {
   const rank = severityRank(severity);
   if (rank <= 1) return "minor";
   if (rank === 2) return "moderate";

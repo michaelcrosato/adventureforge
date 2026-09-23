@@ -17,7 +17,7 @@ export type OverworldContactPresentation = Readonly<{
   afterEventOptions: readonly Readonly<{ eventId: string; optionId: string }>[];
 }>;
 
-export type OverworldContactPresentationState = Readonly<{
+type OverworldContactPresentationState = Readonly<{
   character: CampaignCharacterState;
   completedQuestIds: ReadonlySet<string>;
   worldFactIds?: ReadonlySet<string>;
