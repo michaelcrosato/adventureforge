@@ -28,13 +28,31 @@ const INITIAL_H = new Uint32Array([
 const SHARED_TEXT_ENCODER = new TextEncoder();
 const WORK_W = new Uint32Array(64);
 
+/**
+ * The largest message buffer this module keeps between calls. Per-step state
+ * hashes are a few KB, so they all reuse one buffer; an input whose worst-case
+ * encoding needs more gets a transient buffer sized for it alone. Without the cap
+ * the reused buffer only ever grew — hashing the ~2.7 MB overworld once (the
+ * buffer reserves 4 bytes per UTF-16 unit) pinned ~11 MB for the life of every
+ * process and worker (bug_0641).
+ */
+export const SHA256_RETAINED_BUFFER_MAX_BYTES = 1024 * 1024;
+
 let msgBuffer = new Uint8Array(4096);
 
 function getMsgBuffer(requiredSize: number): Uint8Array {
+  if (requiredSize > SHA256_RETAINED_BUFFER_MAX_BYTES) return new Uint8Array(requiredSize);
   if (requiredSize > msgBuffer.length) {
-    msgBuffer = new Uint8Array(Math.max(requiredSize, msgBuffer.length * 2));
+    msgBuffer = new Uint8Array(
+      Math.min(SHA256_RETAINED_BUFFER_MAX_BYTES, Math.max(requiredSize, msgBuffer.length * 2)),
+    );
   }
   return msgBuffer;
+}
+
+/** Verification seam: bytes of message buffer currently retained between calls. */
+export function sha256RetainedBufferBytes(): number {
+  return msgBuffer.length;
 }
 
 function hex32(num: number): string {

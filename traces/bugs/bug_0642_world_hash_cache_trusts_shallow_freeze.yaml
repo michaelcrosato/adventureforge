@@ -1,0 +1,43 @@
+id: bug_0642
+title: The worldHash identity cache trusted Object.isFrozen, which a top-level-only freeze satisfies
+reported_by: engine audit at c17192f9 (lane C, finding C3)
+severity: S3
+
+symptom: >
+  buildOverworldSessionIndexes (src/world/session_indices.ts) returned a stale worldHash
+  for a manifest frozen only at its top level: freeze a structuredClone of the world,
+  build indexes once, edit a nested field (areas[0].name), and the second build returned
+  the first hash instead of hashState of the edited manifest. worldHash is what snapshot
+  restore binds a saved overworld session to, so a stale value would let a snapshot of one
+  world restore against another. Production was not affected only because
+  loadOverworldManifest deep-freezes the one manifest it serves.
+
+cause: >
+  PR #369 (from Bolt's #366) keyed the hash cache on Object.isFrozen(world), reasoning that
+  "loadOverworldManifest deep-freezes the manifest". Object.isFrozen says nothing about
+  anything reachable below the top level, so the soundness argument held for the loader's
+  manifest but the predicate admitted any top-level freeze.
+
+reproduction: >
+  tests/unit/world_hash_cache.test.ts builds indexes for a top-level-only frozen clone,
+  edits a nested field, and asserts the rebuilt worldHash equals hashState of the edited
+  manifest and was never cached; it also asserts the loader's manifest IS served from the
+  cache with its true hash. A probe of the pre-fix module showed the stale hash returned.
+
+fix: >
+  session_indices.ts keeps a WeakSet of manifests declared deep-frozen via the new
+  registerDeepFrozenOverworldManifest (which refuses an unfrozen manifest), and only a
+  registered manifest's hash is cached. src/world/source.ts registers the overworld right
+  after deepFreeze in loadOverworldManifest, so production keeps the cache hit; every other
+  manifest, frozen or not, is hashed fresh. overworldWorldHashIsCached is exported as a
+  verification seam.
+
+production:
+  - src/world/session_indices.ts
+  - src/world/source.ts
+regression:
+  - tests/unit/world_hash_cache.test.ts
+verification:
+  - The probe returns a stale hash on the pre-fix module and the true hash after the fix.
+  - The new unit test passes, including the loader-manifest cache-hit case.
+  - typecheck, lint and focused overworld-session and snapshot suites are green.

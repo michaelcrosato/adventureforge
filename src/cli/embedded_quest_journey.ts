@@ -49,14 +49,6 @@ import {
   type OverworldJourneyQuestStartResult,
 } from "../world/session.js";
 
-/**
- * The parent reference recorded in a CLI-launched overlay receipt. The MCP
- * server records its per-process `o-<uuid>`; the terminal journey has exactly
- * one parent per process, so a stable marker keeps the receipt honest about
- * which surface launched the child.
- */
-const CLI_JOURNEY_PARENT_SESSION_REF = "cli-journey";
-
 export const CLI_JOURNEY_SAVE_KIND = "adventureforge_cli_journey" as const;
 export const CLI_JOURNEY_SAVE_VERSION = 1 as const;
 
@@ -534,7 +526,7 @@ export class CliJourneySession {
       throw new Error("Answer the active parent journey choice before starting a quest.");
     }
     const plan = this.parentSession.prepareQuestStart(questId, approachId);
-    const launchOverlay = embeddedLaunchOverlayForPlan(plan, CLI_JOURNEY_PARENT_SESSION_REF);
+    const launchOverlay = embeddedLaunchOverlayForPlan(plan);
     let source;
     let index: RpgIndex;
     let state: GameState;

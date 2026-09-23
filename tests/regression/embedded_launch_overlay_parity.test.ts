@@ -7,13 +7,18 @@
  * child state depending on interface. Every bridge now derives the overlay
  * through src/world/embedded_launch_overlay.ts. These tests pin that parity
  * and the replay-from-fresh restore paths that must rehydrate the persisted
- * receipt.
+ * receipt. The derivation takes no surface identity at all (bug_0644), so the
+ * children are byte-identical across MCP runs and interfaces, not just alike.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { WOLF_WINTER_DISPATCH_DELAY_FLAG } from "../../src/core/embedded_launch_overlay_receipt.js";
+import {
+  EMBEDDED_LAUNCH_OVERLAY_RECEIPT_VERSION,
+  WOLF_WINTER_DISPATCH_DELAY_FLAG,
+} from "../../src/core/embedded_launch_overlay_receipt.js";
+import { createToolApi } from "../../src/mcp/tools.js";
 import { embeddedLaunchOverlayForPlan } from "../../src/world/embedded_launch_overlay.js";
 import { CliJourneySession } from "../../src/cli/embedded_quest_journey.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -29,6 +34,7 @@ const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
 const WOLF_YAML = readFileSync(resolve(process.cwd(), WOLF.source), "utf8");
+const APPROACH_ID = "albany:wolf_approach_exposed_ridge";
 
 function moveToArea(session: OverworldSession, targetAreaId: string): void {
   const currentAreaId = session.view().currentArea?.id;
@@ -102,20 +108,70 @@ function onTimeDispatchSession(): OverworldSession {
 }
 
 describe("embedded launch overlay parity across interfaces", () => {
+  // bug_0644: the receipt used to embed the launching surface's session handle
+  // (MCP `o-<uuid>`, "cli-journey", "ui-journey"), and it lives in GameState, so the
+  // same launch hashed differently per MCP run and per interface. Two independent
+  // MCP launches (two random handles), the terminal journey and the browser must
+  // now open byte-identical children.
+  it("opens the same delayed-dispatch child state hash on MCP, CLI and web UI", () => {
+    const seed = 11;
+    const mcpChild = () => {
+      const api = createToolApi({ root: process.cwd() });
+      const restored = api.restore_overworld_session({
+        snapshot: delayedDispatchSession().snapshot(),
+        compact_context: false,
+      }) as unknown as { session_id: string };
+      const launched = api.start_overworld_session_quest({
+        session_id: restored.session_id,
+        quest_id: "wolf_winter",
+        approach_id: APPROACH_ID,
+        seed,
+        compact_context: false,
+        compact_result: false,
+      }) as unknown as { rpg_session_id: string };
+      const child = api.sessions.get(launched.rpg_session_id);
+      expect(child.overworldSessionId).toBe(restored.session_id);
+      return child;
+    };
+    const firstMcp = mcpChild();
+    const secondMcp = mcpChild();
+    expect(firstMcp.overworldSessionId).not.toBe(secondMcp.overworldSessionId);
+
+    const journey = CliJourneySession.fromParent(process.cwd(), WORLD, delayedDispatchSession());
+    journey.beginQuest("wolf_winter", seed, APPROACH_ID);
+    const cliChild = journey.child()!;
+
+    const plan = delayedDispatchSession().prepareQuestStart("wolf_winter", APPROACH_ID);
+    const ui = GameSession.startEmbedded(
+      WOLF_YAML,
+      plan.characterAfter,
+      WOLF.campaign_imports,
+      seed,
+      embeddedLaunchOverlayForPlan(plan),
+    );
+
+    expect(firstMcp.state.flags[WOLF_WINTER_DISPATCH_DELAY_FLAG]).toBe(true);
+    expect(firstMcp.state.embeddedLaunchOverlayReceipt).toMatchObject({
+      version: EMBEDDED_LAUNCH_OVERLAY_RECEIPT_VERSION,
+    });
+    expect(firstMcp.state.embeddedLaunchOverlayReceipt).not.toHaveProperty("overworld_session_id");
+    expect(secondMcp.state).toEqual(firstMcp.state);
+    expect(cliChild.state).toEqual(firstMcp.state);
+    for (const stateHash of [secondMcp.stateHash, cliChild.stateHash, ui.view().stateHash]) {
+      expect(stateHash).toBe(firstMcp.stateHash);
+    }
+  });
+
   it("CLI journey applies the delayed-dispatch overlay the MCP bridge derives", () => {
     // A separate, identically-built session derives the expected receipt so
     // the journey under test performs the only prepare/commit on its parent.
     const expectedReceipt = embeddedLaunchOverlayForPlan(
-      delayedDispatchSession().prepareQuestStart(
-        "wolf_winter",
-        "albany:wolf_approach_exposed_ridge",
-      ),
-      "cli-journey",
+      delayedDispatchSession().prepareQuestStart("wolf_winter", APPROACH_ID),
     )?.receipt;
     expect(expectedReceipt).toBeDefined();
 
     const journey = CliJourneySession.fromParent(process.cwd(), WORLD, delayedDispatchSession());
-    journey.beginQuest("wolf_winter", 11, "albany:wolf_approach_exposed_ridge");
+    journey.beginQuest("wolf_winter", 11, APPROACH_ID);
     const child = journey.child();
     expect(child).not.toBeNull();
     expect(child!.state.flags[WOLF_WINTER_DISPATCH_DELAY_FLAG]).toBe(true);
@@ -124,7 +180,7 @@ describe("embedded launch overlay parity across interfaces", () => {
 
   it("CLI journey keeps an on-time launch overlay-free", () => {
     const journey = CliJourneySession.fromParent(process.cwd(), WORLD, onTimeDispatchSession());
-    journey.beginQuest("wolf_winter", 11, "albany:wolf_approach_exposed_ridge");
+    journey.beginQuest("wolf_winter", 11, APPROACH_ID);
     const child = journey.child();
     expect(child).not.toBeNull();
     expect(child!.state.flags[WOLF_WINTER_DISPATCH_DELAY_FLAG]).toBeUndefined();
@@ -133,7 +189,7 @@ describe("embedded launch overlay parity across interfaces", () => {
 
   it("CLI save/restore round-trips an overlaid child through replay-from-fresh", () => {
     const journey = CliJourneySession.fromParent(process.cwd(), WORLD, delayedDispatchSession());
-    journey.beginQuest("wolf_winter", 11, "albany:wolf_approach_exposed_ridge");
+    journey.beginQuest("wolf_winter", 11, APPROACH_ID);
     const beforeHash = journey.child()!.stateHash;
 
     const restored = CliJourneySession.restore(
@@ -149,8 +205,8 @@ describe("embedded launch overlay parity across interfaces", () => {
 
   it("web UI start applies the same overlay and its save restores byte-identically", () => {
     const parent = delayedDispatchSession();
-    const plan = parent.prepareQuestStart("wolf_winter", "albany:wolf_approach_exposed_ridge");
-    const launchOverlay = embeddedLaunchOverlayForPlan(plan, "ui-journey");
+    const plan = parent.prepareQuestStart("wolf_winter", APPROACH_ID);
+    const launchOverlay = embeddedLaunchOverlayForPlan(plan);
     expect(launchOverlay).toBeDefined();
 
     const session = GameSession.startEmbedded(

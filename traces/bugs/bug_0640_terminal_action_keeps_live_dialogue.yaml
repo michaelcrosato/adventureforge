@@ -1,0 +1,67 @@
+id: bug_0640
+title: An action that ended play mid-conversation left the conversation live in the terminal state, its observation, and its save
+reported_by: engine audit at c17192f9 (lane C, finding C1)
+severity: S2
+
+symptom: >
+  Tide-Mill, seed 7 (or any seed): raise the sea-gate, go south, go east, POCKET the
+  coin-bag, go west, TALK Ives, then STEAL the coin-bag. Play ends with ending_thief,
+  but the terminal state still carries __dlg_ives=1: buildRpgObservation(...).dialogue
+  keeps offering Ives's root line on an ended game, and a save/load round trip persists
+  the open exchange. An exhaustive best/worst-roll BFS of tide_mill found 352 distinct
+  terminal states in that shape, all ending_thief. A synthetic pack whose ASK answer node
+  carries end_game shows the same thing (the node's own set_var re-opens the exchange
+  and nothing closes it). This violates the runner's stated invariant (src/rpg/runner.ts,
+  terminalRpgEffects): "Terminal observations and saves must never retain a live
+  conversation."
+
+cause: >
+  withRpgDialogueInterruption (src/rpg/legal_actions.ts) projects an action's effects and,
+  when the projected state has ended (or moved, or retired the speaker), composes a
+  dialogue-close set_var onto the resolution — by APPENDING it after every effect. But
+  applyEffects (src/core/effects.ts) stops at the first end_game (bug-hardened on
+  purpose: nothing after termination may mutate state), so whenever the ACTION ITSELF
+  ended play the appended close was the one effect guaranteed never to land. The
+  runner's own terminal path (terminalRpgEffects, used by onEnter and checkWin) already
+  closes BEFORE end_game, which is why post-action wins were correct and only
+  effect-level endings leaked.
+
+reproduction: >
+  tests/regression/tide_mill_takings_branch.test.ts "closes Ives's exchange when the thief
+  ending fires mid-conversation" drives the real shipped route and asserts the ended
+  state, its observation, and a save/load round trip carry no live dialogue.
+  tests/regression/rpg_interruptible_dialogue_flow.test.ts adds two synthetic Gallowmere
+  variants: an ASK answer node whose effects end play, and a same-room rolled USE whose
+  skill-check outcome ends play (the runner's separate skill-check composition route).
+  All three fail on the pre-fix code and pass after it.
+
+fix: >
+  withRpgDialogueInterruption now inserts the close immediately ahead of the first
+  end_game in the resolution (still appended at the end when there is none). Every
+  effect before that end_game — including an ASK node's own re-pointing of the dialogue
+  variable — has already applied, and nothing after it ever lands, so the only
+  behavioural difference is that the close now lands on terminal steps. This mirrors the
+  ordering terminalRpgEffects already uses (close, then end_game). Non-terminal
+  interruptions (moving away, retiring the speaker) are byte-identical. The comment in
+  src/core/effects.ts that described the old append ordering was corrected.
+
+production:
+  - src/rpg/legal_actions.ts
+  - src/core/effects.ts
+regression:
+  - tests/regression/tide_mill_takings_branch.test.ts
+  - tests/regression/rpg_interruptible_dialogue_flow.test.ts
+verification:
+  - The three new cases fail with the fix reverted and pass with it.
+  - An exhaustive best/worst-roll BFS of tide_mill (the audit probe, run against the fixed
+    worktree) finds zero terminal states with a live conversation, down from 352. The
+    same probe over the other ten non-Wolf-Winter shipped quests (advocates_case,
+    breaking_weir, cold_forge, dawn_beacon, factors_mark, falconers_ransom, gallowmere,
+    printers_night, sunken_barrow, tanners_fever) also finds zero after the fix.
+  - npm run replay reproduces traces/rpg/barrow_victory.json's pinned final hash
+    unchanged (that trace never ends mid-conversation), so no trace was re-pinned.
+  - The only states whose bytes change are terminal states that previously kept a
+    dialogue var above 0; the census proofs bound state counts by ceilings, and merging
+    those terminal twins can only lower a count.
+  - Focused vitest over the dialogue, termination, save/load, checkpoint-boundary and
+    tide_mill suites is green.

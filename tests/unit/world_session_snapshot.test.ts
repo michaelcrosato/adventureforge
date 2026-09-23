@@ -90,6 +90,33 @@ describe("overworld session snapshots", () => {
     ).toThrow();
   });
 
+  // bug_0643: the clock and its sibling counters had no safe-integer bound, so a
+  // restored 2^53+2 or 1e300 loaded, advanced inexactly on travel, and re-saved.
+  it("rejects clock and counter values outside the safe-integer range", () => {
+    const base = baseSnapshot();
+    const entry = base.travelLog[0]!;
+    const unsafeSnapshots: Array<[string, unknown]> = [];
+    for (const unsafe of [Number.MAX_SAFE_INTEGER + 1, 2 ** 53 + 2, 1e300]) {
+      unsafeSnapshots.push(
+        ["minutes", { ...base, minutes: unsafe }],
+        ["regionRenown", { ...base, regionRenown: [["Capital / Mohawk", unsafe]] }],
+        ...(["delayMinutes", "minutes", "arrivedAt", "fatigueGained"] as const).map(
+          (field): [string, unknown] => [
+            `travelLog.${field}`,
+            { ...base, travelLog: [{ ...entry, [field]: unsafe }] },
+          ],
+        ),
+      );
+    }
+    for (const [field, snapshot] of unsafeSnapshots) {
+      expect(() => OverworldSessionSnapshotSchema.parse(snapshot), field).toThrow();
+      expect(() => parseOverworldSessionSnapshot(snapshot), field).toThrow();
+    }
+    for (const safe of [0, Number.MAX_SAFE_INTEGER]) {
+      expect(OverworldSessionSnapshotSchema.parse({ ...base, minutes: safe }).minutes).toBe(safe);
+    }
+  });
+
   it("requires campaign service proof ids as a pair and only on service entries", () => {
     const serviceProof = {
       id: "service:rest:600",

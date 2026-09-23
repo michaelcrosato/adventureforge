@@ -358,7 +358,24 @@ export function campaignCharacterMatchesConditions(
   character: CampaignCharacterState,
   input: CampaignCharacterConditions,
 ): boolean {
-  const conditions = CampaignCharacterConditionsSchema.parse(input);
+  return campaignCharacterMatchesValidatedConditions(
+    character,
+    CampaignCharacterConditionsSchema.parse(input),
+  );
+}
+
+/**
+ * The unchecked core of campaignCharacterMatchesConditions, for hot internal callers
+ * that ALREADY parsed `conditions` through CampaignCharacterConditionsSchema — e.g. the
+ * overworld integrity pass, which validates each authored predicate once and then
+ * evaluates it against thousands of reachable characters. That schema has no
+ * transforms or defaults, so a parsed value is structurally the input and the result
+ * is identical. Untrusted input must go through campaignCharacterMatchesConditions.
+ */
+export function campaignCharacterMatchesValidatedConditions(
+  character: CampaignCharacterState,
+  conditions: CampaignCharacterConditions,
+): boolean {
   const companions = new Set(character.companions);
   const promises = new Map(
     character.promises.map((promise) => [promise.promiseId, promise.status] as const),
@@ -532,9 +549,17 @@ function compareIds(left: string, right: string): number {
 export function deriveCampaignWorldFactIds(
   effectGroups: readonly (readonly CampaignConsequenceEffect[])[],
 ): string[] {
+  return worldFactIdsFromValidatedGroups(
+    effectGroups.map((group) => CampaignConsequenceEffectsSchema.parse(group)),
+  );
+}
+
+/** deriveCampaignWorldFactIds for groups this module has itself already parsed. */
+function worldFactIdsFromValidatedGroups(
+  effectGroups: readonly (readonly CampaignConsequenceEffect[])[],
+): string[] {
   const facts = new Set<string>();
-  for (const group of effectGroups) {
-    const effects = CampaignConsequenceEffectsSchema.parse(group);
+  for (const effects of effectGroups) {
     for (const effect of effects) {
       if (effect.type === "set_world_fact") facts.add(effect.fact_id);
     }
@@ -740,6 +765,7 @@ export function applyCampaignConsequences(args: {
 
   return {
     characterAfter,
-    worldFactIds: deriveCampaignWorldFactIds([effects]),
+    // `effects` is this function's own parse result; parsing it again changed nothing.
+    worldFactIds: worldFactIdsFromValidatedGroups([effects]),
   };
 }

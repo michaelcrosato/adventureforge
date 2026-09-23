@@ -399,6 +399,11 @@ function promiseStatus(session: OverworldSession, oathId: OathId): string | unde
     .promises.find((promise) => promise.promiseId === promiseId)?.status;
 }
 
+function completionText(session: OverworldSession): string | undefined {
+  return session.snapshot().journalEntries.find((entry) => entry.id === `quest_done:${WOLF.id}`)
+    ?.text;
+}
+
 function rowanMemories(session: OverworldSession): readonly string[] {
   return (
     session
@@ -832,6 +837,19 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
     const fullCade = completeCampaign(FULL, "ending_fortified_cade_terms");
     expect(promiseStatus(fullCade, FULL)).toBe("broken");
     expect(rowanMemories(fullCade)).toContain("albany:memory_rowan_full_duty_broken");
+
+    // bug_0645: the completion journal reported the kept registration promise and
+    // said nothing about the relief promise the same return broke.
+    expect(completionText(fullCade)).toMatch(
+      /Promise kept: give a truthful account\. Promise broken: use Albany's public seals during FORTIFY\.$/u,
+    );
+    expect(completionText(unaffiliatedAuthority)).toMatch(
+      /Promise kept: give a truthful account\. Promise broken: claim no Albany authority\.$/u,
+    );
+    for (const unbroken of [fullAuthority, limitedAuthority]) {
+      expect(completionText(unbroken)).toMatch(/Promise kept: give a truthful account\.$/u);
+      expect(completionText(unbroken)).not.toContain("Promise broken");
+    }
 
     const fullCivic = returnToServiceArea(fullAuthority, "albany_city__civic_core");
     const limitedCivic = returnToServiceArea(limitedAuthority, "albany_city__civic_core");

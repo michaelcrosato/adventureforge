@@ -26,9 +26,15 @@ export type QuestStartPlanWithDispatchWindow = {
   dispatchWindow: QuestDispatchWindow;
 };
 
+/**
+ * Deliberately takes no caller identity: the overlay enters the child's
+ * deterministic state, so anything surface-specific here (an MCP session handle,
+ * a CLI or browser label) would make one launch hash differently per interface
+ * and per run (bug_0644). The parent binding an MCP child needs lives outside
+ * GameState, on the MCP session record.
+ */
 export function embeddedLaunchOverlayForPlan(
   plan: QuestStartPlanWithDispatchWindow,
-  parentSessionId: string,
 ): EmbeddedLaunchOverlay | undefined {
   const dispatchWindow = plan.dispatchWindow;
   const ledgerMinutes = dispatchWindow.ledgerMinutes;
@@ -63,7 +69,6 @@ export function embeddedLaunchOverlayForPlan(
       version: EMBEDDED_LAUNCH_OVERLAY_RECEIPT_VERSION,
       kind: "overworld_dispatch_opening",
       world_quest_id: "wolf_winter",
-      overworld_session_id: parentSessionId,
       dispatch_window_version: dispatchWindow.schemaVersion,
       status: "delayed",
       ledger_minutes: ledgerMinutes,

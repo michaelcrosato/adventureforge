@@ -1,0 +1,46 @@
+id: bug_0643
+title: Overworld snapshot restore accepted clock and counter values beyond the safe-integer range
+reported_by: engine audit at c17192f9 (lane C, finding C4)
+severity: S3
+
+symptom: >
+  OverworldSession.restore accepted a snapshot whose top-level minutes was 2^53+2 or
+  1e300. The restored session travelled (2^53+2 advanced to 9007199254741000, an inexact
+  sum; 1e300 did not move at all) and re-saved and re-restored cleanly, so a corrupted or
+  hand-edited clock became a durable, silently wrong save. The same held for the
+  travel-log entry's delayMinutes, minutes, arrivedAt and fatigueGained and for
+  regionRenown values.
+
+cause: >
+  OverworldSessionSnapshotBaseSchema (src/world/session_snapshot.ts) declared minutes as
+  z.number().int().nonnegative() with no upper bound, and so did the sibling counters in
+  TravelLogEntrySnapshotSchema and the regionRenown tuple. z.number().int() accepts any
+  integral double, including values past 2^53 where integer addition is no longer exact.
+  The journal-registration boundary's own minutes field in the same file already carried
+  .max(Number.MAX_SAFE_INTEGER); the top-level clock never did.
+
+reproduction: >
+  tests/unit/world_session_snapshot.test.ts "rejects clock and counter values outside the
+  safe-integer range" feeds MAX_SAFE_INTEGER+1, 2^53+2 and 1e300 into each of the six
+  fields through both OverworldSessionSnapshotSchema and parseOverworldSessionSnapshot
+  (the first step of OverworldSession.restore) and expects a rejection, while 0 and
+  MAX_SAFE_INTEGER still parse. It fails on the pre-fix schema. A probe against the real
+  world confirmed restore of 2^53+2 and 1e300 before the fix and rejection after it.
+
+fix: >
+  session_snapshot.ts gains SAFE_NONNEGATIVE_INT (int, >= 0, <= MAX_SAFE_INTEGER, the same
+  shape journey_contract.ts uses) and applies it to the top-level minutes, the travel-log
+  entry's delayMinutes/minutes/arrivedAt/fatigueGained, and regionRenown values. Every
+  save a real session can produce is far inside the bound, so the save version is
+  unchanged. Residual, stated rather than hidden: a crafted save at MAX_SAFE_INTEGER
+  minutes still restores, and travel then advances the clock past the bound; the next
+  snapshot() re-parses through this schema and now throws instead of persisting an
+  inexact clock (fail-closed). The clock has no single advance choke point to guard.
+
+production:
+  - src/world/session_snapshot.ts
+regression:
+  - tests/unit/world_session_snapshot.test.ts
+verification:
+  - The new case fails on the pre-fix schema and passes after it.
+  - The snapshot, snapshot-restore and snapshot-builder unit suites are green.

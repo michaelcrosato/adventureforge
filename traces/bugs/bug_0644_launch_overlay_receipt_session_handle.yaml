@@ -1,0 +1,64 @@
+id: bug_0644
+title: A delayed Wolf-Winter launch hashed differently per MCP run and per interface because the overlay receipt stored the caller's session handle
+reported_by: engine audit at c17192f9 (lane C, finding C5); related intake audit/bug c6d570d674903149
+severity: S2
+
+symptom: >
+  The same delayed-dispatch Wolf-Winter launch (same parent state, approach and seed)
+  opened child states with different hashes depending on who launched it. Measured on
+  the pre-fix code: two MCP launches from the same restored parent snapshot gave
+  10bdf149... and c5332ce6..., and the terminal journey gave 84015b85... — three hashes
+  for one launch. That contradicts the stated contract in src/mcp/overworld_sessions.ts
+  ("Keep the handle outside deterministic game state") and the parity purpose of
+  src/world/embedded_launch_overlay.ts, and it made a browser rename of its literal
+  "ui-journey" silently rehash every browser Wolf-Winter state (intake c6d570d674903149).
+
+cause: >
+  embeddedLaunchOverlayForPlan(plan, parentSessionId) wrote parentSessionId into the
+  receipt's overworld_session_id. Each bridge passed its own handle: the MCP quest bridge
+  its per-process random o-<uuid>, the CLI journey "cli-journey", bin/overworld_play.ts
+  "cli-journey", the web UI "ui-journey". The receipt is stored on GameState
+  (src/rpg/state_init.ts) and therefore included in hashState, so a transport-level
+  identifier became part of the child's deterministic identity. The field carried no
+  authority — the MCP parent binding is enforced from the MCP session record, not the
+  receipt — and provenance_hash already binds the receipt to its exact dispatch proof.
+
+reproduction: >
+  tests/regression/embedded_launch_overlay_parity.test.ts "opens the same delayed-dispatch
+  child state hash on MCP, CLI and web UI" launches the same delayed dispatch through two
+  independent MCP tool APIs (two random handles, restored from one parent snapshot), the
+  CLI journey, and the browser engine, and asserts equal states and one state hash.
+  tests/unit/embedded_dispatch_launch_overlay.test.ts pins the exact v2 receipt and adds
+  "keeps legacy v1 receipts loadable and replayable byte-for-byte".
+
+fix: >
+  EmbeddedLaunchOverlayReceiptSchema (src/core/embedded_launch_overlay_receipt.ts) becomes
+  a discriminated union on version: version 1 (with overworld_session_id) stays loadable
+  exactly as before, and new launches write version 2, which has no session handle. Both
+  shapes are strict, so a receipt cannot mix them. embeddedLaunchOverlayForPlan no longer
+  takes a caller identity at all, and all four callers (src/mcp/overworld_quest_bridge.ts,
+  src/cli/embedded_quest_journey.ts, bin/overworld_play.ts, ui/src/App.tsx) drop their
+  handle; the CLI's CLI_JOURNEY_PARENT_SESSION_REF constant is gone. Save compatibility is
+  honest rather than migrated: an already-started child save carries its v1 receipt,
+  replay-from-fresh rehydrates that same v1 receipt through
+  embeddedLaunchOverlayFromPersistedReceipt, and so it restores to its original hash. Only
+  NEW delayed Wolf-Winter launches hash differently from before (now identically on every
+  surface). No pinned trace or state hash covers a delayed-dispatch child.
+
+production:
+  - src/core/embedded_launch_overlay_receipt.ts
+  - src/world/embedded_launch_overlay.ts
+  - src/mcp/overworld_quest_bridge.ts
+  - src/cli/embedded_quest_journey.ts
+  - bin/overworld_play.ts
+  - ui/src/App.tsx
+regression:
+  - tests/regression/embedded_launch_overlay_parity.test.ts
+  - tests/unit/embedded_dispatch_launch_overlay.test.ts
+verification:
+  - Probe of the pre-fix code shows three different child hashes for one launch (two MCP
+    runs and the CLI); after the fix all are d0dc57b5..., and the browser matches.
+  - The cross-surface parity case fails on the pre-fix code.
+  - Root and UI typecheck are green; focused suites for the overlay, campaign import
+    bridge, MCP overworld sessions, CLI journey bridge, save/trace, seeded openings and the
+    Wolf-Winter dispatch/fortify starting-slice tests are green.

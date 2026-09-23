@@ -33,6 +33,7 @@ import {
   type CampaignConsequenceEffect,
   type CampaignConsequenceEffects,
 } from "../../src/world/campaign_consequences.js";
+import { overworldQuestCampaignEffectsForCharacter } from "../../src/world/overworld.js";
 
 function baseCharacter(): CampaignCharacterState {
   return buildCampaignCharacterState({
@@ -1113,6 +1114,62 @@ describe("generic campaign consequences", () => {
     expect(derived).toEqual(["fact:alpha_recorded", "fact:middle_recorded", "fact:zeta_recorded"]);
     derived.push("fact:caller_mutation");
     expect(deriveCampaignWorldFactIds([first, second])).not.toContain("fact:caller_mutation");
+  });
+
+  // The integrity pass validates authored predicates once and evaluates them through
+  // unchecked internals; the exported boundaries must still reject untrusted input
+  // exactly as before.
+  it("keeps rejecting invalid input at every exported boundary", () => {
+    const character = baseCharacter();
+    const invalidConditions = [
+      {},
+      { requires_all_companions: [] },
+      { requires_all_companions: ["npc:a", "npc:a"] },
+      { requires_all_companions: ["npc:a"], forbids_any_companions: ["npc:a"] },
+      { requires_all_promises: [{ promise_id: "promise:x", status: "sworn" }] },
+      { requires_all_companions: ["npc:a"], unknown_predicate: true },
+    ];
+    for (const conditions of invalidConditions) {
+      expect(() => campaignCharacterMatchesConditions(character, conditions as never)).toThrow();
+      expect(() =>
+        campaignCharacterConditionsAreMutuallyExclusive(conditions as never, {
+          requires_all_companions: ["npc:b"],
+        }),
+      ).toThrow();
+      expect(() =>
+        overworldQuestCampaignEffectsForCharacter(
+          {
+            ending_id: "ending_test",
+            ending_title: "Test",
+            effects: [],
+            conditional_effects: [
+              {
+                id: "test:group",
+                when: conditions,
+                effects: [{ type: "add_companion", npc_id: "npc:a" }],
+              },
+            ],
+          } as never,
+          character,
+        ),
+      ).toThrow();
+    }
+
+    const duplicateFacts = [
+      { type: "set_world_fact", fact_id: "fact:same" },
+      { type: "set_world_fact", fact_id: "fact:same" },
+    ];
+    expect(() => deriveCampaignWorldFactIds([duplicateFacts as never])).toThrow(
+      /Duplicate campaign consequence effect/,
+    );
+    expect(() =>
+      deriveCampaignWorldFactIds([
+        [{ type: "set_world_fact", fact_id: "not_namespaced" }] as never,
+      ]),
+    ).toThrow();
+    expect(() => applyCampaignConsequences({ character, effects: duplicateFacts })).toThrow(
+      /Duplicate campaign consequence effect/,
+    );
   });
 
   it("rolls back the complete effect list when a later effect is invalid", () => {

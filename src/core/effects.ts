@@ -293,7 +293,8 @@ export function applyEffect(
  * a list. The live routes that build such a list are ordinary composition, not
  * exotica — `resolveSkillCheck` returns `[lead, ...on_failure, ...on_failure_when]`
  * and the RPG runner concatenates a check's effects onto the interaction's, then
- * `withRpgDialogueInterruption` appends its dialogue-close `set_var` after all of it.
+ * `withRpgDialogueInterruption` composes its dialogue-close `set_var` onto all of it
+ * (ahead of any `end_game`, since anything after one never lands — bug_0640).
  * No shipped pack orders one this way today, so every recorded trace and pinned
  * per-step hash is unchanged; this keeps it that way by construction rather than by
  * authoring luck.

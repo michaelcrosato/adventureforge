@@ -13,6 +13,8 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { activeDialogue } from "../../src/rpg/model.js";
+import { load, save } from "../../src/persist/save_load.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
@@ -175,5 +177,32 @@ describe("Tide-Mill takings replay branch", () => {
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_thief");
     expect(endingText(state)).toMatch(/without reaching the Staith/i);
+  });
+
+  // bug_0640: STEAL's only effect is end_game, and applyEffects stops there, so the
+  // dialogue close composed after it never landed. The thief ending kept Ives's
+  // exchange live in its observation and through a save/load round trip.
+  it("closes Ives's exchange when the thief ending fires mid-conversation", () => {
+    let state = raiseGateFromMillHouse(fresh());
+    state = act(state, "go_south");
+    state = act(state, "go_east");
+    state = act(state, "use_coin_bag");
+    state = act(state, "go_west");
+    state = act(state, "talk_ives");
+    expect(activeDialogue(index, state)?.npc.id).toBe("ives");
+    state = act(state, "use_coin_bag");
+
+    expect(state.ended).toBe(true);
+    expect(state.endingId).toBe("ending_thief");
+    expect(state.vars["__dlg_ives"]).toBe(0);
+    expect(activeDialogue(index, state)).toBeNull();
+    expect(buildRpgObservation(index, state).dialogue).toBeNull();
+
+    const restored = load(
+      save(state, loaded.compiled.contentHash, "rpg", { worldQuestId: "tide_mill" }),
+    ).state;
+    expect(restored.vars["__dlg_ives"]).toBe(0);
+    expect(activeDialogue(index, restored)).toBeNull();
+    expect(buildRpgObservation(index, restored).dialogue).toBeNull();
   });
 });

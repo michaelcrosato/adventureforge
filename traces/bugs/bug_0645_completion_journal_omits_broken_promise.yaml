@@ -1,0 +1,55 @@
+id: bug_0645
+title: The Wolf-Winter completion journal reported the kept registration promise but never the relief or June promise the same return broke
+reported_by: engine audit at c17192f9 (lane C, finding C6)
+severity: S3
+
+symptom: >
+  Complete Wolf-Winter with FORTIFY on Cade's terms under the Full Compact oath. The
+  campaign state records albany:promise_wolf_full_compact_duty as broken and Rowan Quill
+  gains albany:memory_rowan_full_duty_broken, but the player-facing quest_done journal
+  entry ends "Promise kept: give a truthful account." (or "return Reese's tools.", per
+  registration profile) and says nothing about the broken promise. The same silence held
+  for the Personal Bond broken by invoking Albany authority and for June Pike's
+  cattle-first terms broken when a wolf died with her on the field team — the journal
+  read as a clean record of kept promises.
+
+cause: >
+  questCompletionJournalEntryDraft (src/world/session_quests.ts) appended only the
+  registration receipt from deriveRegistrationPromiseFoldbackReceipt
+  (src/world/registration_promise_receipt.ts), which by design reports the one
+  registration-profile promise and only when it was kept. Nothing read the other
+  resolve_promise effects in the same character-selected campaign export, so a broken
+  resolution changed state and relationships without any journal sentence.
+
+reproduction: >
+  tests/starting_slice/relief_oath_counterfactual.test.ts ("folds kept, bent, and broken
+  promises into three distinct conditional services") now asserts the Cade-terms FORTIFY
+  journal ends "Promise kept: give a truthful account. Promise broken: use Albany's public
+  seals during FORTIFY.", the Personal Bond under Albany authority ends with "Promise
+  broken: claim no Albany authority.", and the kept and released cases carry no broken
+  sentence. It fails on the pre-fix code. tests/unit/registration_promise_receipt.test.ts
+  proves the wording table covers exactly the promises any shipped export resolves as
+  broken, and pins the sentence shape and the fail-closed unknown-promise case.
+
+fix: >
+  registration_promise_receipt.ts gains BROKEN_PROMISE_TERMS (imperative wording in the
+  registration receipts' voice for the three promises a shipped export can break) and
+  deriveBrokenPromiseFoldbackReceipt, which reads resolve_promise effects with status
+  broken from overworldQuestCampaignEffectsForCharacter — the same data source the kept
+  receipt and the character transition use — and returns "Promise broken: <terms>."
+  sentences. planOverworldQuestCompletion passes it to questCompletionJournalEntryDraft,
+  which appends it after the registration receipt. Released ("changed") promises are
+  unchanged. Journal entries already in saves keep their recorded text; only new
+  completions gain the sentence.
+
+production:
+  - src/world/registration_promise_receipt.ts
+  - src/world/session_quests.ts
+regression:
+  - tests/starting_slice/relief_oath_counterfactual.test.ts
+  - tests/unit/registration_promise_receipt.test.ts
+verification:
+  - The relief-oath case fails on the pre-fix code and passes after it.
+  - All 47 test files that complete a quest or read quest_done journals (starting_slice,
+    regression and unit, excluding the census proofs) are green, so no other pinned
+    completion prose or byte budget moved.

@@ -6,6 +6,7 @@ import {
   CampaignConsequenceEffectsSchema,
   campaignCharacterConditionsAreMutuallyExclusive,
   campaignCharacterMatchesConditions,
+  campaignCharacterMatchesValidatedConditions,
   campaignConsequenceEffectKey,
   applyCampaignConsequences,
   type CampaignCharacterConditions,
@@ -637,10 +638,28 @@ export function overworldQuestCampaignEffectsForCharacter(
   campaignExport: OverworldQuestCampaignExport,
   character: CampaignCharacterState,
 ): readonly CampaignConsequenceEffect[] {
-  return [
+  return campaignExportEffectSelector(campaignExport)(character);
+}
+
+/**
+ * overworldQuestCampaignEffectsForCharacter with each conditional group's `when`
+ * schema-validated ONCE, up front, for callers that select the same export's effects
+ * for many characters (the integrity pass enumerates every reachable opening state).
+ * Every group is still parsed — in the same order the per-call path parses them — so
+ * invalid authored predicates are rejected with the same error, and the selected
+ * effects are the same objects in the same order.
+ */
+function campaignExportEffectSelector(
+  campaignExport: OverworldQuestCampaignExport,
+): (character: CampaignCharacterState) => readonly CampaignConsequenceEffect[] {
+  const groups = (campaignExport.conditional_effects ?? []).map((group) => ({
+    when: CampaignCharacterConditionsSchema.parse(group.when),
+    effects: group.effects,
+  }));
+  return (character) => [
     ...campaignExport.effects,
-    ...(campaignExport.conditional_effects ?? [])
-      .filter((group) => campaignCharacterMatchesConditions(character, group.when))
+    ...groups
+      .filter((group) => campaignCharacterMatchesValidatedConditions(character, group.when))
       .flatMap((group) => group.effects),
   ];
 }
@@ -2372,9 +2391,10 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
   }
   for (const campaignExport of quest.campaign_exports ?? []) {
     for (const group of campaignExport.conditional_effects ?? []) {
+      const when = CampaignCharacterConditionsSchema.parse(group.when);
       if (
         !reachableAllyCharacters.some(({ character }) =>
-          campaignCharacterMatchesConditions(character, group.when),
+          campaignCharacterMatchesValidatedConditions(character, when),
         )
       ) {
         throw new Error(
@@ -2382,10 +2402,11 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
         );
       }
     }
+    const effectsForCharacter = campaignExportEffectSelector(campaignExport);
     for (const reachable of reachableAllyCharacters) {
       const applied = applyCampaignConsequences({
         character: reachable.character,
-        effects: overworldQuestCampaignEffectsForCharacter(campaignExport, reachable.character),
+        effects: effectsForCharacter(reachable.character),
       });
       const commitment = fieldCommitmentsByOption.get(reachable.optionId);
       for (const promiseId of commitment?.promiseIds ?? []) {
@@ -3311,6 +3332,10 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
       ),
     ),
   );
+  // Validate each export's authored predicates once for the whole enumeration below.
+  const targetQuestEffectSelectors = (targetQuest.campaign_exports ?? []).map(
+    campaignExportEffectSelector,
+  );
   const statesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
   const rememberState = (state: CanonicalCampaignServiceIntegrityState): void => {
     statesByKey.set(canonicalCampaignServiceIntegrityStateKey(state), state);
@@ -3377,10 +3402,10 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
                 selectedStoryChoices: openingStoryChoices,
               });
 
-              for (const campaignExport of targetQuest.campaign_exports ?? []) {
+              for (const effectsForCharacter of targetQuestEffectSelectors) {
                 const applied = applyCampaignConsequences({
                   character: beforeQuest,
-                  effects: overworldQuestCampaignEffectsForCharacter(campaignExport, beforeQuest),
+                  effects: effectsForCharacter(beforeQuest),
                 });
                 const afterQuest: CanonicalCampaignServiceIntegrityState = {
                   character: applied.characterAfter,

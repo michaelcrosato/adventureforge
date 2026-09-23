@@ -142,7 +142,20 @@ describe("overworld quest launch", () => {
       startedQuestIds: new Set<string>(),
     };
 
-    expect(() => prepareOverworldQuestStart(base)).toThrow(/Choose an approach/);
+    // bug_0646: the rejection names the parameter and every approach id that is
+    // affordable now (the ridge needs 1 supply, the stockway 2), and each blocked
+    // id's reason when none is.
+    expect(() => prepareOverworldQuestStart(base)).toThrow(
+      "Choose an approach_id before starting Test Quest: test:exposed_ridge, test:sheltered_stockway.",
+    );
+    expect(() => prepareOverworldQuestStart({ ...base, supplies: 1 })).toThrow(
+      "Choose an approach_id before starting Test Quest: test:exposed_ridge.",
+    );
+    expect(() => prepareOverworldQuestStart({ ...base, supplies: 0 })).toThrow(
+      "Choose an approach_id before starting Test Quest, but no approach is available yet: " +
+        "test:exposed_ridge (Requires 1 supply. You have 0 supplies.), " +
+        "test:sheltered_stockway (Requires 2 supplies. You have 0 supplies.).",
+    );
     expect(() =>
       prepareOverworldQuestStart({ ...base, approachId: "test:missing_approach" }),
     ).toThrow(/Unknown quest launch approach/);

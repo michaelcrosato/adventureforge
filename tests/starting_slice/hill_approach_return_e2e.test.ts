@@ -542,7 +542,7 @@ describe("SS-F07 — hill approach survives the full Wolf-Winter return", () => 
         }),
       ).toThrow(
         approachId === undefined
-          ? /Choose an approach before starting The Wolf-Winter/
+          ? /Choose an approach_id before starting The Wolf-Winter.*: albany:wolf_approach_exposed_ridge, albany:wolf_approach_sheltered_stockway.$/
           : /Unknown quest launch approach "albany:wolf_approach_unknown"/,
       );
       expect(exportSession(api, parent.sessionId)).toEqual(before);

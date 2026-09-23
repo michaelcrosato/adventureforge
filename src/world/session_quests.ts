@@ -25,6 +25,9 @@ import type { OverworldJournalEntry } from "./session_snapshot.js";
 import {
   applyOverworldQuestLaunchOption,
   overworldQuestStartPreconditionFingerprint,
+  projectOverworldQuestLaunchOption,
+  type OverworldQuestLaunch,
+  type OverworldQuestLaunchResources,
 } from "./quest_launch.js";
 import type { OpeningLeadSource } from "./opening_lead_source.js";
 import type { OpeningAlly } from "./opening_ally.js";
@@ -32,7 +35,10 @@ import type { OpeningPreparation } from "./opening_preparation.js";
 import type { OpeningRegistration } from "./opening_registration.js";
 import type { OpeningReliefAllocation } from "./opening_relief_allocation.js";
 import type { OpeningReliefOath } from "./opening_relief_oath.js";
-import { deriveRegistrationPromiseFoldbackReceipt } from "./registration_promise_receipt.js";
+import {
+  deriveBrokenPromiseFoldbackReceipt,
+  deriveRegistrationPromiseFoldbackReceipt,
+} from "./registration_promise_receipt.js";
 import { deriveQuestDispatchWindow, type QuestDispatchWindow } from "./quest_dispatch_window.js";
 
 export type OverworldQuestCompletionOutcome = {
@@ -245,17 +251,20 @@ export function questCompletionJournalEntryDraft(args: {
   townName: string;
   returnSummary?: string;
   registrationReceipt?: string;
+  brokenPromiseReceipt?: string;
 }): Omit<OverworldJournalEntry, "recordedAt"> {
   const baseText =
     `The quest closed at ${args.endingTitle} after ` +
     `${String(args.minutes)} minutes of local work.`;
-  const returnText = args.returnSummary ? `${baseText} ${args.returnSummary}` : baseText;
+  const text = [baseText, args.returnSummary, args.registrationReceipt, args.brokenPromiseReceipt]
+    .filter((part): part is string => part !== undefined && part.length > 0)
+    .join(" ");
   return {
     id: `quest_done:${args.quest.id}`,
     kind: "quest_done",
     town: args.townName,
     title: `Completed ${args.quest.title}`,
-    text: args.registrationReceipt ? `${returnText} ${args.registrationReceipt}` : returnText,
+    text,
     questCompletionEndingId: args.endingId,
   };
 }
@@ -381,6 +390,36 @@ export function planOverworldQuestStart(state: OverworldQuestStartState): Overwo
   };
 }
 
+/**
+ * The rejection for a launch-gated quest started without an approach. Like the
+ * job/event option rejections (bug_0620/bug_0621), it names the parameter and every
+ * approach id that would be accepted right now — the same affordability projection
+ * applyOverworldQuestLaunchOption enforces — so a caller can retry without a separate
+ * lookup (bug_0646). When none is affordable, each id is named with its blocked reason.
+ */
+function missingQuestApproachError(
+  title: string,
+  launch: OverworldQuestLaunch,
+  resources: OverworldQuestLaunchResources,
+): Error {
+  const projected = launch.options.map((option) => ({
+    id: option.id,
+    projection: projectOverworldQuestLaunchOption(option, resources),
+  }));
+  const availableIds = projected
+    .filter((entry) => entry.projection.available)
+    .map((entry) => entry.id);
+  if (availableIds.length > 0) {
+    return new Error(`Choose an approach_id before starting ${title}: ${availableIds.join(", ")}.`);
+  }
+  const blocked = projected
+    .map((entry) => `${entry.id} (${entry.projection.blockedReason ?? "unavailable"})`)
+    .join(", ");
+  return new Error(
+    `Choose an approach_id before starting ${title}, but no approach is available yet: ${blocked}.`,
+  );
+}
+
 export function prepareOverworldQuestStart(
   state: OverworldQuestPrepareState,
 ): OverworldQuestStartPreparation {
@@ -388,14 +427,14 @@ export function prepareOverworldQuestStart(
   if (!quest.launch && state.approachId !== undefined) {
     throw new Error(`Quest "${quest.id}" does not offer a launch approach.`);
   }
-  if (quest.launch && state.approachId === undefined) {
-    throw new Error(`Choose an approach before starting ${quest.title}.`);
-  }
   const resources = {
     minutes: state.minutes,
     supplies: state.supplies,
     fatigue: state.fatigue,
   };
+  if (quest.launch && state.approachId === undefined) {
+    throw missingQuestApproachError(quest.title, quest.launch, resources);
+  }
   const launchApplication =
     quest.launch && state.approachId
       ? applyOverworldQuestLaunchOption({
@@ -494,6 +533,9 @@ export function planOverworldQuestCompletion(
         openingLeadSource: state.openingLeadSource,
       })
     : undefined;
+  const brokenPromiseReceipt = campaignExport
+    ? deriveBrokenPromiseFoldbackReceipt(campaignExport, state.character)
+    : undefined;
   return {
     minutes,
     // A completed quest returns its achieved ending and journal consequence.
@@ -515,6 +557,7 @@ export function planOverworldQuestCompletion(
       townName: state.nodesById.get(quest.home)?.name ?? quest.home,
       ...(returnSummary ? { returnSummary } : {}),
       ...(registrationReceipt ? { registrationReceipt } : {}),
+      ...(brokenPromiseReceipt ? { brokenPromiseReceipt } : {}),
     }),
   };
 }

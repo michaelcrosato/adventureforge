@@ -55,6 +55,42 @@ const REGISTRATION_PROMISE_IDS = new Set(
   [...REGISTRATION_PROMISE_BY_PROFILE.values()].map((entry) => entry.promiseId),
 );
 
+/**
+ * Player-facing terms for every promise a shipped quest export can resolve as
+ * `broken`, in the same imperative voice as the registration "Promise kept:" lines.
+ * A completion journal that reports a kept promise must not stay silent about one
+ * the same export broke (bug_0645). tests/unit/registration_promise_receipt.test.ts
+ * proves every authored `broken` resolution has wording here.
+ */
+export const BROKEN_PROMISE_TERMS: ReadonlyMap<string, string> = new Map([
+  ["albany:promise_wolf_full_compact_duty", "use Albany's public seals during FORTIFY"],
+  ["albany:promise_wolf_unaffiliated_bond", "claim no Albany authority"],
+  ["albany:promise_june_cattle_first", "keep June's cattle-first terms"],
+]);
+
+/**
+ * The "Promise broken: …" sentences for a quest completion, read from the same
+ * character-selected export effects the "Promise kept:" receipt and the character
+ * transition use. Undefined when the export breaks nothing.
+ */
+export function deriveBrokenPromiseFoldbackReceipt(
+  campaignExport: OverworldQuestCampaignExport,
+  characterBefore: CampaignCharacterState,
+): string | undefined {
+  const sentences = overworldQuestCampaignEffectsForCharacter(campaignExport, characterBefore)
+    .flatMap((effect) =>
+      effect.type === "resolve_promise" && effect.status === "broken" ? [effect.promise_id] : [],
+    )
+    .map((promiseId) => {
+      const terms = BROKEN_PROMISE_TERMS.get(promiseId);
+      if (terms === undefined) {
+        throw new Error(`Broken promise "${promiseId}" has no completion-journal wording.`);
+      }
+      return `Promise broken: ${terms}.`;
+    });
+  return sentences.length > 0 ? sentences.join(" ") : undefined;
+}
+
 function sameStringSet(left: readonly string[], right: readonly string[]): boolean {
   return (
     left.length === right.length &&

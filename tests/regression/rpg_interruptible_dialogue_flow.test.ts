@@ -328,6 +328,66 @@ describe("bug_0512 — interruptible, auto-resuming RPG dialogue", () => {
     expect(buildRpgObservation(game.index, state).dialogue).toBeNull();
   });
 
+  // bug_0640: applyEffects stops at the first end_game, so the close used to be
+  // appended where it could never land whenever the ACTION ITSELF ended play.
+  it("clears dialogue when an answer node's own effects end play", () => {
+    const pack = structuredClone(BASE_PACK);
+    const answerNode = pack.npcs
+      .find((npc) => npc.id === "hedrick")
+      ?.dialogue?.nodes.find((node) => node.id === "hedrick_sow");
+    if (!answerNode) throw new Error("expected Hedrick's sow answer");
+    answerNode.effects.push({ end_game: "ending_hunt_won" });
+
+    const game = fresh(pack);
+    let state = drive(game.index, game.rules, game.state, "go_west").state;
+    state = drive(game.index, game.rules, state, "talk_hedrick").state;
+    const answer = drive(game.index, game.rules, state, "ask_ask_sow");
+
+    expect(answer.state.ended).toBe(true);
+    expect(answer.state.endingId).toBe("ending_hunt_won");
+    // The node re-points the dialogue variable before its end_game; every effect
+    // ahead of the end_game still lands, and the close now lands after them.
+    expect(answer.state.flags.heard_lore_counsel).toBe(true);
+    expect(answer.state.vars.__dlg_hedrick).toBe(0);
+    expect(activeDialogue(game.index, answer.state)).toBeNull();
+    expect(buildRpgObservation(game.index, answer.state).dialogue).toBeNull();
+    expect(answer.events.at(-1)).toEqual({ type: "ending", endingId: "ending_hunt_won" });
+  });
+
+  it("clears dialogue when a same-room rolled USE's outcome ends play", () => {
+    const pack = structuredClone(BASE_PACK);
+    const log = pack.objects.find((object) => object.id === "shepherd_log");
+    if (!log) throw new Error("expected shepherd_log");
+    log.interactions.push(
+      InteractionSchema.parse({
+        verb: "USE",
+        target: "shepherd_log",
+        command_verb: "test",
+        conditions: [],
+        effects: [{ set_flag: "test_started" }],
+        skill_check: {
+          skill: "tracking",
+          difficulty: 1,
+          on_success: [{ set_flag: "test_succeeded" }, { end_game: "ending_hunt_won" }],
+          on_failure: [{ set_flag: "test_failed" }, { end_game: "ending_hunt_won" }],
+        },
+      }),
+    );
+
+    const game = fresh(pack);
+    let state = drive(game.index, game.rules, game.state, "go_west").state;
+    state = drive(game.index, game.rules, state, "talk_hedrick").state;
+    const rolled = drive(game.index, game.rules, state, "use_shepherd_log");
+
+    expect(rolled.skillCheck).toBe(true);
+    expect(rolled.state.ended).toBe(true);
+    expect(rolled.state.endingId).toBe("ending_hunt_won");
+    expect(rolled.state.flags.test_started).toBe(true);
+    expect(rolled.state.vars.__dlg_hedrick).toBe(0);
+    expect(activeDialogue(game.index, rolled.state)).toBeNull();
+    expect(buildRpgObservation(game.index, rolled.state).dialogue).toBeNull();
+  });
+
   it("keeps a same-room rolled USE inside the active exchange", () => {
     const pack = structuredClone(BASE_PACK);
     const log = pack.objects.find((object) => object.id === "shepherd_log");
