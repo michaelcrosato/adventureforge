@@ -149,8 +149,8 @@ compile, until `loop:seal-feedback` promotes its exact digest into the tracked
 `AI_LOOP_STATE.md` marker after every outer gate. The same seal consumes a feedback
 recommendation only when the provisional commit's actual-selection attestation names
 it (the assessor's offered recommendation is not authority) and queues the just-tested
-pure report for a later cohort. `loop.sh` also checks that attestation seconds after the
-provisional commit (`npm run --silent loop:seal-feedback -- --check-attestation --meta
+pure report for a later cohort. In commit mode `loop.sh` also checks that attestation seconds
+after the provisional commit (`npm run --silent loop:seal-feedback -- --check-attestation --meta
 ai-runs/latest-cycle.json`), so a worker that leaves `AI_LOOP_STATE.md` out of its commit
 fails before the bar runs rather than after it; the generated prompt hands the worker the
 same command to run before it ends its turn. This one-cycle lag prevents that canonical cycle

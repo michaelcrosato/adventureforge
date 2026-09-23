@@ -439,6 +439,25 @@ require_provisional_commit() {
   echo "✓ local provisional revision present: $current_ref"
 }
 
+require_selection_attestation() {
+  # Fail fast on the seal's OWN precondition. A provisional commit whose ledger entry
+  # carries no actual-selection attestation is already dead — loop:seal-feedback will
+  # refuse it at the end of the cycle no matter how green the gates are — and one such
+  # cycle spent seventy minutes proving a full bar (4771 tests) before being thrown away
+  # at the last step. Asking the seal itself, in --check-attestation mode, rather than
+  # re-parsing the marker here: a check that drifts from the gate it stands in for is
+  # worse than none, because it would fail cycles the seal would have accepted.
+  #
+  # Commit mode only, exactly like require_provisional_commit and safe_commit_if_enabled
+  # (bug_0630). The attestation lives in the PROVISIONAL COMMIT's ledger scaffold, which
+  # ai-loop.ts writes only when AI_LOOP_COMMIT=1; an evidence-only cycle has no such
+  # commit, is never sealed, and so has nothing to attest. Running the check there asked
+  # HEAD — the untouched cycle start — for a marker it could not carry, so every
+  # evidence-only cycle failed here and was hard-reset, whatever its agent did.
+  [[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0
+  npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json
+}
+
 require_final_ledger_only() {
   # After the outer gates pass, the sole tracked mutation still allowed is completion
   # of this cycle's terse ledger entry. (Historically this fenced off the exact-clean
@@ -685,14 +704,9 @@ run_cycle() {
     _reject_cycle "provisional-commit" "required provisional implementation commit is absent or invalid"
     return 1
   }
-  # Fail fast on the seal's OWN precondition. A provisional commit whose ledger entry
-  # carries no actual-selection attestation is already dead — loop:seal-feedback will
-  # refuse it at the end of the cycle no matter how green the gates are — and one such
-  # cycle spent seventy minutes proving a full bar (4771 tests) before being thrown away
-  # at the last step. Asking the seal itself, in --check-attestation mode, rather than
-  # re-parsing the marker here: a check that drifts from the gate it stands in for is
-  # worse than none, because it would fail cycles the seal would have accepted.
-  npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json || {
+  # Fail fast on the seal's own precondition, right after the provisional commit and
+  # before anything expensive (see require_selection_attestation; commit mode only).
+  require_selection_attestation || {
     _reject_cycle "attestation" "provisional commit carries no actual-selection attestation; the seal would reject it"
     return 1
   }

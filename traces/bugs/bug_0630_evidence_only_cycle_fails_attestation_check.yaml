@@ -1,0 +1,56 @@
+id: bug_0630
+title: loop.sh asked for the seal's selection attestation in evidence-only mode, so every default-mode dev cycle failed and was hard-reset
+reported_by: repo audit at c17192f9 (2026-09-22)
+severity: S1
+
+symptom: >
+  With the default AI_LOOP_COMMIT=0 (evidence-only), every dev cycle failed at the
+  "attestation" stage right after the agent turn — "provisional commit carries no
+  actual-selection attestation; the seal would reject it" — and _reject_cycle hard-reset
+  the tree, discarding whatever the agent had done. The mode AGENTS.md describes as
+  leaving work uncommitted for review could therefore never complete a cycle.
+
+cause: >
+  run_cycle in loop.sh ran `npm run --silent loop:seal-feedback -- --check-attestation`
+  unconditionally. That check reads the actual-selection marker from HEAD's
+  AI_LOOP_STATE.md, but the marker lives in the per-cycle ledger scaffold that
+  src/ai-loop.ts appends only when AI_LOOP_COMMIT=1 and that the worker freezes into its
+  provisional commit. In evidence-only mode no scaffold is written, no commit is allowed
+  (the driver rejects one), and the seal itself never runs (safe_commit_if_enabled is
+  inert), so HEAD is the untouched cycle start and the check exits 1 every time. Its
+  neighbours require_provisional_commit and safe_commit_if_enabled were both guarded on
+  AI_LOOP_COMMIT; this fail-fast step, added later to stop a seventy-minute bar being
+  wasted on an unattested commit, was not. tests/regression/loop_driver_gates.test.ts
+  pinned the gap in place by asserting no AI_LOOP_COMMIT appeared between the provisional
+  commit and the rotation.
+
+reproduction: >
+  tests/regression/loop_driver_gates.test.ts "asks for the attestation in commit mode only
+  (bug_0630)" extracts the gate from loop.sh with a stub `npm` that records whether the
+  seal was asked and answers "unattested" (exit 1). Before the fix the check was inline in
+  run_cycle with no guard, so with AI_LOOP_COMMIT=0 (or unset) the seal was asked and the
+  step failed.
+
+fix: >
+  The check moves into require_selection_attestation(), which returns 0 unless
+  AI_LOOP_COMMIT=1 — the same guard shape require_provisional_commit and
+  safe_commit_if_enabled use — and run_cycle calls it at the same point, still before
+  the rotation, post-crawl and bar, still rejecting with stage "attestation" in commit
+  mode. The rotation stays unconditional (it runs in both modes). docs/afk_loop.md now
+  says the fail-fast check is a commit-mode step.
+
+production:
+  - loop.sh
+  - docs/afk_loop.md
+regression:
+  - tests/regression/loop_driver_gates.test.ts
+verification:
+  - The new case asserts, behaviourally, that evidence-only mode (AI_LOOP_COMMIT=0 and
+    unset) never asks the seal and passes, while commit mode asks it with the exact
+    --check-attestation command and fails when the seal says unattested / passes when it
+    says attested. Removing the guard makes the case fail.
+  - The existing ordering case still pins the check after the provisional commit and
+    before the rotation and bar, and still requires it to ask the seal rather than grep
+    the marker. The rotation case now asserts the guard lives in the attestation function
+    and that nothing inline gates the rotation, instead of asserting no guard exists.
+  - npx vitest run tests/regression/loop_driver_gates.test.ts is 40/40 green.

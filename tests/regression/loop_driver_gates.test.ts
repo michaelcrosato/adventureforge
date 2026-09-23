@@ -126,8 +126,12 @@ describe("loop.sh verification gates", () => {
     // tests — and was discarded at the last step. The check therefore has to sit right
     // after the commit and BEFORE anything expensive.
     const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    const gate = sectionBetween(
+      "require_selection_attestation() {",
+      "\n}\n\nrequire_final_ledger_only()",
+    );
     const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');
-    const attestation = runCycle.indexOf("--check-attestation", provisional);
+    const attestation = runCycle.indexOf("require_selection_attestation ||", provisional);
     const rotate = runCycle.indexOf("loop:rotate-state", attestation);
     const bar = runCycle.indexOf('npm run "$health_script"', attestation);
 
@@ -139,8 +143,64 @@ describe("loop.sh verification gates", () => {
     expect(runCycle).toContain('_reject_cycle "attestation"');
     // It asks the SEAL rather than re-parsing the marker in bash: a check that drifts from
     // the gate it stands in for would fail cycles the seal would have accepted.
-    expect(runCycle).toContain("loop:seal-feedback -- --check-attestation");
+    expect(gate).toContain(
+      "npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json",
+    );
     expect(runCycle).not.toMatch(/feedback_cycle_selection[^\n]*grep/u);
+    expect(gate).not.toMatch(/feedback_cycle_selection[^\n]*grep/u);
+  });
+
+  it("asks for the attestation in commit mode only (bug_0630)", () => {
+    // The attestation lives in the provisional commit's ledger scaffold, which ai-loop.ts
+    // writes only when AI_LOOP_COMMIT=1. Asked unconditionally, the check exited 1 on
+    // every evidence-only cycle (HEAD is the untouched cycle start) and _reject_cycle
+    // hard-reset it, so the default mode could never succeed. The guard sits BEFORE the
+    // seal call, the same shape require_provisional_commit and safe_commit_if_enabled use.
+    const gate = `${sectionBetween(
+      "require_selection_attestation() {",
+      "\n}\n\nrequire_final_ledger_only()",
+    )}\n}`;
+    expect(gate.indexOf('[[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0')).toBeGreaterThan(0);
+    expect(gate.indexOf('[[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0')).toBeLessThan(
+      gate.indexOf("npm run --silent loop:seal-feedback"),
+    );
+
+    // Behaviourally: a stub `npm` records whether the seal was asked and answers with
+    // the status the case needs.
+    const stub = (sealStatus: number): string =>
+      ["npm() {", '  printf "SEAL-ASKED %s\\n" "$*"', `  return ${sealStatus}`, "}", gate].join(
+        "\n",
+      );
+
+    const evidenceOnly = runGateHarness(
+      stub(1),
+      { AI_LOOP_COMMIT: "0" },
+      "require_selection_attestation",
+    );
+    expect(evidenceOnly.status, evidenceOnly.output).toBe(0);
+    expect(evidenceOnly.output).not.toContain("SEAL-ASKED");
+
+    const unsetMode = runGateHarness(stub(1), {}, "require_selection_attestation");
+    expect(unsetMode.status, unsetMode.output).toBe(0);
+    expect(unsetMode.output).not.toContain("SEAL-ASKED");
+
+    const commitUnattested = runGateHarness(
+      stub(1),
+      { AI_LOOP_COMMIT: "1" },
+      "require_selection_attestation",
+    );
+    expect(commitUnattested.status).toBe(1);
+    expect(commitUnattested.output).toContain(
+      "SEAL-ASKED run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json",
+    );
+
+    const commitAttested = runGateHarness(
+      stub(0),
+      { AI_LOOP_COMMIT: "1" },
+      "require_selection_attestation",
+    );
+    expect(commitAttested.status, commitAttested.output).toBe(0);
+    expect(commitAttested.output).toContain("SEAL-ASKED");
   });
 
   it("rotates completed loop state in both modes before post-change verification", () => {
@@ -163,6 +223,17 @@ describe("loop.sh verification gates", () => {
     expect(rotationBlock).toContain(
       '_reject_cycle "loop-state-rotation" "deterministic final loop-state rotation failed"',
     );
+    // Between the provisional commit and the rotation, the ONLY commit-mode-gated step is
+    // the attestation check, and it is gated inside its own function (bug_0630) — so the
+    // rotation itself stays unconditional and runs in both modes. Pinned both ways: the
+    // attestation function carries the guard, and nothing inline in run_cycle between the
+    // two steps does, so a guard cannot creep over the rotation.
+    const attestationGate = sectionBetween(
+      "require_selection_attestation() {",
+      "\n}\n\nrequire_final_ledger_only()",
+    );
+    expect(attestationGate).toContain('[[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0');
+    expect(runCycle.slice(provisional, rotation)).toContain("require_selection_attestation ||");
     expect(runCycle.slice(provisional, rotation)).not.toContain("AI_LOOP_COMMIT");
     expect(scripts["loop:rotate-state"]).toBe("tsx scripts/rotate-loop-state.ts");
   });
@@ -402,7 +473,7 @@ describe("loop.sh per-cycle clean baseline and scoped cleanup", () => {
 describe("loop.sh provisional/final commit contracts", () => {
   const provisional = `${sectionBetween(
     "require_provisional_commit() {",
-    "\n}\n\nrequire_final_ledger_only()",
+    "\n}\n\nrequire_selection_attestation()",
   )}\n}`;
   const ledgerOnly = `${sectionBetween(
     "require_final_ledger_only() {",
