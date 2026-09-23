@@ -3721,7 +3721,7 @@ describe("OverworldSession", () => {
     ]);
     const beforeMissing = missing.session.snapshot();
     expect(() => missing.session.prepareQuestStart(missing.quest.id)).toThrow(
-      /Choose an approach before starting/i,
+      /Choose an approach_id before starting .+: albany:wolf_approach_exposed_ridge, albany:wolf_approach_sheltered_stockway.$/,
     );
     expect(missing.session.snapshot()).toEqual(beforeMissing);
 

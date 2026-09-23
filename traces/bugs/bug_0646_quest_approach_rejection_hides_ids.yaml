@@ -1,0 +1,47 @@
+id: bug_0646
+title: Starting a launch-gated quest without an approach was rejected without naming approach_id or any legal approach id
+reported_by: engine audit at c17192f9 (lane C, finding C7)
+severity: S3
+
+symptom: >
+  start_overworld_session_quest for Wolf-Winter with no approach_id (and the CLI/UI paths
+  that reach the same planner) was rejected with "Choose an approach before starting The
+  Wolf-Winter." It named neither the parameter the caller had to add nor the approach ids
+  that would be accepted — exactly the rejection shape bug_0620 (job options) and bug_0621
+  (event re-request) removed from the sibling job and event paths.
+
+cause: >
+  prepareOverworldQuestStart (src/world/session_quests.ts) threw a fixed sentence before
+  it had even assembled the resources the launch projection needs, so it could not say
+  which approaches were affordable. The affordability rule itself lives in
+  projectOverworldQuestLaunchOption (src/world/quest_launch.ts), which
+  applyOverworldQuestLaunchOption enforces a few lines later.
+
+reproduction: >
+  tests/unit/world_quest_launch.test.ts "prepares one atomic launch transition and rejects
+  absent or stale option input" now pins the exact rejection with both approaches
+  affordable, with only the one-supply ridge affordable, and with none affordable (each id
+  named with its blocked reason). It fails on the pre-fix code.
+  tests/starting_slice/hill_approach_return_e2e.test.ts (MCP) and
+  tests/unit/ui_overworld.test.ts (browser session) re-pin the shipped Wolf-Winter wording
+  with both real approach ids.
+
+fix: >
+  prepareOverworldQuestStart builds the resources first and throws
+  missingQuestApproachError, which projects every launch option through the same
+  projectOverworldQuestLaunchOption rule: "Choose an approach_id before starting <title>:
+  id_a, id_b." when any is affordable, otherwise "..., but no approach is available yet:
+  id_a (<blocked reason>), ...". Every id it names is one the retry will accept. No state
+  is touched before the throw, so the existing atomicity assertions are unchanged.
+
+production:
+  - src/world/session_quests.ts
+regression:
+  - tests/unit/world_quest_launch.test.ts
+  - tests/starting_slice/hill_approach_return_e2e.test.ts
+  - tests/unit/ui_overworld.test.ts
+verification:
+  - The unit case fails on the pre-fix code; the two surface tests were updated from the
+    old wording to the new exact ids deliberately, not loosened.
+  - tests/unit/campaign_import_bridge.test.ts (which matches /Choose an approach/) and the
+    four touched suites are green; typecheck and lint are green.
