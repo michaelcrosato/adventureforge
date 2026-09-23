@@ -95,8 +95,12 @@ export function makeStep<A extends EngineAction = RpgAction>(rules: Rules<A>) {
     // canonicalizes both operands, so testing membership in a set of N actions cost
     // 2N JSON.stringify passes when N+1 suffice. Purely local — same comparison, same
     // result — and it sits under every solver BFS, where it is the hot path.
-    const target = canonicalize(action);
-    const legal = rules.legalActions(state).some((a) => canonicalize(a) === target);
+    const legalActions = rules.legalActions(state);
+    let legal = legalActions.includes(action);
+    if (!legal) {
+      const target = canonicalize(action);
+      legal = legalActions.some((a) => canonicalize(a) === target);
+    }
     if (!legal) return reject(state, "That action is not available right now.");
 
     const resolution = rules.resolve(state, action);
