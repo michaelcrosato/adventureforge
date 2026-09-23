@@ -16,6 +16,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   assess,
+  attendanceScanText,
   blindReportAttendanceOffsets,
   mergeAttendanceOffsets,
   packStem,
@@ -282,5 +283,110 @@ describe("local blind reports — rotation sees accepted report artifacts before
     const newestLocalStem = [...reportOffsets.entries()].sort((x, y) => x[1] - y[1])[0]![0];
     expect(attendance.get(newestLocalStem)).toBeLessThan(0);
     expect(packStem(reviews[0]!.target)).not.toBe(newestLocalStem);
+  });
+});
+
+describe("bug_0638 — recency is chronological across BOTH ledger entry shapes", () => {
+  // Since the 2026-08-29 two-loop migration the driver APPENDS each cycle's "## AFK Cycle"
+  // entry at the END of AI_LOOP_STATE.md, after the legacy "### Cycle result" entries
+  // (which are newest-first). Scanning raw file order gave the NEWEST AFK entry the
+  // LARGEST offset, so the pack it had just attended looked stalest of all.
+  const liveShapedLog = [
+    "# AI Loop State",
+    "",
+    "Entry contract: the blind-pass rotation derives attendance from entry names.",
+    "",
+    "### Cycle result - newest_legacy",
+    "- Mandated blind pass ran on `sunken_barrow` (rpg, seed 3).",
+    "",
+    "### Cycle result - older_legacy",
+    "- Mandated blind pass ran on `bellfounders_alarm` (rpg, seed 2).",
+    "## AFK Cycle 2026-09-06T04-13-53-054Z",
+    "- Rec: playtest-cold_forge (content_fix/M; score=0.5).",
+    "## AFK Cycle 2026-09-06T06-59-18-840Z",
+    "- Rec: playtest-breaking_weir (content_fix/M; score=0.5).",
+    "## AFK Cycle 2026-09-06T09-16-39-619Z",
+    "- Rec: playtest-dawn_beacon (content_fix/M; score=0.5).",
+    "",
+  ].join("\n");
+
+  it("ranks a quest named only in the newest APPENDED AFK entry as the most recent", () => {
+    const offsets = parseAttendanceOffsets(liveShapedLog);
+    const newest = offsets.get("dawn_beacon");
+    expect(newest).toBeDefined();
+    // Pre-fix dawn_beacon had the LARGEST offset in the file (it is the last line).
+    for (const older of ["breaking_weir", "cold_forge", "sunken_barrow", "bellfounders_alarm"]) {
+      expect(offsets.get(older), older).toBeDefined();
+      expect(newest!, older).toBeLessThan(offsets.get(older)!);
+    }
+    // The whole chronology, newest to oldest: AFK entries last-appended first, then the
+    // legacy entries top-down.
+    const order = [...offsets.entries()].sort((a, b) => a[1] - b[1]).map(([stem]) => stem);
+    expect(order).toEqual([
+      "dawn_beacon",
+      "breaking_weir",
+      "cold_forge",
+      "sunken_barrow",
+      "bellfounders_alarm",
+    ]);
+  });
+
+  it("so the rotation sorts the just-attended AFK pack LAST, never first", () => {
+    const offsets = parseAttendanceOffsets(liveShapedLog);
+    const rank = (stem: string): number => {
+      const off = offsets.get(stem);
+      return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
+    };
+    const order = ["cold_forge", "dawn_beacon", "factors_mark", "sunken_barrow"].sort(
+      (x, y) => rank(x) - rank(y) || x.localeCompare(y),
+    );
+    expect(order[0]).toBe("factors_mark"); // never attended
+    expect(order[order.length - 1]).toBe("dawn_beacon"); // attended by the newest entry
+  });
+
+  it("keeps a pack's NEWEST mention when an old legacy entry also names it", () => {
+    const log = liveShapedLog.replace(
+      "- Rec: playtest-dawn_beacon (content_fix/M; score=0.5).",
+      "- Rec: playtest-bellfounders_alarm (content_fix/M; score=0.5).",
+    );
+    const offsets = parseAttendanceOffsets(log);
+    // bellfounders_alarm is in the OLDEST legacy entry and the NEWEST AFK entry: newest wins.
+    expect(offsets.get("bellfounders_alarm")!).toBeLessThan(offsets.get("breaking_weir")!);
+    expect(offsets.get("bellfounders_alarm")!).toBeLessThan(offsets.get("sunken_barrow")!);
+  });
+
+  it("never lets the intro outrank a real entry, and leaves heading-free text as it was", () => {
+    const withIntroMention = liveShapedLog.replace(
+      "Entry contract: the blind-pass rotation derives attendance from entry names.",
+      "- Mandated blind pass ran on `dawn_beacon` (an example in the contract prose).",
+    );
+    const offsets = parseAttendanceOffsets(withIntroMention);
+    // Still attended by the newest AFK entry; the intro copy sits after every entry.
+    expect(offsets.get("dawn_beacon")!).toBeLessThan(offsets.get("breaking_weir")!);
+    const scan = attendanceScanText(withIntroMention);
+    expect(scan.indexOf("an example in the contract prose")).toBeGreaterThan(
+      scan.indexOf("### Cycle result - older_legacy"),
+    );
+
+    // Free-form text with no entry headings keeps the plain top-is-newest reading
+    // every earlier regression in this file relies on.
+    const plain = "- Mandated blind pass ran on cold_forge (rpg, seed 3).\n- noise\n";
+    expect(attendanceScanText(plain)).toBe(plain);
+  });
+
+  it("on the real repo, the newest AFK entry's first attendance is the freshest in the ledger", () => {
+    // Skips when the live ledger's newest AFK entry names no pack in a recognised form
+    // (true at the time of writing: it says "Rec playtest-…" with no colon), and bites as
+    // soon as one does.
+    const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
+    if (!existsSync(loopState)) return;
+    const raw = readFileSync(loopState, "utf8");
+    const lastAfk = raw.lastIndexOf("\n## AFK Cycle ");
+    if (lastAfk < 0) return;
+    const freshestOf = (text: string): string | undefined =>
+      [...parseAttendanceOffsets(text).entries()].sort((a, b) => a[1] - b[1])[0]?.[0];
+    const inNewestEntry = freshestOf(raw.slice(lastAfk + 1));
+    if (inNewestEntry === undefined) return;
+    expect(freshestOf(raw)).toBe(inNewestEntry);
   });
 });

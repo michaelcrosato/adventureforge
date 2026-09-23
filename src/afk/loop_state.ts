@@ -158,14 +158,19 @@ export function totalCycleCount(root: string): number {
   return liveN + archN;
 }
 
-type LiveEntry = { start: number; end: number; bytes: number };
+/** One cycle entry's span in the log text (`text.slice(start, end)`), and its UTF-8 size. */
+export type LoopStateEntry = { start: number; end: number; bytes: number };
+type LiveEntry = LoopStateEntry;
 
 /**
  * Split the log into its entries, returned OLDEST FIRST. Each entry runs from its heading
  * to the next heading of either shape (or EOF). Legacy entries are prepend-ordered, so
  * they reverse; scaffolds are append-ordered and all newer, so they follow in file order.
+ * Text before the first heading (the intro) belongs to no entry. Pure. This is the ONE
+ * definition of the ledger's chronology: rotation archives from its front, and the
+ * assessor's attendance recency (assessor.ts parseAttendanceOffsets) reads it backwards.
  */
-function entriesOldestFirst(text: string): LiveEntry[] {
+export function loopStateEntriesOldestFirst(text: string): LoopStateEntry[] {
   const headings = [...text.matchAll(ANY_ENTRY)];
   const legacy: LiveEntry[] = [];
   const scaffolds: LiveEntry[] = [];
@@ -194,7 +199,7 @@ export function rotateLoopState(
   const live = join(root, LOOP_STATE_FILE);
   if (!existsSync(live)) return 0;
   const text = readFileSync(live, "utf8");
-  const chronological = entriesOldestFirst(text);
+  const chronological = loopStateEntriesOldestFirst(text);
   if (chronological.length === 0) return 0;
 
   let movedCount = Math.max(0, chronological.length - keep);
