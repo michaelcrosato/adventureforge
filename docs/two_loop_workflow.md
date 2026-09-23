@@ -74,7 +74,7 @@ learns a vendor's name.
 
 ```bash
 npm run qa:bucket -- --summary              # what the dev loop can pick up
-AI_AGENT=claude ./loop.sh                   # dev loop on Claude Code
+AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh ./loop.sh   # dev loop on Claude Code
 PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 ```
 
@@ -456,7 +456,7 @@ wrong and a real cohort would have failed the same way.
 
 ```bash
 cd /d/zork-unlimited
-AI_AGENT=claude \
+AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh \
 AI_LOOP_TRIAGE_STORE=/d/af-corpus \
 AI_LOOP_COMMIT=1 AI_LOOP_PUSH=1 \
 ./loop.sh

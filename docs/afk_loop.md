@@ -333,9 +333,14 @@ bar off the diff after the provisional commit).
 
 ### A hardened `claude` launcher for unattended runs
 
-The registry's bare `claude -p` entry satisfies the contract, but a multi-day unattended
-run showed what else a headless worker needs, and `agents/claude-headless-worker.sh`
-packages it as an `AI_AGENT_CMD` (`AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh ./loop.sh`):
+For any unattended Claude run, use `agents/claude-headless-worker.sh` as the
+`AI_AGENT_CMD` (`AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh ./loop.sh`).
+The registry's bare `claude` entry (`claude -p --permission-mode acceptEdits`) is only
+the auto-detect default: `acceptEdits` approves file edits, not shell commands, and a
+headless `-p` run has nobody to approve them, so unless the operator's own Claude settings
+happen to allow them, that worker cannot run `npm`/`git` — no focused checks, no
+provisional commit — and a commit-mode cycle fails. The launcher packages what a
+multi-day unattended run showed a headless worker needs:
 
 - **One turn, stated outright.** A `claude -p` run is a single non-interactive turn; nothing
   resumes it. The launcher appends that contract to the system prompt (never background a
@@ -344,7 +349,10 @@ packages it as an `AI_AGENT_CMD` (`AI_AGENT=claude AI_AGENT_CMD=agents/claude-he
   messaging, and worktree tool families, so the worker cannot "end its turn expecting a
   wake-up" — the way the first lost cycles went.
 - **Explicit permissions.** A tool allowlist (`--allowedTools`) under `acceptEdits` instead
-  of a blanket permission bypass, which the CLI refuses for a root process anyway.
+  of a blanket permission bypass, which the CLI refuses for a root process anyway. It is a
+  guardrail, not a sandbox: `node`/`npx`/`npm` can still run anything, but there is no
+  generic command runner (`bash`, `env`, `xargs`, `command`, `python3`), git is allowed
+  only per subcommand a cycle uses, and `git push`/remote-mutating git is denied outright.
 - **A clean process.** `env -i` with only PATH, HOME, the proxy/CA settings, and the loop's
   own `AI_*` knobs; a fresh `--session-id` with `--no-session-persistence`, so the worker
   never writes into an operator's transcript and the CLI's session registry cannot fail a

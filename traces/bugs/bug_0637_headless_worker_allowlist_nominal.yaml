@@ -1,0 +1,52 @@
+id: bug_0637
+title: The claude headless worker's tool allowlist allowed generic command runners and git push
+reported_by: repo audit at c17192f9 (2026-09-22)
+severity: S3
+
+symptom: >
+  agents/claude-headless-worker.sh advertised "an explicit tool allowlist instead of a
+  blanket permission bypass", but the list allowed Bash(bash:*), Bash(env:*),
+  Bash(xargs:*), Bash(python3:*) and Bash(command:*), each of which runs any program, and
+  Bash(git:*), which includes `git push` — the one thing the loop's protocol says a worker
+  must never do. The docs also presented the registry's bare `claude -p --permission-mode
+  acceptEdits` as satisfying the dev-agent contract, although acceptEdits approves only
+  file edits, so a headless run of it cannot run npm or git without operator-level
+  permissions and fails a commit-mode cycle.
+
+cause: >
+  The allowlist grew by accretion during unattended runs (each denial answered with a new
+  allow rule) and was never reviewed as a whole; git was allowed as one blanket rule for
+  convenience; and nothing tested the list.
+
+reproduction: >
+  tests/regression/claude_headless_worker_allowlist.test.ts reads the REAL ALLOWED and
+  DISALLOWED_BASH arrays with bash; against the old script it finds Bash(bash:*),
+  Bash(env:*), Bash(xargs:*), Bash(python3:*), Bash(command:*) and Bash(git:*), and no
+  deny rule for git push.
+
+fix: >
+  Removed the five generic runners (and a duplicate cd rule); replaced Bash(git:*) with the
+  subcommands a cycle uses (status, diff, add, commit, log, show, rev-parse, ls-files,
+  grep, restore, rm, mv, blame, stash, branch --show-current); added a DISALLOWED_BASH
+  list passed to --disallowedTools — git push, git remote, git send-email, git
+  request-pull, git config, git -c and gh — which wins over any allow rule. The header now
+  says plainly that the list is a guardrail, not a sandbox, because node/npx/npm (and
+  find -exec, awk, sed, timeout) can still execute arbitrary programs. docs/afk_loop.md,
+  docs/two_loop_workflow.md and dev-agents.json now point unattended Claude runs at
+  AI_AGENT_CMD=agents/claude-headless-worker.sh, and dev-agents.json no longer refers to a
+  nonexistent `order` field.
+
+production:
+  - agents/claude-headless-worker.sh
+  - dev-agents.json
+  - docs/afk_loop.md
+  - docs/two_loop_workflow.md
+regression:
+  - tests/regression/claude_headless_worker_allowlist.test.ts
+verification:
+  - The new test asserts no generic runner is allowed, every git rule is one of the cycle
+    subcommands (and add/commit remain), git push/remote and gh are denied and the deny
+    array is what the launch passes to --disallowedTools, and the header states the
+    guardrail limitation.
+  - bash -n agents/claude-headless-worker.sh passes. The worker itself was not launched
+    (it needs a live Claude CLI session); the allowlist is exercised statically.
