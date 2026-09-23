@@ -1,0 +1,44 @@
+id: bug_0636
+title: The scripts that choose which bar a change must clear were outside the verifier-integrity guard
+reported_by: repo audit at c17192f9 (2026-09-22)
+severity: S3
+
+symptom: >
+  scripts/test-lanes.ts (CENSUS_PROOF_SOURCE_SCOPES and the fast/exhaustive project
+  partition) and scripts/cycle-bar.ts (loop.sh's bar classifier) decide whether a change
+  runs the census proofs at all, and scripts/verify-opening-density.ts and
+  scripts/verify-bug-traces.ts are two of the nine health steps. None of them was in
+  PROTECTED_FILES, so a cycle could delete one, or narrow the scope list so an engine
+  change classified as fast, with no PROTECTED_DELETED, no VERIFIER_TOUCHED warning and no
+  GUARD_WEAKENED finding — while scripts/ci-test-groups.ts, which only chooses which test
+  paths CI hands to vitest, was already protected for exactly that reason.
+
+cause: >
+  The fast lane and the diff-read bar (npm run ship, then loop.sh via cycle-bar.ts) were
+  added after the protected list last grew, and the list was not extended to the new
+  files that carry the same "decides what runs" authority.
+
+reproduction: >
+  tests/regression/bar_selection_protected.test.ts: before this change, classifyDrift on
+  a deleted scripts/test-lanes.ts returned no findings and removing it from the list was
+  not GUARD_WEAKENED because it was never a member.
+
+fix: >
+  All four files join PROTECTED_FILES in scripts/verify-integrity.ts beside
+  scripts/ci-test-groups.ts, with the list's usual rationale comments (kept free of
+  quotes and brackets so parseGuardConstants reads the literal correctly). Deleting one
+  is now a hard PROTECTED_DELETED, editing one is surfaced as VERIFIER_TOUCHED, and
+  dropping one from the list is GUARD_WEAKENED. This only adds protection; nothing is
+  loosened.
+
+production:
+  - scripts/verify-integrity.ts
+regression:
+  - tests/regression/bar_selection_protected.test.ts
+verification:
+  - The new file checks membership and existence, that parseGuardConstants over the real
+    verify-integrity.ts text yields exactly PROTECTED_FILES (no phantom or truncated
+    entry from the new comments), PROTECTED_DELETED and VERIFIER_TOUCHED per file, and
+    GUARD_WEAKENED on removal of each.
+  - generator_program_protected, sealed_corpus_manifest_protected and
+    verifier_static_rejection_corpus stay green against the longer list.

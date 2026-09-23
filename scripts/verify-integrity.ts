@@ -96,6 +96,21 @@ export const PROTECTED_FILES = [
   // Decides WHICH test files CI runs. A filter here silently shrinks the suite while
   // every shard still reports green, so it belongs beside the counts it could hide.
   "scripts/ci-test-groups.ts",
+  // The same rationale for the two files that choose WHICH BAR a change must clear.
+  // test-lanes.ts owns CENSUS_PROOF_SOURCE_SCOPES and the fast versus exhaustive
+  // partition of the vitest projects; cycle-bar.ts is how loop.sh asks it. Dropping one
+  // scope from that list, or teaching the classifier to answer fast, sends an engine or
+  // content change through health:fast with the census proofs never run, while every
+  // count here and every shard stays green. bug_0636.
+  //
+  // NOTE: keep this comment free of apostrophes and quotes and brackets — see below.
+  "scripts/test-lanes.ts",
+  "scripts/cycle-bar.ts",
+  // Two of the nine health steps are verifiers in their own right, beside this file: the
+  // opening-density budget and the bug-trace corpus check. Hollowing either one turns a
+  // health step into a no-op that still exits 0. bug_0636.
+  "scripts/verify-opening-density.ts",
+  "scripts/verify-bug-traces.ts",
   // The same rationale one layer lower, and the sharper half of it. ci-test-groups.ts
   // only chooses which PATHS are handed to vitest; vitest.config.ts decides which of
   // those paths a project actually RUNS. Appending one glob to a project exclude array
