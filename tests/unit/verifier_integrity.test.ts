@@ -24,9 +24,6 @@ import {
   detectForbiddenTrackedFiles,
   detectForbiddenLegacyImports,
   detectCountRegressions,
-  expectedTestCountsAfterApprovedD10Removal,
-  matchesApprovedD10NetTestReduction,
-  qualifiesForApprovedD10Removal,
   parseGuardConstants,
   detectGuardWeakening,
   runStatic,
@@ -44,10 +41,6 @@ import {
   MAX_TAUTOLOGY_ASSERTIONS,
   MAX_LIVE_LOOP_STATE_ENTRIES,
   MAX_LIVE_LOOP_STATE_ENTRY_BYTES,
-  APPROVED_D10_DECISION_MARKER,
-  APPROVED_D10_COMPLETION_RECORD,
-  APPROVED_D10_REMOVED_PATHS,
-  APPROVED_D10_NET_TEST_REDUCTION,
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
 import { LOOP_ARCHIVE_FILE } from "../../src/afk/loop_state.js";
@@ -163,108 +156,6 @@ describe("detectCountRegressions — counts cannot drop and tautologies cannot r
     );
     expect(codes(fs)).toEqual(["ASSERTION_COUNT_REGRESSION"]);
     expect(fs[0]!.severity).toBe("error");
-  });
-});
-
-describe("approved D10 migration-ladder removal", () => {
-  it("computes the exact reviewed net tuple and preserves the tautology baseline", () => {
-    expect(
-      expectedTestCountsAfterApprovedD10Removal({
-        cases: 3_282,
-        assertions: 20_427,
-        strong: 19_512,
-        tautologies: 0,
-      }),
-    ).toEqual({ cases: 3_143, assertions: 19_654, strong: 18_793, tautologies: 0 });
-  });
-
-  it("rejects any unbalanced change around the exact reviewed net tuple", () => {
-    const before = {
-      cases: 3_282,
-      assertions: 20_427,
-      strong: 19_512,
-    };
-    const exact = expectedTestCountsAfterApprovedD10Removal(before);
-
-    expect(matchesApprovedD10NetTestReduction(before, exact)).toBe(true);
-    expect(
-      matchesApprovedD10NetTestReduction(before, {
-        cases: exact.cases - 1,
-        assertions: exact.assertions,
-        strong: exact.strong!,
-      }),
-    ).toBe(false);
-    expect(
-      matchesApprovedD10NetTestReduction(before, {
-        cases: exact.cases + 1,
-        assertions: exact.assertions + 1,
-        strong: exact.strong! + 1,
-      }),
-    ).toBe(false);
-  });
-
-  it("qualifies only for the exact deleted world/test set and a new one-time completion record", () => {
-    const changedPaths = [
-      ...APPROVED_D10_REMOVED_PATHS,
-      "docs/DECISION_LOG.md",
-      APPROVED_D10_COMPLETION_RECORD,
-      // An unrelated reviewed deletion outside world/tests does not spend the
-      // test-retirement grant.
-      "src/rpg/dialogue_presentation.ts",
-    ];
-    const currentPaths = new Set(["docs/DECISION_LOG.md", APPROVED_D10_COMPLETION_RECORD]);
-    const eligible = (
-      options: { missing?: string; extraDeleted?: string; future?: boolean } = {},
-    ): boolean =>
-      qualifiesForApprovedD10Removal({
-        changedPaths: [
-          ...changedPaths.filter((path) => path !== options.missing),
-          ...(options.extraDeleted ? [options.extraDeleted] : []),
-        ],
-        existedAtRef: (path) =>
-          options.future && path === APPROVED_D10_COMPLETION_RECORD
-            ? true
-            : path !== APPROVED_D10_COMPLETION_RECORD,
-        existsNow: (path) => currentPaths.has(path),
-        decisionLog: `### ${APPROVED_D10_DECISION_MARKER}`,
-        completionRecord: `# ${APPROVED_D10_DECISION_MARKER}`,
-      });
-
-    expect(eligible()).toBe(true);
-    expect(eligible({ missing: APPROVED_D10_REMOVED_PATHS[0] })).toBe(false);
-    expect(eligible({ extraDeleted: "tests/unit/unrelated.test.ts" })).toBe(false);
-    expect(eligible({ extraDeleted: "src/world/unrelated.ts" })).toBe(false);
-    expect(eligible({ future: true })).toBe(false);
-    expect(APPROVED_D10_NET_TEST_REDUCTION).toEqual({
-      cases: 139,
-      assertions: 773,
-      strong: 719,
-    });
-  });
-
-  it("rejects missing, duplicated, or stale decision markers", () => {
-    const currentPaths = new Set(["docs/DECISION_LOG.md", APPROVED_D10_COMPLETION_RECORD]);
-    const eligible = (decisionLog: string, completionRecord: string): boolean =>
-      qualifiesForApprovedD10Removal({
-        changedPaths: [
-          ...APPROVED_D10_REMOVED_PATHS,
-          "docs/DECISION_LOG.md",
-          APPROVED_D10_COMPLETION_RECORD,
-        ],
-        existedAtRef: (path) => path !== APPROVED_D10_COMPLETION_RECORD,
-        existsNow: (path) => currentPaths.has(path),
-        decisionLog,
-        completionRecord,
-      });
-
-    expect(eligible("unrelated decision", APPROVED_D10_DECISION_MARKER)).toBe(false);
-    expect(eligible(APPROVED_D10_DECISION_MARKER, "unrelated completion")).toBe(false);
-    expect(
-      eligible(
-        APPROVED_D10_DECISION_MARKER,
-        `${APPROVED_D10_DECISION_MARKER}\n${APPROVED_D10_DECISION_MARKER}`,
-      ),
-    ).toBe(false);
   });
 });
 

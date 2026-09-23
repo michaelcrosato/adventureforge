@@ -43,7 +43,7 @@ fix:
     data-in/validated-data-out path — is PRESERVED and reframed as not-a-human-gate. The
     runtime summary "Reviewer action required for ..." became "Direct code fix required
     (no content-patch op) for ...". (2) Extracted the bug_0049 conservative predicate
-    into a shared module src/afk/gate_coherence.ts, broadened with two code-comment
+    into a shared module tests/regression/support/gate_coherence.ts, broadened with two code-comment
     signatures ("proposals only (gated, §14)"; "code edits stay with the human
     supervisor") — the legitimate §14 SPEC references (e.g. debugger.ts's "(§14 testing
     strategy)") match no signature and are NOT flagged. (3) bug_0049's doc test now

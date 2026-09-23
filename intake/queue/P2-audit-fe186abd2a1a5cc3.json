@@ -16,15 +16,5 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:00.830Z",
-  "updated_at": "2026-08-31T16:36:36.305Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "76c01a51-d308-48d2-8d6e-4ebc86101926",
-      "identifier": "MIC-26",
-      "url": "https://linear.app/michael-crosato/issue/MIC-26/fe186abd2a1a5cc3-protected-files-does-not-guard-srcvalidaterpg",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:36.305Z"
 }

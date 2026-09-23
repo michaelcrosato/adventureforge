@@ -16,15 +16,5 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:02.128Z",
-  "updated_at": "2026-08-31T16:36:32.170Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "cd5ff2b7-d162-4add-861e-4a7c91720b75",
-      "identifier": "MIC-6",
-      "url": "https://linear.app/michael-crosato/issue/MIC-6/1416a00d7a57baf5-take-effects-re-fire-after-any-non-drop-inventory",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:32.170Z"
 }

@@ -55,7 +55,6 @@
     "playtest:record": "tsx bin/record-playtest-session.ts",
     "submit": "tsx bin/submit.ts",
     "work": "tsx bin/work.ts",
-    "intake:sync:linear": "tsx scripts/sync-intake-linear.ts",
     "fleet": "node blind-tester/fleet.mjs",
     "fleet:mock": "node blind-tester/fleet.mjs --mock",
     "starting-slice:pilot": "tsx bin/starting-slice.ts pilot",

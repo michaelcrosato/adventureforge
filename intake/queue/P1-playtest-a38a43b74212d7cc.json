@@ -25,15 +25,5 @@
     "observations": 13
   },
   "created_at": "2026-08-31T02:14:24.892Z",
-  "updated_at": "2026-08-31T16:35:36.095Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "abf02a7d-4b95-4e59-8e16-a915cc1d60b0",
-      "identifier": "MIC-35",
-      "url": "https://linear.app/michael-crosato/issue/MIC-35/a38a43b74212d7cc-first-lure-lay-fieldcraft-dc-12-contradicts-silent",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:35:36.095Z"
 }

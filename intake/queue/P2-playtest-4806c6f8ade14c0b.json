@@ -20,15 +20,5 @@
     "observations": 2
   },
   "created_at": "2026-08-28T23:36:07.942Z",
-  "updated_at": "2026-08-31T16:36:34.232Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "038fbc7c-72c4-4f81-a9d0-61a1b1e19d74",
-      "identifier": "MIC-27",
-      "url": "https://linear.app/michael-crosato/issue/MIC-27/4806c6f8ade14c0b-room-prose-names-verbs-the-action-surface-rejects",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:34.232Z"
 }

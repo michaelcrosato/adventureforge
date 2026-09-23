@@ -25,7 +25,7 @@
  *   npm run work -- --decline <id>  mark declined (records who resolved it)
  *   npm run work -- --next-id      just the id, or nothing — for shell callers
  */
-import { DEFAULT_QUEUE_DIR, externalMirrors, type Submission } from "../src/intake/submission.js";
+import { DEFAULT_QUEUE_DIR, type Submission } from "../src/intake/submission.js";
 import {
   claimLeaseHours,
   claimSubmission,
@@ -60,17 +60,8 @@ function describe(s: Submission): string {
   return (
     `${s.priority} ${s.source}/${s.kind} ${s.id} — ${s.title}\n` +
     `  ${s.evidence.summary}\n` +
-    `  ${support}${s.area ? `; area ${s.area}` : ""}${describeMirrors(s)}`
+    `  ${support}${s.area ? `; area ${s.area}` : ""}`
   );
-}
-
-function describeMirrors(s: Submission): string {
-  const mirrors = externalMirrors(s);
-  if (mirrors.length === 0) return "";
-  const refs = mirrors.map((mirror) =>
-    mirror.provider === "github" ? `GitHub #${mirror.number}` : `Linear ${mirror.identifier}`,
-  );
-  return `; ${refs.join(", ")}`;
 }
 
 function main(): void {

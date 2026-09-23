@@ -354,25 +354,10 @@ describe("region supersession reaches the intake queue", () => {
       claimed_at: "2026-09-04T12:00:00.000Z",
       created_at: "2026-09-03T12:00:00.000Z",
       updated_at: "2026-09-04T12:00:00.000Z",
-      external: {
-        provider: "github",
-        number: 123,
-        url: "https://example.invalid/123",
-        synced_status: status,
-      },
-      mirrors: [
-        {
-          provider: "linear",
-          id: "fixture",
-          identifier: "QA-1",
-          url: "https://example.invalid/qa-1",
-          synced_status: status,
-        },
-      ],
     };
   }
 
-  it("retires a promoted split without losing body, evidence, ownership or mirrors", () => {
+  it("retires a promoted split without losing body, evidence or ownership", () => {
     const dir = temp();
     const prior = legacyTicket(sessions);
     const submission = upsertSubmission(queuedTicket(prior), dir);
@@ -395,7 +380,7 @@ describe("region supersession reaches the intake queue", () => {
   });
 
   it.each(["in_progress", "done", "declined", "stale"] as const)(
-    "preserves %s on a newly created one-to-one successor without copying tracker pointers",
+    "preserves %s on a newly created one-to-one successor",
     (status) => {
       const dir = temp();
       const prior = legacyTicket(sameRegion);
@@ -408,9 +393,7 @@ describe("region supersession reaches the intake queue", () => {
         status,
         claimed_by: submission.claimed_by,
         claimed_at: submission.claimed_at,
-        external: null,
       });
-      expect(next.mirrors).toBeUndefined();
       if (status !== "in_progress") expect(stored).toContainEqual(submission);
       const snapshot = diskSnapshot(dir);
       reconcileTicketSubmissions(result.tickets, dir);

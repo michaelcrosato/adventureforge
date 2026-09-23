@@ -106,7 +106,6 @@ export function submissionFromTicket(ticket: QaTicket): Submission {
     },
     created_at: now,
     updated_at: now,
-    external: null,
   };
 }
 

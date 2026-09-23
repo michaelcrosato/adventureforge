@@ -24,15 +24,5 @@
     "observations": 98
   },
   "created_at": "2026-08-31T08:08:13.692Z",
-  "updated_at": "2026-08-31T16:36:22.416Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "99a830f9-d4c0-4029-a5d8-fb01261b2230",
-      "identifier": "MIC-42",
-      "url": "https://linear.app/michael-crosato/issue/MIC-42/73d01a3a9b0c6538-spark-100-player-fleet-produced-only-2-verified",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:22.416Z"
 }

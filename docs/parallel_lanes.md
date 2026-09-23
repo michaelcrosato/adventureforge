@@ -39,7 +39,7 @@ writes its own `ai-runs/playtest-loop.pid` that `loop.sh` checks the same way.
 | **content**           | Quest YAML, world copy, doctrine text, new packs                                                  | `npm run validate -- <quest_id>` + `verify:opening-density` + `crawl:smoke`, full `npm run health` before landing |
 | **dev / engineering** | Engine, schemas, tooling, bugfixes (+ `traces/bugs/` artifact + regression per charter)           | `npm run health` (the bar), `crawl:smoke` pre/post if running loop cycles                                         |
 | **playtest**          | Blind sessions against the **published build** (never the lane's own tree), triage, corroboration | `npm run doctor` for lane readiness; sessions record commit-bound evidence                                        |
-| **ops**               | Queue hygiene, Linear mirror, CI, orchestration                                                   | n/a (no product edits)                                                                                            |
+| **ops**               | Queue hygiene, CI, orchestration                                                                  | n/a (no product edits)                                                                                            |
 
 Any vendor can drive a dev/content lane: `loop.sh` auto-detects the first
 installed of `codex`, `claude`, `gemini`; `AI_AGENT=<id>` selects explicitly;
@@ -66,9 +66,6 @@ falling back to `AI_AGENT`, then `<user>@<host>`. A fresh foreign claim
 (younger than `AI_CLAIM_LEASE_HOURS`, default 24) refuses with the holder's
 name; an expired lease is reclaimable; `--force` overrides loudly. Set
 `AI_LANE_ID` in every lane's environment.
-
-A human-facing mirror of the queue lives in Linear — see
-`docs/linear_workflow.md`. The repo file is always the source of truth.
 
 ## Single-writer map (what still cannot be parallelized)
 
@@ -103,5 +100,5 @@ These are last-writer-wins or conflict-prone surfaces. One owner each:
 
 One interactive session (any capable agent harness) runs the room: it
 dispatches lanes, watches `npm run loop:status` per worktree, triages the
-queue, syncs the Linear mirror, sequences landings, and is the only place
+queue, sequences landings, and is the only place
 push/merge decisions get made. Lanes never merge themselves.

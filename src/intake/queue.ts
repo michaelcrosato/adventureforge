@@ -6,10 +6,8 @@
  * loop cannot act on. Closed items are pruned from the tree once resolved; git history
  * keeps each one next to the commits that closed it.
  *
- * The external tracker (Linear, see `linear.ts`) is a MIRROR of this, not the
- * other way round. That ordering is deliberate: the loop must keep working when the
- * network is down, when a token expires, when someone runs it offline. A queue whose
- * canonical copy lives behind an API is a loop with an outage dependency.
+ * There is no external tracker; these files are the whole queue, so the loop keeps working
+ * offline and never takes an outage dependency on an API.
  *
  * Upsert semantics rather than wholesale rewrite: submissions arrive from several
  * independent sources that know nothing about each other, so a writer must be able to
@@ -60,10 +58,9 @@ export function readQueue(dir: string = DEFAULT_QUEUE_DIR): {
 /**
  * Add or update one submission, preserving fields the queue owns rather than the caller.
  *
- * `status` and `external` belong to the QUEUE's lifecycle — whoever is working the item,
- * and wherever it is mirrored — not to the source that keeps re-filing it. A playtest
- * loop re-triaging every wave must not reset an item a dev agent already marked
- * `in_progress`, or drop the issue number it was synced to. `created_at` is likewise
+ * `status` belongs to the QUEUE's lifecycle — whoever is working the item — not to the
+ * source that keeps re-filing it. A playtest loop re-triaging every wave must not reset
+ * an item a dev agent already marked `in_progress`. `created_at` is likewise
  * first-filing, not latest-filing.
  *
  * A re-file that changes nothing is a NO-OP, down to the bytes on disk. These files are
@@ -72,11 +69,6 @@ export function readQueue(dir: string = DEFAULT_QUEUE_DIR): {
  * `updated_at` bump manufactured a tracked-file diff out of an unchanged corpus and left
  * every cycle with a dirty tree it never intended to produce. "Re-filing is safe and
  * expected" (docs/two_loop_workflow.md) has to mean byte-identical when nothing moved.
- *
- * `external` is the one lifecycle field a caller MAY supply: a mirror sync calls this
- * immediately after creating an issue, precisely to record where it landed. Keeping
- * `existing.external` unconditionally discarded that every time, so the number was never
- * stored and each sync re-searched by marker instead of being the no-op it claims to be.
  */
 export function upsertSubmission(
   submission: Submission,
@@ -107,9 +99,6 @@ export function upsertSubmission(
     const carried: Submission = {
       ...submission,
       status: existing.status === "stale" ? "open" : existing.status,
-      external: submission.external ?? existing.external,
-      mirrors:
-        submission.mirrors && submission.mirrors.length > 0 ? submission.mirrors : existing.mirrors,
       // The claim is the queue's, exactly like `status`: a source re-filing an item it
       // knows nothing about must not evict the lane that is working it, and a re-file
       // that changes nothing must stay byte-identical even while the item is claimed.

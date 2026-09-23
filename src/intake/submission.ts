@@ -108,39 +108,6 @@ export const SubmissionEvidenceSchema = z
   })
   .strict();
 
-/** Where this lives in an external tracker, once synced. */
-const GitHubExternalSchema = z
-  .object({
-    provider: z.literal("github"),
-    number: z.number().int().positive(),
-    url: z.string().min(1),
-    /** Last state we pushed, so a no-op sync is detectable without a round trip. */
-    synced_status: SubmissionStatusSchema,
-  })
-  .strict();
-const LinearMirrorSchema = z
-  .object({
-    provider: z.literal("linear"),
-    /** Linear's UUID, used for updates after the first marker lookup. */
-    id: z.string().min(1),
-    /** Human-facing identifier such as MIC-28. */
-    identifier: z.string().min(1),
-    url: z.string().min(1),
-    /** Last state we pushed, so a no-op sync is detectable without a round trip. */
-    synced_status: SubmissionStatusSchema,
-  })
-  .strict();
-
-/** The legacy `external` field remains the GitHub pointer for compatibility. */
-const SubmissionExternalSchema = GitHubExternalSchema;
-
-/** References used by either the legacy primary pointer or additional mirrors. */
-const SubmissionMirrorSchema = z.discriminatedUnion("provider", [
-  GitHubExternalSchema,
-  LinearMirrorSchema,
-]);
-type SubmissionMirror = z.infer<typeof SubmissionMirrorSchema>;
-
 export const SubmissionSchema = z
   .object({
     schema_version: z.literal(SUBMISSION_SCHEMA_VERSION),
@@ -163,59 +130,16 @@ export const SubmissionSchema = z
     claimed_at: z.string().datetime().optional(),
     /** Who marked it done or declined. The claim fields stay behind as history. */
     resolved_by: z.string().min(1).optional(),
-    /** Free-form tags, mirrored to the tracker's labels. */
+    /** Free-form tags. */
     labels: z.array(z.string().min(1)).default([]),
     /** Where in the game or repo, when the source knows. */
     area: z.string().min(1).nullable(),
     evidence: SubmissionEvidenceSchema,
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
-    external: SubmissionExternalSchema.nullable(),
-    /** Additional tracker references when GitHub and Linear are mirrored together. */
-    mirrors: z.array(SubmissionMirrorSchema).optional(),
   })
   .strict();
 export type Submission = z.infer<typeof SubmissionSchema>;
-
-/** Return all known tracker references, de-duplicated by provider. */
-export function externalMirrors(
-  submission: Pick<Submission, "external" | "mirrors">,
-): SubmissionMirror[] {
-  const refs = [
-    ...(submission.external ? [submission.external] : []),
-    ...(submission.mirrors ?? []),
-  ];
-  const seen = new Set<SubmissionMirror["provider"]>();
-  return refs.filter((ref): ref is SubmissionMirror => {
-    if (seen.has(ref.provider)) return false;
-    seen.add(ref.provider);
-    return true;
-  });
-}
-
-/** Find a provider-specific reference without making callers know the storage layout. */
-export function externalMirrorFor(
-  submission: Pick<Submission, "external" | "mirrors">,
-  provider: SubmissionMirror["provider"],
-): SubmissionMirror | null {
-  return externalMirrors(submission).find((ref) => ref.provider === provider) ?? null;
-}
-
-/** Add or replace one provider reference while retaining the other tracker mirror. */
-export function withExternalMirror(submission: Submission, mirror: SubmissionMirror): Submission {
-  const primaryProvider = submission.external?.provider;
-  const retained = externalMirrors(submission).filter(
-    (ref) => ref.provider !== mirror.provider && ref.provider !== primaryProvider,
-  );
-  if (mirror.provider === "github") {
-    const mirrors = retained.filter((ref) => ref.provider !== "github");
-    return { ...submission, external: mirror, mirrors };
-  }
-  return {
-    ...submission,
-    mirrors: [...retained.filter((ref) => ref.provider !== "linear"), mirror],
-  };
-}
 
 /**
  * Stable identity. `key` is whatever the source uses to mean "the same problem" — a

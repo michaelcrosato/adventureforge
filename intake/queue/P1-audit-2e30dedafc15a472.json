@@ -16,15 +16,5 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:02.922Z",
-  "updated_at": "2026-08-31T16:36:33.036Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "676ab35c-40de-438a-b759-a8a1342d189a",
-      "identifier": "MIC-9",
-      "url": "https://linear.app/michael-crosato/issue/MIC-9/2e30dedafc15a472-spectate-feed-and-pure-run-evidence-file-are-placed",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:33.036Z"
 }

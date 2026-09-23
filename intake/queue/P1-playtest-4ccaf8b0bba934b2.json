@@ -21,15 +21,5 @@
     "observations": 2
   },
   "created_at": "2026-08-29T00:17:20.797Z",
-  "updated_at": "2026-08-31T16:36:26.950Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "c4bea8b8-8cca-4727-bb50-69272994ea21",
-      "identifier": "MIC-22",
-      "url": "https://linear.app/michael-crosato/issue/MIC-22/4ccaf8b0bba934b2-bug-severity-runs-backwards-from-convention-so-the",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:26.950Z"
 }

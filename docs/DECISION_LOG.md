@@ -1122,3 +1122,13 @@ Regression artifact: `traces/bugs/bug_0621_event_rerequest_hides_option_ids.yaml
 **Next after bug_0621:** no further leftover branch of this shape is known; the next
 ultraplan should re-run the same four-dimension sweep fresh rather than assume another
 one is waiting.
+
+### Owner cleanup — 2026-09-23 (no external tracker; D10 allowance code retired)
+
+- **No external tracker.** The Linear mirror (and the earlier GitHub Issues mirror) were
+  retired: `intake/queue/` is the whole queue, submissions carry no `external`/`mirrors`
+  fields, and the dev loop pulls from nothing. Do not re-nominate a tracker sync.
+- **D10 allowance code removed.** The one-time D10 exception in
+  `scripts/verify-integrity.ts` had already expired (its completion record landed in the
+  comparison base), so its constants, eligibility check and drift branch were deleted with
+  their tests. The drift ratchet now has no allowance path at all.

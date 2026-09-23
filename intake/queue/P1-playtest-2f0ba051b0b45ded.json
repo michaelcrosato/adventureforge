@@ -25,15 +25,5 @@
     "observations": 7
   },
   "created_at": "2026-08-31T02:14:26.185Z",
-  "updated_at": "2026-08-31T16:35:36.086Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "475c6451-b178-48ab-84a3-7db6115f4df0",
-      "identifier": "MIC-38",
-      "url": "https://linear.app/michael-crosato/issue/MIC-38/2f0ba051b0b45ded-albany-opening-is-paperwork-and-compact-tuples-before",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:35:36.086Z"
 }

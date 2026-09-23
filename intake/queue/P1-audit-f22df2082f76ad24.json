@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": "f22df2082f76ad24",
-  "title": "Grok-4.6 reference-tier auto-corroboration floods intake and Linear",
-  "body": "`derivePromotion` in `src/qa/ticket.ts` marks a cluster `corroborated` as soon as `evidence.tiers` includes `\"reference\"`:\n\n```\nif (evidence.tiers.includes(\"reference\")) return \"corroborated\";\nif (evidence.families.length >= 2) return \"corroborated\";\n```\n\nThat is the intended calibration-instrument rule (a few expensive players checking the cheap cohort). It is the wrong rule for a **100-player Grok 4.6 (low) instant-thinking wave**.\n\n`blind-tester/catalogs/grok_cli.json` stamps `grok-4.6` `tier: \"reference\"` with `settings.reasoning_effort: \"low\"`. The dedicated lane `npm run playtest:grok-wave` pins that model and effort and fans out up to 32 OS children. A dry-run of `bin/triage.ts` against `ai-runs/playtest/sessions-grok-stress-20260901` (100 sessions, 92 interviews) produced **525 issues → 392 clusters, all corroborated, 392 actionable**. Same family, one wave, slightly different wording — the clusterer barely merged them.\n\n`isActionable` then lets every one of those cross into `intake/queue/`, and `intake:sync:linear` would mirror them onto Linear AdventureForge. Linear/`intake/queue` is the **short working board**; `qa/tickets/` is the **idle shelf**. This leak would flood both.\n\n**Fix (do not do in this ticket's landing):** treat the cheap Grok-4.6 instant-thinking wave as **volume**, not reference — either retier the catalog entry the wave actually pins, or stop letting single-family reference presence auto-corroborate a mass cohort. Reference-tier corroboration was bought for a small expensive check, not 100 low-effort Grok runs.\n\nDo **not** dump the 392 clusters into intake or Linear. A handful of ranked P0/P1 items belong on the working board; the rest stay in `qa/tickets/`.",
+  "title": "Grok-4.6 reference-tier auto-corroboration floods intake",
+  "body": "`derivePromotion` in `src/qa/ticket.ts` marks a cluster `corroborated` as soon as `evidence.tiers` includes `\"reference\"`:\n\n```\nif (evidence.tiers.includes(\"reference\")) return \"corroborated\";\nif (evidence.families.length >= 2) return \"corroborated\";\n```\n\nThat is the intended calibration-instrument rule (a few expensive players checking the cheap cohort). It is the wrong rule for a **100-player Grok 4.6 (low) instant-thinking wave**.\n\n`blind-tester/catalogs/grok_cli.json` stamps `grok-4.6` `tier: \"reference\"` with `settings.reasoning_effort: \"low\"`. The dedicated lane `npm run playtest:grok-wave` pins that model and effort and fans out up to 32 OS children. A dry-run of `bin/triage.ts` against `ai-runs/playtest/sessions-grok-stress-20260901` (100 sessions, 92 interviews) produced **525 issues → 392 clusters, all corroborated, 392 actionable**. Same family, one wave, slightly different wording — the clusterer barely merged them.\n\n`isActionable` then lets every one of those cross into `intake/queue/`. `intake/queue` is the **short working board**; `qa/tickets/` is the **idle shelf**. This leak would flood both.\n\n**Fix (do not do in this ticket's landing):** treat the cheap Grok-4.6 instant-thinking wave as **volume**, not reference — either retier the catalog entry the wave actually pins, or stop letting single-family reference presence auto-corroborate a mass cohort. Reference-tier corroboration was bought for a small expensive check, not 100 low-effort Grok runs.\n\nDo **not** dump the 392 clusters into intake. A handful of ranked P0/P1 items belong on the working board; the rest stay in `qa/tickets/`.",
   "source": "audit",
   "kind": "bug",
   "priority": "P1",
@@ -22,15 +22,5 @@
     "observations": 1
   },
   "created_at": "2026-09-02T05:04:18.878Z",
-  "updated_at": "2026-09-02T05:06:06.815Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "3cba6556-16aa-4875-a1f6-0a7f3df9ddb1",
-      "identifier": "MIC-64",
-      "url": "https://linear.app/michael-crosato/issue/MIC-64/f22df2082f76ad24-grok-46-reference-tier-auto-corroboration-floods",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-09-02T05:06:06.815Z"
 }

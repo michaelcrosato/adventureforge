@@ -16,15 +16,5 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:17:59.241Z",
-  "updated_at": "2026-08-31T16:36:29.768Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "8f44f897-5b75-41c1-9ce1-59d409ff62f7",
-      "identifier": "MIC-8",
-      "url": "https://linear.app/michael-crosato/issue/MIC-8/247a4e033fb3a1bc-ticket-id-is-not-stable-as-evidence-accumulates",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:29.768Z"
 }

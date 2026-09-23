@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "dca6520649b9b402",
   "title": "When intake is empty, point at qa:bucket --next instead of staying silent",
-  "body": "When `intake/queue/` is empty, `loop.sh` does **not** look at the playtest shelf. Default: fall through to the assessor’s own candidates (`await_queued_work` is opt-in via `AI_LOOP_IDLE_WHEN_EMPTY=1`). `report_qa_bucket` only prints `npm run work -- --list` and never fails the cycle.\n\nThat is correct for not blocking on the fleet. It is silent about **where to look when the team is out of queued work**. The idle shelf is `qa/tickets/` — accumulating and corroborated-but-not-promoted-this-week findings. `npm run qa:bucket -- --next` already prints the highest-priority actionable ticket; `--all` is the full listing.\n\n**Ask:** when the working board is empty, print one line pointing at that shelf (`qa:bucket -- --next`), without promoting those tickets into intake or Linear. Linear/`intake/queue` stays the short working board; `qa/tickets` stays the place you browse when idle.\n\nDo not treat a 100-player Grok 4.6 (low) wave’s `derivePromotion` auto-corroboration (reference-tier stamp in `blind-tester/catalogs/grok_cli.json`) as filling the working board. The shelf is for that volume.",
+  "body": "When `intake/queue/` is empty, `loop.sh` does **not** look at the playtest shelf. Default: fall through to the assessor’s own candidates (`await_queued_work` is opt-in via `AI_LOOP_IDLE_WHEN_EMPTY=1`). `report_qa_bucket` only prints `npm run work -- --list` and never fails the cycle.\n\nThat is correct for not blocking on the fleet. It is silent about **where to look when the team is out of queued work**. The idle shelf is `qa/tickets/` — accumulating and corroborated-but-not-promoted-this-week findings. `npm run qa:bucket -- --next` already prints the highest-priority actionable ticket; `--all` is the full listing.\n\n**Ask:** when the working board is empty, print one line pointing at that shelf (`qa:bucket -- --next`), without promoting those tickets into intake. `intake/queue` stays the short working board; `qa/tickets` stays the place you browse when idle.\n\nDo not treat a 100-player Grok 4.6 (low) wave’s `derivePromotion` auto-corroboration (reference-tier stamp in `blind-tester/catalogs/grok_cli.json`) as filling the working board. The shelf is for that volume.",
   "source": "research",
   "kind": "feature",
   "priority": "P2",
@@ -22,15 +22,5 @@
     "observations": 1
   },
   "created_at": "2026-09-02T05:04:19.249Z",
-  "updated_at": "2026-09-02T05:06:07.476Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "40bfded0-e837-41d4-b51e-4ae2fa4c6640",
-      "identifier": "MIC-66",
-      "url": "https://linear.app/michael-crosato/issue/MIC-66/dca6520649b9b402-when-intake-is-empty-point-at-qabucket-next-instead",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-09-02T05:06:07.476Z"
 }

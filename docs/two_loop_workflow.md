@@ -241,8 +241,6 @@ flowchart LR
     R["research / design agent"] --> Q
     C["crawler oracles"] --> Q
     H["a person"] --> Q[("intake/queue/<br/>one JSON per submission")]
-    Q <-->|"npm run intake:sync:linear"| LIN[("Linear<br/>mirror")]
-    H -.->|"files an issue<br/>from anywhere"| LIN
     Q ==>|"npm run work"| DEV["dev loop"]
 ```
 
@@ -269,15 +267,9 @@ cat plan.md | npm run submit -- --source research --kind feature --title "..." -
 
 Re-filing is safe and expected. A submission's id is content-addressed on
 `source + kind + key`, so an agent that re-runs nightly **updates its own submissions
-instead of filing a hundred duplicates** — and lifecycle state the queue owns (`status`,
-and the tracker issue it is mirrored to) survives a re-file, so re-filing never resets something a
+instead of filing a hundred duplicates** — and lifecycle state the queue owns (`status`
+and the claim) survives a re-file, so re-filing never resets something a
 dev agent is already working.
-
-### Linear is a mirror, not the source of truth
-
-People file and triage in Linear; the loop keeps working when the network is down, because
-the canonical copy is the files and `npm run intake:sync:linear` reconciles both ways. The
-full procedure is [`linear_workflow.md`](linear_workflow.md).
 
 ### Reading
 
@@ -603,7 +595,6 @@ Two things that will bite if you skip the doctor:
 | `./playtest-loop.sh`                   | playtest loop; cohorts across providers and personas |
 | `npm run work`                         | the next thing to build                              |
 | `npm run submit -- …`                  | file work from any source                            |
-| `npm run intake:sync:linear`           | reconcile the queue with the Linear mirror           |
 | `npm run qa:bucket -- --summary`       | the playtest ticket bucket                           |
 | `npm run qa:bucket -- --store-summary` | the session corpus                                   |
 | `npm run qa:triage`                    | re-triage the corpus (pure; safe to re-run)          |

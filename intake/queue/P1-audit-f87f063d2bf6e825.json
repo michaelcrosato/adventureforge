@@ -16,15 +16,5 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:00.299Z",
-  "updated_at": "2026-08-31T16:36:30.613Z",
-  "external": null,
-  "mirrors": [
-    {
-      "provider": "linear",
-      "id": "afc9a21c-3579-44a7-82b4-0b9788783153",
-      "identifier": "MIC-21",
-      "url": "https://linear.app/michael-crosato/issue/MIC-21/f87f063d2bf6e825-multi-vendor-familiestiers-ranking-is-unreachable",
-      "synced_status": "open"
-    }
-  ]
+  "updated_at": "2026-08-31T16:36:30.613Z"
 }

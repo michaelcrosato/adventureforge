@@ -106,9 +106,9 @@ successor inherits workflow state unless it already has its own; a split inherit
 neither the old claim nor its corroboration.
 
 Triage also declines an already-promoted pending intake item with that exact old
-identity, retaining its body, evidence, claim and tracker pointers and adding
-replacement references. Completed and declined decisions remain intact. Tracker
-pointers stay on the predecessor. Reconciliation uses the saved links, so a retry
+identity, retaining its body, evidence and claim and adding replacement
+references. Completed and declined decisions remain intact. Reconciliation uses
+the saved links, so a retry
 after writing the ticket bucket still corrects the intake queue.
 
 See [`../../docs/two_loop_workflow.md`](../../docs/two_loop_workflow.md).
