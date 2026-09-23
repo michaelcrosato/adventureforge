@@ -1,0 +1,55 @@
+id: bug_0634
+title: The dev loop and the playtest loop guarded a shared checkout in one direction only, and a stale dev pid file blocked QA forever
+reported_by: intake/queue audit/bug 14e1722c0dad98c0 (docs/REPO_AUDIT_2026-09.md findings 4/10); re-confirmed by the repo audit at c17192f9
+severity: S2
+
+symptom: >
+  playtest-loop.sh refused to start whenever ai-runs/loop.pid existed, live or not, so a
+  dev loop killed by taskkill or a closed terminal left a checkout that refused every
+  playtest loop until someone deleted the file by hand. In the other direction there was
+  no guard at all: the playtest loop wrote no record, so a dev loop started SECOND in the
+  same checkout ran, and its red-gate `git reset --hard` changed the build under players
+  mid-run — sessions stamped with a commit whose content had already moved.
+
+cause: >
+  loop.sh authenticated its own record (pid plus /proc start tick) with inline helpers,
+  but playtest-loop.sh used a bare `-f ai-runs/loop.pid` test and never wrote
+  ai-runs/playtest-loop.pid, and loop.sh never looked for one. The two drivers had no
+  shared notion of a live holder.
+
+reproduction: >
+  tests/regression/loop_process_scripts.test.ts "dev loop / playtest loop mutual
+  exclusion (bug_0634)" runs the real guard text from both drivers against a fake /proc:
+  a stale loop.pid (reused pid, dead pid, malformed) no longer blocks the playtest guard;
+  a live one still does; loop.sh refuses a live playtest record and ignores a stale one.
+
+fix: >
+  scripts/process-record.sh now holds process_start_time, write_process_record and the
+  new live_process_record (succeeds only for a record whose pid is live with the recorded
+  start tick). loop.sh sources it instead of its inline copies, keeps its single-writer
+  guard on top of it, and adds refuse_if_live_playtest_loop before it writes its own
+  record. playtest-loop.sh sources the same file, refuses only a LIVE dev-loop record,
+  refuses a second live playtest loop, writes ai-runs/playtest-loop.pid, and removes it
+  on exit only if it is still its own (checked with BASHPID so a player subshell can never
+  delete it). PLAYTEST_ALLOW_SHARED_CHECKOUT=1 opts out from either side. Where /proc
+  cannot authenticate a process the playtest loop writes no record, since loop.sh cannot
+  run on such a system anyway. scripts/loop-status.sh and scripts/loop-stop.sh keep their
+  own copies because their tests run them as stand-alone bodies. docs/two_loop_workflow.md
+  and docs/parallel_lanes.md describe the two-way guard.
+
+production:
+  - scripts/process-record.sh
+  - loop.sh
+  - playtest-loop.sh
+  - docs/two_loop_workflow.md
+  - docs/parallel_lanes.md
+regression:
+  - tests/regression/loop_process_scripts.test.ts
+verification:
+  - Four new cases cover the playtest guard (stale dev records pass and a record is
+    written then removed on exit; a live dev record refuses unless opted in; a second live
+    QA loop refuses while a stale QA record is overwritten) and the loop.sh guards (live
+    playtest record refuses, stale or opted-in does not, the single-writer guard still
+    refuses a live dev record, and the new check is wired before loop.sh writes its record).
+  - playtest_loop_persona_gate, playtest_loop_documented_cohort, loop_driver_gates and the
+    doctor_cli playtest-loop cases stay green; bash -n passes for both drivers.

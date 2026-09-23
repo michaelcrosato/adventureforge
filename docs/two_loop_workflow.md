@@ -400,14 +400,18 @@ Two things to do before the first launch, both of which cost you a wave otherwis
   from the corpus with no other trace. `C:\dev` is already excluded; a corpus on
   another volume is not.
 
-The dev-loop refusal is worth understanding precisely, because it is weaker than it
-reads: it is a bare `-f ai-runs/loop.pid` existence test relative to the script's own
-checkout. `ai-runs/` is gitignored and therefore per-worktree, so a dev loop in one
-worktree is invisible to a playtest loop in another — the guard does not police
-worktrees, and it is not a multi-instance lock either. It also never clears itself if
-the dev loop is killed with `taskkill` or by closing the terminal: the file survives and
-that checkout then refuses every playtest loop forever. Clear it with
-`scripts/loop-stop.sh`, or `rm -f ai-runs/loop.pid`.
+The dev-loop refusal is worth understanding precisely. Both drivers write an
+authenticated pid record (`ai-runs/loop.pid`, `ai-runs/playtest-loop.pid`: pid plus the
+process's `/proc` start tick, via the shared `scripts/process-record.sh`), and each
+refuses to start while the OTHER's record names a live process — so it no longer matters
+which loop starts first, and a record left behind by a crash or a `taskkill` (dead pid,
+or a pid since reused) is recognised as stale and ignored rather than blocking forever.
+A second playtest loop in the same checkout is refused the same way.
+`PLAYTEST_ALLOW_SHARED_CHECKOUT=1` opts out from either side. `ai-runs/` is gitignored
+and therefore per-worktree, so a loop in one worktree is invisible to a loop in another —
+the guard polices one checkout, which is exactly the scope of the hard-reset hazard. On a
+system without a compatible `/proc` (macOS) the playtest loop writes no record; `loop.sh`
+fails closed there and cannot run at all.
 
 ### Preflight, part one and a half: ask what this machine can actually do
 

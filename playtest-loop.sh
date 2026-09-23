@@ -50,12 +50,48 @@ once=0
 # no longer exists on disk. Run the QA loop from its own clone or worktree. This is a
 # refusal rather than a warning because the failure it prevents is silent — you would
 # get sessions stamped with a commit whose content had already changed.
-if [[ "${PLAYTEST_ALLOW_SHARED_CHECKOUT:-0}" != "1" && -f "ai-runs/loop.pid" ]]; then
-  echo "A dev loop appears to be running in this checkout (ai-runs/loop.pid)."
+#
+# Both directions are guarded, with the same authenticated records (bug_0634). The dev
+# loop's ai-runs/loop.pid counts only when it names a LIVE process whose start tick still
+# matches — a bare file left by a crash used to block this loop forever. And this loop now
+# writes ai-runs/playtest-loop.pid, which loop.sh checks the same way, so starting the dev
+# loop SECOND in this checkout is refused too.
+# shellcheck source=scripts/process-record.sh
+source "$REPO_ROOT/scripts/process-record.sh"
+PLAYTEST_PID_FILE="ai-runs/playtest-loop.pid"
+mkdir -p ai-runs
+if [[ "${PLAYTEST_ALLOW_SHARED_CHECKOUT:-0}" != "1" ]] &&
+  dev_loop_holder="$(live_process_record "ai-runs/loop.pid")"; then
+  echo "A dev loop is running in this checkout (ai-runs/loop.pid, pid ${dev_loop_holder% *})."
   echo "Run the playtest loop from a separate clone or git worktree so a failed dev"
   echo "cycle's hard reset cannot change the build out from under a player mid-run."
   echo "Set PLAYTEST_ALLOW_SHARED_CHECKOUT=1 to override."
   exit 1
+fi
+# Two QA loops in one checkout reset the tree under each other's players between waves,
+# and one's exit would delete the other's record, so only one may hold it.
+if qa_holder="$(live_process_record "$PLAYTEST_PID_FILE")"; then
+  echo "Another playtest loop is running in this checkout ($PLAYTEST_PID_FILE, pid ${qa_holder% *})."
+  echo "Run a second QA loop from its own git worktree; point both at one PLAYTEST_STORE to pool."
+  exit 1
+fi
+# Where /proc cannot authenticate a process (e.g. macOS), no record is written. loop.sh
+# fails closed on such a system and cannot run here at all, so there is nothing to guard.
+if write_process_record "$PLAYTEST_PID_FILE" "$$"; then
+  # Remove the record only if it is still THIS process's. BASHPID, not $$: a player
+  # subshell shares $$ with this shell, and must never delete the loop's record.
+  cleanup_playtest_record() {
+    local mine=""
+    mine="$(live_process_record "$PLAYTEST_PID_FILE" 2>/dev/null)" || mine=""
+    [[ "${mine% *}" == "$BASHPID" ]] && rm -f "$PLAYTEST_PID_FILE" 2>/dev/null
+    return 0
+  }
+  trap cleanup_playtest_record EXIT
+  trap 'cleanup_playtest_record; trap - EXIT; exit 130' INT
+  trap 'cleanup_playtest_record; trap - EXIT; exit 143' TERM
+else
+  rm -f "$PLAYTEST_PID_FILE" 2>/dev/null || true
+  echo "Note: cannot authenticate this process through /proc; no $PLAYTEST_PID_FILE written."
 fi
 
 # Default cohort: one player on the registry's first provider. The vendor name used to

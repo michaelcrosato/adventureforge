@@ -38,6 +38,7 @@
 #   AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES=N   retained durable failure records [100]
 #   AI_LOOP_ALLOW_DIRTY=1            allow risky dirty commit-mode start; never waives clean evidence [0]
 #   AI_LOOP_ALLOW_VERIFIER_EDITS=1   acknowledge a deliberate verifier change [0]
+#   PLAYTEST_ALLOW_SHARED_CHECKOUT=1 start beside a live playtest-loop.sh in this checkout [0]
 #   AI_LOOP_COMMIT_MESSAGE="..."     final ledger commit message override
 #
 # Companions: npm run loop:status / loop:stop (project-scoped, pid-file based).
@@ -103,35 +104,17 @@ clear_stop_request() {
 # worker pid. scripts/loop-status.sh and scripts/loop-stop.sh act ONLY on these pids.
 LOOP_PID_FILE="ai-runs/loop.pid"
 AGENT_PID_FILE="ai-runs/agent.pid"
+# The QA loop's record (playtest-loop.sh writes it). Read here, never written.
+PLAYTEST_PID_FILE="ai-runs/playtest-loop.pid"
 AFK_PROC_ROOT="/proc"
 
-# A pid alone is not an identity: after a crash leaves a stale file, the kernel may
-# reuse that number for an unrelated process. Linux exposes a process's immutable
-# start tick in /proc/<pid>/stat field 22. Record both values and require both before
-# status/stop trusts the record. Systems without a compatible /proc fail closed: the
-# unattended loop refuses to start rather than creating a record that cannot be
-# authenticated later.
-process_start_time() {
-  local pid="$1" stat tail start
-  [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 1
-  [[ -r "$AFK_PROC_ROOT/$pid/stat" ]] || return 1
-  stat="$(<"$AFK_PROC_ROOT/$pid/stat")" || return 1
-  [[ "$stat" == *") "* ]] || return 1
-  # The comm field is parenthesized and may contain spaces. Strip through its LAST
-  # closing ") "; the remaining token 20 is original field 22 (starttime).
-  tail="${stat##*) }"
-  set -- $tail
-  [[ "$#" -ge 20 ]] || return 1
-  start="${20:-}"
-  [[ "$start" =~ ^[0-9]+$ ]] || return 1
-  printf '%s\n' "$start"
-}
-
-write_process_record() {
-  local path="$1" pid="$2" start
-  start="$(process_start_time "$pid")" || return 1
-  printf '%s %s\n' "$pid" "$start" > "$path"
-}
+# process_start_time / write_process_record / live_process_record: one copy, shared with
+# playtest-loop.sh so the two drivers authenticate each other's records the same way.
+# Record pid AND start tick, and require both before anything trusts the record. Systems
+# without a compatible /proc fail closed: the unattended loop refuses to start rather
+# than creating a record that cannot be authenticated later.
+# shellcheck source=scripts/process-record.sh
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/process-record.sh"
 
 cleanup_pid_records() {
   rm -f "$LOOP_PID_FILE" "$AGENT_PID_FILE" 2>/dev/null || true
@@ -144,15 +127,27 @@ cleanup_pid_records() {
 # by a crash (dead pid, or pid reused by an unrelated process) — stale records are
 # overwritten as before; only an authenticated live holder refuses startup.
 refuse_if_live_loop() {
-  local path="$1" pid recorded_start start rest
-  [[ -f "$path" ]] || return 0
-  read -r pid recorded_start rest < "$path" 2>/dev/null || return 0
-  [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 0
-  start="$(process_start_time "$pid")" || return 0
-  [[ "$start" == "$recorded_start" ]] || return 0
-  echo "Refusing to start: $path names a live loop (pid $pid, start tick $start)."
+  local path="$1" holder
+  holder="$(live_process_record "$path")" || return 0
+  echo "Refusing to start: $path names a live loop (pid ${holder% *}, start tick ${holder#* })."
   echo "Two dev loops in one checkout destroy each other's cycles. Stop the running"
   echo "one with 'npm run loop:stop', or run this lane in its own git worktree."
+  return 1
+}
+
+# The other direction of playtest-loop.sh's own guard (bug_0634, intake 14e1722c). A red
+# gate here hard-resets the tree, which changes the build out from under a player the QA
+# loop has mid-run — and sessions get stamped with a commit whose content already moved.
+# playtest-loop.sh refuses to start beside a live dev loop; this refuses to start beside a
+# live QA loop, authenticated the same way, so a stale record blocks neither.
+# PLAYTEST_ALLOW_SHARED_CHECKOUT=1 is the same deliberate opt-in from either side.
+refuse_if_live_playtest_loop() {
+  local path="$1" holder
+  [[ "${PLAYTEST_ALLOW_SHARED_CHECKOUT:-0}" != "1" ]] || return 0
+  holder="$(live_process_record "$path")" || return 0
+  echo "Refusing to start: $path names a live playtest loop (pid ${holder% *})."
+  echo "A failed dev cycle's hard reset would change the build under its players mid-run."
+  echo "Run the dev loop in its own git worktree, or set PLAYTEST_ALLOW_SHARED_CHECKOUT=1."
   return 1
 }
 
@@ -165,6 +160,7 @@ on_loop_signal() {
 
 mkdir -p ai-runs
 refuse_if_live_loop "$LOOP_PID_FILE" || exit 1
+refuse_if_live_playtest_loop "$PLAYTEST_PID_FILE" || exit 1
 if ! write_process_record "$LOOP_PID_FILE" "$$"; then
   rm -f "$LOOP_PID_FILE" 2>/dev/null || true
   echo "Refusing to start: cannot authenticate this process through /proc/<pid>/stat."

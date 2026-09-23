@@ -29,7 +29,8 @@ Each worktree has its own `ai-runs/` (per-checkout, gitignored), its own pid
 records, and its own branch; `loop.sh` additionally refuses to start when a
 live loop already holds the checkout's `ai-runs/loop.pid` (stale records from
 crashes are detected via the pid + start-tick identity and overwritten).
-`playtest-loop.sh` likewise refuses to share a checkout with a live dev loop.
+`playtest-loop.sh` likewise refuses to share a checkout with a live dev loop, and
+writes its own `ai-runs/playtest-loop.pid` that `loop.sh` checks the same way.
 
 ## Lane types
 
