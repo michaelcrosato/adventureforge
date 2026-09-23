@@ -32,7 +32,10 @@ import type { OpeningPreparation } from "./opening_preparation.js";
 import type { OpeningRegistration } from "./opening_registration.js";
 import type { OpeningReliefAllocation } from "./opening_relief_allocation.js";
 import type { OpeningReliefOath } from "./opening_relief_oath.js";
-import { deriveRegistrationPromiseFoldbackReceipt } from "./registration_promise_receipt.js";
+import {
+  deriveBrokenPromiseFoldbackReceipt,
+  deriveRegistrationPromiseFoldbackReceipt,
+} from "./registration_promise_receipt.js";
 import { deriveQuestDispatchWindow, type QuestDispatchWindow } from "./quest_dispatch_window.js";
 
 export type OverworldQuestCompletionOutcome = {
@@ -245,17 +248,20 @@ export function questCompletionJournalEntryDraft(args: {
   townName: string;
   returnSummary?: string;
   registrationReceipt?: string;
+  brokenPromiseReceipt?: string;
 }): Omit<OverworldJournalEntry, "recordedAt"> {
   const baseText =
     `The quest closed at ${args.endingTitle} after ` +
     `${String(args.minutes)} minutes of local work.`;
-  const returnText = args.returnSummary ? `${baseText} ${args.returnSummary}` : baseText;
+  const text = [baseText, args.returnSummary, args.registrationReceipt, args.brokenPromiseReceipt]
+    .filter((part): part is string => part !== undefined && part.length > 0)
+    .join(" ");
   return {
     id: `quest_done:${args.quest.id}`,
     kind: "quest_done",
     town: args.townName,
     title: `Completed ${args.quest.title}`,
-    text: args.registrationReceipt ? `${returnText} ${args.registrationReceipt}` : returnText,
+    text,
     questCompletionEndingId: args.endingId,
   };
 }
@@ -494,6 +500,9 @@ export function planOverworldQuestCompletion(
         openingLeadSource: state.openingLeadSource,
       })
     : undefined;
+  const brokenPromiseReceipt = campaignExport
+    ? deriveBrokenPromiseFoldbackReceipt(campaignExport, state.character)
+    : undefined;
   return {
     minutes,
     // A completed quest returns its achieved ending and journal consequence.
@@ -515,6 +524,7 @@ export function planOverworldQuestCompletion(
       townName: state.nodesById.get(quest.home)?.name ?? quest.home,
       ...(returnSummary ? { returnSummary } : {}),
       ...(registrationReceipt ? { registrationReceipt } : {}),
+      ...(brokenPromiseReceipt ? { brokenPromiseReceipt } : {}),
     }),
   };
 }
