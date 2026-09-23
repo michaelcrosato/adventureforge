@@ -13,6 +13,7 @@ import {
   type OverworldManifest,
 } from "./overworld.js";
 import { assertOpeningPreparationCheckDisclosureSourceIntegrity } from "./opening_preparation_source_integrity.js";
+import { registerDeepFrozenOverworldManifest } from "./session_indices.js";
 import {
   compactSourceRefLegacyConsistency,
   compactSourceRefValidationError,
@@ -322,6 +323,7 @@ export function loadOverworldManifest(
   assertOverworldQuestSourceCoverage(overworld, discoverShippedRpgSourcePaths(root));
   assertOpeningPreparationCheckDisclosureSourceIntegrity(root, overworld);
   deepFreeze(overworld);
+  registerDeepFrozenOverworldManifest(overworld);
   overworldManifestCache.set(root, overworld);
   return overworld;
 }

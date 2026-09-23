@@ -60,23 +60,42 @@ export type OverworldSessionIndexes = {
 };
 
 /**
- * Module-level WeakMap cache for `worldHash` computations on frozen OverworldManifest objects.
- * Computing `hashState(world)` takes ~100ms per call due to canonical serialization of the large manifest.
- * Since `loadOverworldManifest` deep-freezes the manifest, caching by object identity is completely safe
- * for frozen manifests and avoids repeated ~100ms overhead on every new `OverworldSession` instance.
+ * Module-level WeakMap cache for `worldHash` computations on deep-frozen OverworldManifest objects.
+ * Computing `hashState(world)` takes ~100ms per call due to canonical serialization of the large manifest,
+ * and caching by object identity avoids repeating it on every new `OverworldSession` instance.
+ *
+ * Identity caching is only sound when NOTHING reachable from the manifest can change, and
+ * `Object.isFrozen` answers for the top level alone: a manifest frozen only at the top still
+ * accepts nested edits, and used to be served its stale first hash (bug_0642). So the cache
+ * admits only manifests a loader registered right after deep-freezing them.
  */
-const FROZEN_WORLD_HASH_CACHE = new WeakMap<object, string>();
+const DEEP_FROZEN_WORLDS = new WeakSet<OverworldManifest>();
+const DEEP_FROZEN_WORLD_HASH_CACHE = new WeakMap<OverworldManifest, string>();
+
+/**
+ * Declare `world` deep-frozen, making its `worldHash` cacheable by identity. Call it only
+ * after freezing every object reachable from the manifest (`loadOverworldManifest` does).
+ */
+export function registerDeepFrozenOverworldManifest(world: OverworldManifest): void {
+  if (!Object.isFrozen(world)) {
+    throw new Error("Only a deep-frozen overworld manifest can be registered for hash caching.");
+  }
+  DEEP_FROZEN_WORLDS.add(world);
+}
+
+/** Verification seam: whether `world`'s hash is currently served from the identity cache. */
+export function overworldWorldHashIsCached(world: OverworldManifest): boolean {
+  return DEEP_FROZEN_WORLD_HASH_CACHE.has(world);
+}
 
 function getOrComputeWorldHash(world: OverworldManifest): string {
-  if (Object.isFrozen(world)) {
-    let hash = FROZEN_WORLD_HASH_CACHE.get(world);
-    if (!hash) {
-      hash = hashState(world);
-      FROZEN_WORLD_HASH_CACHE.set(world, hash);
-    }
-    return hash;
+  if (!DEEP_FROZEN_WORLDS.has(world)) return hashState(world);
+  let hash = DEEP_FROZEN_WORLD_HASH_CACHE.get(world);
+  if (!hash) {
+    hash = hashState(world);
+    DEEP_FROZEN_WORLD_HASH_CACHE.set(world, hash);
   }
-  return hashState(world);
+  return hash;
 }
 
 export function buildOverworldSessionIndexes(world: OverworldManifest): OverworldSessionIndexes {
