@@ -6,7 +6,9 @@
   "source": "audit",
   "kind": "bug",
   "priority": "P1",
-  "status": "open",
+  "status": "done",
+  "claimed_by": "claude-code_2-1-275_agent",
+  "claimed_at": "2026-09-18T00:18:21.537Z",
   "labels": [],
   "area": "src/mcp/server.ts",
   "evidence": {
@@ -16,7 +18,7 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:01.607Z",
-  "updated_at": "2026-08-31T16:36:31.518Z",
+  "updated_at": "2026-09-18T01:47:42.913Z",
   "external": null,
   "mirrors": [
     {
@@ -26,5 +28,6 @@
       "url": "https://linear.app/michael-crosato/issue/MIC-20/f63012f07982e235-apply-content-patch-does-not-enforce-the-closed-op",
       "synced_status": "open"
     }
-  ]
+  ],
+  "resolved_by": "claude-code_2-1-275_agent"
 }

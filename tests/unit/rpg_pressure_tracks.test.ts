@@ -56,6 +56,68 @@ function compiledPressurePack(): RpgPack {
   return result.compiled.pack;
 }
 
+// These fixtures are derived by substitution, so a silently-missed anchor would
+// hand a test the UNMODIFIED source and quietly invert what it proves.
+function substituted(source: string, find: string, replacement: string): string {
+  const out = source.replace(find, replacement);
+  if (out === source) throw new Error(`fixture anchor not found: ${JSON.stringify(find)}`);
+  return out;
+}
+
+const CATTLE_ALARM_WRITE = "    on_enter:\n      - inc_var: { name: cattle_alarm, by: 4 }\n";
+
+// Derived from SYNTHETIC_PRESSURE_SOURCE by removing its one write to cattle_alarm
+// (the "finish" room's on_enter inc_var) — the var is still declared in vars_init
+// and still projected by the pressure track, but now nothing in the pack ever
+// writes it: the DEAD_PRESSURE_TRACK fixture.
+const SYNTHETIC_DEAD_PRESSURE_SOURCE = substituted(
+  SYNTHETIC_PRESSURE_SOURCE,
+  CATTLE_ALARM_WRITE,
+  "",
+);
+
+// The dead fixture, except the track's ONLY write lives in an object effect slot
+// outside interactions[]: take_effects (fired on first pickup) and unlock_effects
+// (fired on UNLOCK). Both are real runtime write paths, so neither track is dead.
+const SYNTHETIC_TAKE_EFFECTS_PRESSURE_SOURCE = substituted(
+  SYNTHETIC_DEAD_PRESSURE_SOURCE,
+  "enemies: []",
+  `objects:
+  - id: alarm_bell
+    name: alarm bell
+    description: A brass bell that clatters when it is lifted.
+    takeable: true
+    take_effects:
+      - inc_var: { name: cattle_alarm, by: 4 }
+enemies: []`,
+);
+
+const SYNTHETIC_UNLOCK_EFFECTS_PRESSURE_SOURCE = substituted(
+  SYNTHETIC_DEAD_PRESSURE_SOURCE,
+  "enemies: []",
+  `objects:
+  - id: gate_key
+    name: gate key
+    description: An iron key worn smooth at the bow.
+    takeable: true
+  - id: pen_gate
+    name: pen gate
+    description: A gate lashed shut against the herd.
+    openable: true
+    locked: true
+    key_id: gate_key
+    unlock_narrate: The gate swings wide and the herd surges against the rail.
+    unlock_effects:
+      - inc_var: { name: cattle_alarm, by: 4 }
+enemies: []`,
+);
+
+function compiledFrom(source: string): RpgPack {
+  const result = compileRpgSource(source);
+  if (!result.ok) throw result.error;
+  return result.compiled.pack;
+}
+
 function pressureTrack(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "alarm",
@@ -145,6 +207,31 @@ describe("RPG pressure-track authoring contract", () => {
     );
     expect(validateRpg(below).findings.map((finding) => finding.code)).toContain(
       "PRESSURE_INITIAL_BELOW_MIN",
+    );
+  });
+
+  it("flags DEAD_PRESSURE_TRACK when no effect ever writes the track's var, and not when one does", () => {
+    const alive = compiledPressurePack();
+    expect(validateRpg(alive).findings.map((finding) => finding.code)).not.toContain(
+      "DEAD_PRESSURE_TRACK",
+    );
+
+    const dead = compiledFrom(SYNTHETIC_DEAD_PRESSURE_SOURCE);
+    const finding = validateRpg(dead).findings.find((f) => f.code === "DEAD_PRESSURE_TRACK");
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe("warning");
+  });
+
+  // A write is a write wherever it is authored. take_effects/unlock_effects are
+  // object effect slots outside interactions[], so a liveness check that walks
+  // only interactions calls these tracks dead and sends an author hunting a
+  // wire-up that is already correct.
+  it.each([
+    ["take_effects", SYNTHETIC_TAKE_EFFECTS_PRESSURE_SOURCE],
+    ["unlock_effects", SYNTHETIC_UNLOCK_EFFECTS_PRESSURE_SOURCE],
+  ])("does not flag DEAD_PRESSURE_TRACK when the only write is in %s", (_slot, source) => {
+    expect(validateRpg(compiledFrom(source)).findings.map((f) => f.code)).not.toContain(
+      "DEAD_PRESSURE_TRACK",
     );
   });
 });

@@ -80,11 +80,7 @@ import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
 import { runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
-import {
-  applyContentPatch,
-  ContentPatchProposalSchema,
-  type ContentPatchProposal,
-} from "../../agents/fixer.js";
+import { applyContentPatch, type ContentPatchProposal } from "../../agents/fixer.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
 
@@ -896,8 +892,18 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
       // proof; the full modified pack is an explicit debug echo. The model never
       // writes files: a patch is data, validated before it can be played (§16).
       // The fixer is RPG-only, matching the public catalog and runtime.
+      //
+      // `args.proposal` is untrusted MCP input — server.ts's wire-level schema
+      // leaves each op's shape as an open record on purpose, so the closed op
+      // vocabulary is enforced exactly once: here, by passing the proposal straight
+      // through, UNPARSED, to applyContentPatch. That function already runs its own
+      // `ContentPatchProposalSchema.safeParse` and returns a structured
+      // `PATCH_INVALID` report on failure (agents/fixer.ts). A local, throwing
+      // `.parse()` here used to run first and reject a malformed op with a bare
+      // Zod exception before that branch ever saw it, which surfaced to the MCP
+      // client as a raw error message instead of the promised report (bug_0628).
+      // Do not reintroduce a pre-parse here.
       const requestedWorldQuestId = resolveWorldQuestSourceId(args, "apply_content_patch");
-      const proposal = ContentPatchProposalSchema.parse(args.proposal);
       const source = rpgSources.loadWorldQuestReport(requestedWorldQuestId);
       const loaded = source.result;
       if (!loaded.ok) {
@@ -907,7 +913,7 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
           report: loaded.report,
         };
       }
-      const result = applyContentPatch(loaded.compiled.pack, proposal);
+      const result = applyContentPatch(loaded.compiled.pack, args.proposal);
       if (!result.ok) {
         return {
           ok: false,

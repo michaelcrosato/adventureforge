@@ -4470,17 +4470,67 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     ).toThrow(/not pack_path/);
   });
 
-  it("rejects the retired proposal mode discriminator", () => {
-    expect(() =>
+  it("reports the retired proposal mode discriminator as a structured PATCH_INVALID finding, not a thrown error", () => {
+    // The proposal shape itself is schema-invalid (an extra `mode` key), same as a
+    // non-vocabulary op below — both are caught by applyContentPatch's own
+    // ContentPatchProposalSchema.safeParse, so neither should throw past it (bug_0628).
+    const r = api().apply_content_patch({
+      world_quest_id: "cold_forge",
+      proposal: {
+        layer: "content",
+        mode: "rpg",
+        summary: "x",
+        ops: [],
+      } as never,
+    }) as {
+      ok: boolean;
+      world_quest_id: string | null;
+      report: { source_id: string; findings: { code: string; message: string }[] };
+    };
+    expect(r.ok).toBe(false);
+    expect(r.world_quest_id).toBe("cold_forge");
+    expect(r.report.findings[0]?.code).toBe("PATCH_INVALID");
+    expect(r.report.findings[0]?.message).toMatch(/mode/);
+  });
+
+  it("returns a structured PATCH_INVALID report for a non-vocabulary op, not a thrown Zod error (bug_0628)", () => {
+    // `delete_object` is not one of the closed op vocabulary's three ops
+    // (set_meta, set_object_field, add_room_journal_hint — agents/fixer.ts's
+    // PatchOpSchema). Before bug_0628 was fixed, src/mcp/tools.ts validated the
+    // proposal with a throwing `ContentPatchProposalSchema.parse(...)` ahead of
+    // applyContentPatch, so this call threw a raw ZodError instead of returning
+    // applyContentPatch's designed PATCH_INVALID report.
+    const call = () =>
       api().apply_content_patch({
         world_quest_id: "cold_forge",
         proposal: {
           layer: "content",
-          mode: "rpg",
           summary: "x",
-          ops: [],
+          ops: [{ op: "delete_object", id: "ghost" }],
         } as never,
-      }),
-    ).toThrow(/mode/);
+      });
+    expect(call).not.toThrow();
+    const r = call() as {
+      ok: boolean;
+      world_quest_id: string | null;
+      report: {
+        source_id: string;
+        ok: boolean;
+        findings: { severity: string; code: string; message: string; where: string[] }[];
+      };
+    };
+    expect(r.ok).toBe(false);
+    expect(r.world_quest_id).toBe("cold_forge");
+    expect(r.report.ok).toBe(false);
+    expect(r.report.findings).toHaveLength(1);
+    expect(r.report.findings[0]?.severity).toBe("error");
+    expect(r.report.findings[0]?.code).toBe("PATCH_INVALID");
+    expect(r.report.findings[0]?.where).toEqual(["proposal"]);
+    // The op vocabulary stays genuinely closed: the message names the rejected
+    // field and the exact set of ops still accepted.
+    expect(r.report.findings[0]?.message).toMatch(/invalid_union_discriminator|discriminator/i);
+    expect(r.report.findings[0]?.message).toMatch(/set_meta/);
+    expect(r.report.findings[0]?.message).toMatch(/set_object_field/);
+    expect(r.report.findings[0]?.message).toMatch(/add_room_journal_hint/);
   });
 });

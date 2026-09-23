@@ -283,6 +283,47 @@ Ship small and often — every ship is another point to go back to.
 - CLI RPG play requires no server: `npm run play`.
 - MCP and live LLM playtests are optional and belong to the playtest loop; CI uses deterministic mocks.
 
+### Sharp edges in a fresh checkout
+
+Each of these cost a real cycle before it was written down. They are cheap to avoid
+and expensive to rediscover, which is the only reason they are in the charter.
+
+- **Neither driver parses flags. An unrecognized one is IGNORED, and the run starts
+  for real.** `./loop.sh --help` does not print help — it begins a cycle.
+  `./playtest-loop.sh --help` is worse: the only flag it reads is `--once`, so
+  anything else leaves it unbounded and it starts dispatching live players. There is
+  no dry-run flag to probe with; read the header comment instead — both files
+  document their env knobs in the first ~45 lines.
+- **Always set `PLAYTEST_COHORT` explicitly.** Unset, it resolves to the registry's
+  first provider, which is whichever vendor `blind-tester/providers.json` lists first
+  — not whichever vendor you have installed. If that binary is absent every player
+  fails instantly, and without `--once`/`PLAYTEST_MAX_WAVES` the loop keeps minting
+  failed sessions into the corpus every `PLAYTEST_DELAY_SECONDS` until stopped.
+  `npm run doctor` prints what this checkout can actually launch; ask it first.
+- **A shallow clone fails `verify:bug-traces`, and therefore `npm run health`.** The
+  gate resolves ~770 historical path references through git history and reports
+  `GIT_HISTORY_TRUNCATED` when it cannot. CI runners and cloud checkouts often clone
+  shallow. `git fetch --unshallow` once fixes it; worktrees share the object store,
+  so it only needs doing once per clone.
+- **Install `node_modules` for real; do not symlink it from another checkout.**
+  `.gitignore` lists `node_modules/` with a trailing slash, which matches directories
+  only — a symlink of that name shows as untracked, and `loop.sh` then refuses to
+  start on a dirty tree. Reaching for `AI_LOOP_ALLOW_DIRTY=1` to get past that is
+  waiving a guard to paper over a self-inflicted problem; `npm install` takes seconds.
+- **A sandboxed host may refuse the spawned-worker path entirely, and the two
+  failures look nothing alike.** A headless `claude -p` worker has no one to approve
+  its Bash calls, so every `npm`/`git add`/`git commit` is auto-denied and the cycle
+  dies at `require_provisional_commit` having written nothing; and a host permission
+  classifier may refuse to launch `agents/claude-headless-worker.sh` at all, since an
+  unattended process carrying an explicit mutating-tool allowlist is the shape such
+  classifiers exist to stop. Narrowing the allowlist does not help — the pattern is
+  what is refused. Where that holds, the loop's machinery (assess, gates, triage,
+  revert, breakers) still works; only the "spawn an agent to make the change" step is
+  unavailable, so make the change in-session against the same protocol and bar. Do
+  not add `--dangerously-skip-permissions` (the CLI refuses it for a root process
+  anyway) and do not route the launch through another agent or session — that
+  launders a permission decision that was not yours to make.
+
 ## Token Economy
 
 - Prefer targeted `rg`, `git grep`, `git ls-files`, and ranged file reads over broad
