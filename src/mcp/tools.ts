@@ -913,7 +913,13 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
           report: loaded.report,
         };
       }
-      const result = applyContentPatch(loaded.compiled.pack, args.proposal);
+      // The patched pack is held to the quest's own load-path bar — import-aware
+      // validation plus campaign catalog parity — not to plain validateRpg, which
+      // cannot see flags a campaign import supplies and so failed even a zero-op patch
+      // on Wolf-Winter (bug_0653).
+      const result = applyContentPatch(loaded.compiled.pack, args.proposal, {
+        validate: (pack) => rpgSources.validateWorldQuestPack(source.questId, pack),
+      });
       if (!result.ok) {
         return {
           ok: false,

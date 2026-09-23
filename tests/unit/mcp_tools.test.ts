@@ -4425,6 +4425,39 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     expect(JSON.stringify(r).length).toBeLessThan(JSON.stringify(withPack).length);
   });
 
+  // bug_0653. Wolf-Winter's approach and oath flags arrive through campaign imports, which
+  // the load path's import-aware validation knows and plain validateRpg does not. The
+  // fixer used the plain one, so the SHIPPED quest failed its own patch tool: even a
+  // zero-op proposal came back ok:false with 74 IMPOSSIBLE_GATE errors.
+  it("holds a world quest's patch to the quest's own load-path bar (bug_0653)", () => {
+    type PatchResult = {
+      ok: boolean;
+      applied?: number;
+      report: { ok: boolean; source_id: string; findings: { code: string }[] };
+    };
+    const a = api();
+    const noop = a.apply_content_patch({
+      world_quest_id: "wolf_winter",
+      proposal: { layer: "content", summary: "no change", ops: [] } as never,
+    }) as PatchResult;
+    expect(noop.report.findings.map((f) => f.code)).toEqual([]);
+    expect(noop).toMatchObject({ ok: true, applied: 0, report: { ok: true } });
+    expect(noop.report.source_id).toBe("wolf_winter_v1");
+
+    // Still a real bar: a patch that genuinely breaks the quest is refused.
+    const broken = a.apply_content_patch({
+      world_quest_id: "wolf_winter",
+      proposal: {
+        layer: "content",
+        summary: "point the start at a room that does not exist",
+        ops: [{ op: "set_meta", field: "start_room", value: "nowhere" }],
+      } as never,
+    }) as PatchResult;
+    expect(broken.ok).toBe(false);
+    expect(broken.report.ok).toBe(false);
+    expect(broken.report.findings.map((f) => f.code)).toContain("START_MISSING");
+  });
+
   it("refuses a patch whose target is missing (no file written)", () => {
     const r = api().apply_content_patch({
       world_quest_id: "cold_forge",

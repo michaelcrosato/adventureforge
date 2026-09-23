@@ -4,6 +4,7 @@ import { hashState } from "../core/hash.js";
 import type { RpgAction } from "../api/types.js";
 import { compileRpgSource, type CompiledRpgSource } from "../rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../rpg/runner.js";
+import type { RpgPack } from "../rpg/schema.js";
 import {
   CampaignCharacterImportsSchema,
   campaignCharacterImportPlayerStateContract,
@@ -585,6 +586,33 @@ export class RpgSourceRuntime {
       title: source.title,
       result: this.loadWorldQuestSourceReport(source),
     };
+  }
+
+  /**
+   * Validate a CANDIDATE pack for a shipped world quest exactly as the load path validates
+   * that quest's source: plain `validateRpg`, then `withCampaignCatalogParity`, which
+   * re-validates with the flags, items and var ranges the quest's campaign imports supply
+   * and adds the export/import catalog parity findings.
+   *
+   * `apply_content_patch` validated a patched pack with plain `validateRpg` alone, which
+   * does not know that Wolf-Winter's approach and oath flags arrive through campaign
+   * imports — so even a zero-op patch on the shipped quest came back `ok:false` with 74
+   * IMPOSSIBLE_GATE errors (bug_0653). A patch's proof has to be the same bar the quest
+   * is played against, or it proves nothing about whether the patched quest would load.
+   *
+   * The report is labelled with the pack's own id rather than the manifest source path
+   * the load path uses once parity rewrites it, so every report `apply_content_patch`
+   * returns — its own PATCH_* refusals included — names the pack the same way.
+   */
+  validateWorldQuestPack(worldQuestId: string, pack: RpgPack): ValidationReport {
+    const source = this.resolveWorldQuestRpgSource(worldQuestId);
+    const plain = validateRpg(pack);
+    const result = withCampaignCatalogParity(source, {
+      ok: true,
+      compiled: { pack, contentHash: hashState(pack) },
+      report: plain,
+    });
+    return makeReport(plain.source_id, [...result.report.findings]);
   }
 
   resolveTraceSource(

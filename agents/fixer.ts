@@ -20,7 +20,7 @@
  * human-approval gate.
  */
 import { z } from "zod";
-import { RpgPackSchema } from "../src/rpg/schema.js";
+import { RpgPackSchema, type RpgPack } from "../src/rpg/schema.js";
 import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeReport, type ValidationReport } from "../src/validate/report.js";
 import type { Diagnosis, FixLayer } from "./debugger.js";
@@ -92,6 +92,17 @@ type AnyPack = {
   rooms?: { id: string; on_enter?: unknown[] }[];
 };
 
+export type ApplyContentPatchOptions = {
+  /**
+   * The validation bar the patched pack must clear. Defaults to plain `validateRpg`,
+   * which is right for a standalone pack. A pack that ships as a world quest must be
+   * validated the way its load path validates it — campaign imports supply flags and
+   * items plain validation cannot see — so the MCP tool passes
+   * `RpgSourceRuntime.validateWorldQuestPack` here (bug_0653).
+   */
+  validate?: (pack: RpgPack) => ValidationReport;
+};
+
 /**
  * Apply a proposal to a raw (schema-shaped) pack object. Deterministic; mutates
  * only a clone. Returns the re-validated pack — with `applied` counting the ops
@@ -99,7 +110,11 @@ type AnyPack = {
  * refused (unknown target, unsafe field name, schema break, or a still-failing
  * validation).
  */
-export function applyContentPatch(rawPack: unknown, proposal: ContentPatchProposal): ApplyResult {
+export function applyContentPatch(
+  rawPack: unknown,
+  proposal: ContentPatchProposal,
+  options: ApplyContentPatchOptions = {},
+): ApplyResult {
   const parsedProposal = ContentPatchProposalSchema.safeParse(proposal);
   if (!parsedProposal.success) {
     return {
@@ -178,7 +193,9 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
     }));
     return { ok: false, report: makeReport(String(pack.meta?.["id"] ?? "patch"), findings) };
   }
-  const report = validateRpg(reparsed.data);
+  const report = (options.validate ?? ((candidate: RpgPack) => validateRpg(candidate)))(
+    reparsed.data,
+  );
   return { ok: report.ok, applied, pack: reparsed.data, report };
 }
 

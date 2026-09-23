@@ -1,0 +1,48 @@
+id: bug_0653
+title: apply_content_patch validated with plain validateRpg, so Wolf-Winter failed even a zero-op patch
+reported_by: 2026-09-22 repository audit at c17192f9 (lane B, task B3)
+severity: S2
+
+symptom: >
+  `apply_content_patch` on world_quest_id "wolf_winter" returned ok:false with 74
+  IMPOSSIBLE_GATE errors for ANY proposal, including one with no ops at all — while
+  `validate_quest` on the same quest is clean and the quest plays. The MCP repair tool
+  could not produce a passing proof for the shipped quest it was pointed at, so any real
+  repair to Wolf-Winter through it read as a regression.
+
+cause: >
+  agents/fixer.ts's `applyContentPatch` re-validated the patched pack with plain
+  `validateRpg(pack)`. The world-quest load path (src/mcp/rpg_source_runtime.ts,
+  `withCampaignCatalogParity`) does more: it re-validates with the flags, items and
+  initial var ranges the quest's campaign imports supply (Wolf-Winter's approach and oath
+  flags arrive that way, so without them every gate on them is "impossible"), and adds the
+  campaign export/import catalog parity findings. The patch tool held a patched quest to a
+  different, stricter-in-the-wrong-way bar than the one the quest is loaded against.
+
+reproduction: >
+  tests/unit/mcp_tools.test.ts, "holds a world quest's patch to the quest's own load-path
+  bar (bug_0653)": a zero-op patch on wolf_winter must return ok:true with no findings and
+  applied 0 (before the fix: ok:false, 74 IMPOSSIBLE_GATE); a patch that points
+  meta.start_room at a missing room must still fail with START_MISSING.
+
+fix: >
+  `RpgSourceRuntime.validateWorldQuestPack(worldQuestId, pack)` runs the load path's own
+  validation — plain `validateRpg`, then `withCampaignCatalogParity` with the quest's
+  resolved campaign import/export catalogs — over a candidate pack, and labels the report
+  with the pack id so every apply_content_patch report names the pack the same way.
+  `applyContentPatch` gained an optional `validate` hook (default: plain `validateRpg`,
+  unchanged for standalone packs), and the MCP tool passes the world-quest validator. The
+  bug_0628 rule is untouched: the tool still passes the proposal to applyContentPatch
+  unparsed.
+
+production:
+  - agents/fixer.ts
+  - src/mcp/rpg_source_runtime.ts
+  - src/mcp/tools.ts
+regression:
+  - tests/unit/mcp_tools.test.ts
+verification:
+  - The new case, plus the existing apply_content_patch cases (cold_forge hint patch,
+    PATCH_TARGET_MISSING, source identity, both PATCH_INVALID shapes), pass.
+  - tests/unit/debugger_fixer.test.ts passes unchanged, pinning the default validator for
+    standalone packs.
