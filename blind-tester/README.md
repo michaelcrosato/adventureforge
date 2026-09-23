@@ -311,9 +311,11 @@ outside and non-overlapping with `ai-runs/fleet/<label>`.
   A dirty tree, fingerprint drift, or Git/provenance error aborts launch.
   Untracked notes do not dirty this check.
 - **Persona**: pure live fleets enforce the neutral `default` first-time-player
-  persona. `explorer`, `speedrunner`, `breaker`, `casual`, `lore-reader`, and
-  `mixed` remain explicit structural experiments; their prescribed behavior
-  changes the retention measurement.
+  persona. `explorer`, `speedrunner`, `breaker`, `casual`, `lore-reader`,
+  `cynical_veteran`, and `mixed` remain explicit structural experiments; their
+  prescribed behavior changes the retention measurement. Under `--mock` a
+  persona is a label only: the scripted mock agent discards its prompt, so
+  persona rotation there proves the structural plumbing, not persona behavior.
 - **Provider/model**: the live fleet default is Codex
   `gpt-5.3-codex-spark`, using the dedicated Spark allowance for ordinary blind
   feedback. Current plans accept only exact homogeneous
