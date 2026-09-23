@@ -1,0 +1,47 @@
+id: bug_0629
+title: seal_feedback_acceptance's --check-attestation tests spawned node_modules/.bin/tsx directly and failed ENOENT on Windows
+reported_by: repo audit at c17192f9 (2026-09-22), reproduced on the owner's Windows 11 checkout
+severity: S2
+
+symptom: >
+  `npm run health` was red on every Windows checkout. The two "--check-attestation, the
+  seal's precondition on its own" cases in tests/unit/seal_feedback_acceptance.test.ts
+  failed with `expected null to be 0` / `expected null to be 1`: the child never started,
+  so it had no exit status and no output, and the failure read as an unexplained null
+  rather than as a spawn error. Linux CI stayed green, so nothing outside a Windows run
+  of the full bar could see it.
+
+cause: >
+  The helper spawned `join(REPO_ROOT, "node_modules", ".bin", "tsx")` via spawnSync with
+  no shell. On Windows `.bin/tsx` is a POSIX shell shim (its runnable sibling is
+  `tsx.cmd`), and spawnSync without `shell` can execute neither, so it returns
+  `{ status: null, error: ENOENT }`. Every other CLI-spawning test in the repo already
+  invokes tsx as `process.execPath` + `node_modules/tsx/dist/cli.mjs`, which is
+  platform-neutral; this one helper had been written against the POSIX layout while
+  fixing an unrelated `npx` registry-latency problem. The windows-smoke CI job's explicit
+  file list did not include this test, so the portability hole was never exercised in CI.
+
+reproduction: >
+  On Windows: `node -e 'require("child_process").spawnSync("<repo>/node_modules/.bin/tsx",
+  ["--version"])'` returns status null with error code ENOENT. Running
+  `npx vitest run tests/unit/seal_feedback_acceptance.test.ts` at c17192f9 fails the two
+  --check-attestation cases.
+
+fix: >
+  The helper now spawns `process.execPath` with `node_modules/tsx/dist/cli.mjs` as the
+  first argument — the same invocation every other CLI-spawning test uses — keeping the
+  checkout's own tsx and the temp-root cwd (so the original no-`npx` hermeticity reason
+  still holds). It also rethrows `result.error`, so a spawn that never started reports
+  its real cause instead of a null status. The test file is added to the windows-smoke
+  job's explicit vitest list in .github/workflows/ci.yml so CI exercises it on Windows.
+  A grep of tests/ and scripts/ found no other bare `.bin/` spawn; the one bare `npm`
+  spawn in scripts/measure-test-durations.ts already sets `shell` on win32.
+
+production:
+  - .github/workflows/ci.yml
+regression:
+  - tests/unit/seal_feedback_acceptance.test.ts
+verification:
+  - npx vitest run tests/unit/seal_feedback_acceptance.test.ts is 28/28 green on Windows
+    11 (was 26/28 with the two --check-attestation cases failing on a null status).
+  - The windows-smoke job now runs the file on windows-latest on every push.

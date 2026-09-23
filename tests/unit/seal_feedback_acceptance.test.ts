@@ -501,14 +501,23 @@ describe("--check-attestation, the seal's precondition on its own", () => {
    * from the repo, which silently blew the 60s budget and failed the bar on a change that
    * touched nothing near it. Resolving the binary by path keeps the cwd honest and the
    * test hermetic.
+   *
+   * It is tsx's JS entry run under this node, never `node_modules/.bin/tsx` (bug_0629):
+   * on Windows `.bin/tsx` is a POSIX shell shim beside a `tsx.cmd`, and spawnSync without
+   * a shell cannot execute either, so the spawn failed ENOENT with a null status and the
+   * bar went red on every Windows checkout. `process.execPath` + `dist/cli.mjs` is how
+   * every other CLI-spawning test here invokes tsx, on every platform.
    */
-  const TSX_BIN = join(REPO_ROOT, "node_modules", ".bin", "tsx");
+  const TSX_CLI = join(REPO_ROOT, "node_modules", "tsx", "dist", "cli.mjs");
   const check = (root: string): { status: number | null; output: string } => {
     const result = spawnSync(
-      TSX_BIN,
-      [join(REPO_ROOT, "scripts", "seal-feedback-acceptance.ts"), "--check-attestation"],
+      process.execPath,
+      [TSX_CLI, join(REPO_ROOT, "scripts", "seal-feedback-acceptance.ts"), "--check-attestation"],
       { cwd: root, encoding: "utf8" },
     );
+    // A spawn that never started (ENOENT) has no status and no output; say so instead of
+    // letting it read as an unexplained `null !== 0`.
+    if (result.error) throw result.error;
     return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
   };
 

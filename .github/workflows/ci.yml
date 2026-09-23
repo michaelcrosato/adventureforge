@@ -208,4 +208,4 @@ jobs:
       - name: Validate every shipped quest
         run: npm run validate
       - name: Path-sensitive CLI tests
-        run: npx vitest run tests/unit/doctor_cli.test.ts tests/unit/record_playtest_session_cli.test.ts tests/unit/qa_triage_cli.test.ts
+        run: npx vitest run tests/unit/doctor_cli.test.ts tests/unit/record_playtest_session_cli.test.ts tests/unit/qa_triage_cli.test.ts tests/unit/seal_feedback_acceptance.test.ts
