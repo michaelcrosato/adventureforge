@@ -91,7 +91,8 @@ same filename. What it does cost is the trail of a finding nobody acted on — a
 deliberate trade, since the retired file stays in Git history, which is where
 [`AGENTS.md`](../../AGENTS.md) ("Token Economy") already keeps old detail.
 
-`tests/unit/qa_playtest_pipeline.test.ts` pins both halves of the rule.
+`tests/unit/qa_playtest_pipeline.test.ts` pinned both halves of the rule until the
+2026-09-23 suite halving retired it.
 
 ## Corrected region identities
 

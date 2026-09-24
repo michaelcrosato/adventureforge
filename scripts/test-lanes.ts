@@ -11,11 +11,13 @@ import { parseVitestSuiteProjects, type VitestSuiteProject } from "./verify-inte
  * WHICH named projects a given npm script hands to vitest:
  *
  *   - FAST (`test:fast`) — every ordinary unit/property/regression/acceptance file.
- *     This is the pre-commit lane; `health:fast` is the bar built on it.
- *   - EXHAUSTIVE (`test:exhaustive`) — the whole-state-space census proofs. Each one
- *     BFSes the complete reachable region of every shipped pack, so they are minutes
- *     apiece and run one or two workers wide by design (see the per-project comments
- *     in vitest.config.ts). They run nightly in `deep-audit.yml`.
+ *     This is the active-development bucket and the pre-commit lane; `health:fast` is
+ *     the bar built on it, and it must stay well under five minutes of wall clock.
+ *   - EXHAUSTIVE (`test:exhaustive`) — the whole-state-space census proofs, the bucket
+ *     to run while taking a break from coding. Each one BFSes the complete reachable
+ *     region of every shipped pack, so they are minutes apiece and run one or two
+ *     workers wide by design (see the per-project comments in vitest.config.ts). They
+ *     run nightly in `deep-audit.yml`.
  *
  * The split is only defensible while it is EXHAUSTIVE, and the dangerous failure is
  * silent: add a sixth project to vitest.config.ts, forget to name it in either script,
@@ -52,6 +54,7 @@ export const LANE_NAMES = Object.keys(LANE_SCRIPTS) as LaneName[];
  * the verifier treat it as a second opinion — so it needs this list, not the config.
  */
 export const EXHAUSTIVE_PROOF_FILES: readonly string[] = [
+  "tests/regression/no_dead_pocket.test.ts",
   "tests/regression/rpg_action_id_unique.test.ts",
   "tests/regression/rpg_all_endings_reachable.test.ts",
   "tests/regression/rpg_metamorphic_observation_stream.test.ts",

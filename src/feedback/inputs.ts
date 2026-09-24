@@ -101,8 +101,6 @@ export function canonicalCycleReportRef(root: string, path: string): string | nu
  * Both are fixable, and neither is fixable safely from this function alone. Until then
  * the honest statement is: the compiler's live default corpus is the report ledger, and
  * the fleet reaches the dev loop through the intake queue, not through here.
- *
- * The first-default invariant is pinned by tests/regression/feedback_cycle_input_discovery.test.ts.
  */
 export function resolveFeedbackInputs(
   root: string,

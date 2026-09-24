@@ -780,7 +780,7 @@ describe("the dev loop does not gate on a playtest", () => {
     // run therefore passed every gate named above and was hard-reset at the seal — and
     // since only one vendor could mint that sidecar, this is also what kept a
     // Claude-driven dev loop needing Codex installed. The seal now treats those
-    // artifacts as optional (tests/unit/seal_feedback_acceptance.test.ts), so what has
+    // artifacts as optional (scripts/seal-feedback-acceptance.ts), so what has
     // to stay true here is that the commit path never re-acquires the dependency.
     expect(driver).not.toContain("npm run blind");
     expect(driver).not.toContain("run --silent blind");

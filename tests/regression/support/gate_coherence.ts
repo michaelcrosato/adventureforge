@@ -10,11 +10,10 @@
  * human is a stale map that steers behaviour the wrong way — a fresh agent would
  * refuse the very engine/validator fixes the charter grants.
  *
- * This predicate is the shared, conservative detector behind both coherence guards:
- *   - bug_0049: the current-process DOCS (AGENTS.md, blind_playtest_protocol.md,
- *     afk_loop.md) — tests/regression/docs_trust_but_verify_coherence.test.ts.
- *   - bug_0050: the agent-facing CODE COMMENTS (agents/*.ts) —
- *     tests/regression/agents_trust_but_verify_coherence.test.ts.
+ * This predicate was the shared, conservative detector behind two coherence guards
+ * (bug_0049 for the current-process DOCS, bug_0050 for the agent-facing CODE COMMENTS
+ * in agents/*.ts); both guard files were retired in the 2026-09-23 suite halving, and
+ * tests/unit/gate_coherence.test.ts keeps the predicate itself honest.
  *
  * It is conservative BY CONSTRUCTION: it matches only imperative gate phrasings, so
  * it never fires on the charter's legitimate NEGATIONS ("no §14 ceremony", "no

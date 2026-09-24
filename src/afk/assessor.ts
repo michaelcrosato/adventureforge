@@ -441,7 +441,7 @@ function categoryForHotspot(h: Hotspot): Category {
  * `hint_text` fix_layers "S", which let a single hot spot outscore even an
  * unplayable-quest fix: `score(5, "S", "content_fix")` = 5.0 vs
  * `score(5, "M", "content_fix")` = 2.5 for `fix-unplayable-*`/`fix-unbound-*`
- * (see tests/unit/assessor_hotspots.test.ts and the real checkpoint capture in
+ * (see the real checkpoint capture in
  * .superpowers/sdd/task-17-report.md, where a `hint_text` hot spot legitimately
  * ranked #1 over everything). With the floor at "M", a hotspot candidate's
  * best-case score is exactly 2.5 — at most a TIE with, never a win over, an

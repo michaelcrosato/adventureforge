@@ -31,8 +31,7 @@ import { crawlQuest } from "./quest_crawler.js";
  *  quest crawler's own SOFTLOCK-solver oracle and defaults to 0 (off) for
  *  `--smoke`. A round trip always needs a real solver budget to find a
  *  playable ending, so this is a fixed constant rather than reusing that
- *  option. Tuned against `npm run crawl:smoke`'s wall-clock budget and kept in
- *  step with tests/unit/crawl_overworld.test.ts's per-quest solver budget:
+ *  option. Tuned against `npm run crawl:smoke`'s wall-clock budget:
  *  tide_mill (6 endings, the largest shipped pack) needs ~60k states (~2s).
  *  If a future pack caps out here, smoke goes red with an honest "search
  *  capped" WORLD finding — raise this consciously rather than papering over.
@@ -490,8 +489,8 @@ export function finalizeFindings(rawFindings: readonly CrawlFinding[]): {
  * (edge sweep, boards/quest discovery, quest round trips, coverage) via
  * `crawlOverworld`. `questRoundTrips` is always on here: a real run (smoke,
  * deep, or a plain `--overworld` invocation) always wants the full proof, not
- * just the sweep — the cheaper `questRoundTrips:false` shape is a unit-test-only
- * knob (`tests/unit/crawl_overworld.test.ts`'s determinism check).
+ * just the sweep — the cheaper `questRoundTrips:false` shape is for direct
+ * `crawlOverworld` callers that only need the sweep.
  */
 function runOverworldItem(
   item: Extract<CrawlPlanItem, { kind: "overworld" }>,

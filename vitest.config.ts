@@ -9,6 +9,11 @@ const EXHAUSTIVE_RPG_PROOFS = [
   "tests/regression/rpg_action_id_unique.test.ts",
   "tests/regression/rpg_score_economy_sound.test.ts",
   "tests/regression/rpg_metamorphic_relabel.test.ts",
+  // The dynamic soft-lock census: every progress-reachable state of every shipped pack
+  // must still reach an ending. Same whole-state-space BFS shape as the proofs above, and
+  // at ~79s it was the single longest file in the standard project, so it sets the
+  // active-development lane's wall clock by itself.
+  "tests/regression/no_dead_pocket.test.ts",
 ];
 const ALL_EXHAUSTIVE_RPG_PROOFS = [
   METAMORPHIC_OBSERVATION_PROOF,

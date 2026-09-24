@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -52,9 +52,15 @@ describe("starting-slice causal matrix", () => {
     );
     expect(albanyReturn?.systems).toContain("jobs");
     expect(albanyReturn?.baseline_evidence).toContain(
-      "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
+      "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
     );
     expect(() => assertProvenStartingSliceProofsExist(matrix)).not.toThrow();
+    // Baseline evidence is a claim that a file exercises the fork, so a deleted test must
+    // leave the matrix with it rather than linger as a citation nothing can open.
+    const missingEvidence = matrix.forks.flatMap((fork) =>
+      fork.baseline_evidence.filter((path) => !existsSync(path)).map((path) => `${fork.id}: ${path}`),
+    );
+    expect(missingEvidence).toEqual([]);
   });
 
   it("loads causal matrix from custom root directory and handles errors", () => {

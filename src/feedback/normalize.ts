@@ -150,10 +150,10 @@ function stripStopwords(tokens: readonly string[]): string[] {
  * trimmed — so no leading/trailing/doubled spaces). Padding both sides with
  * a single space turns "phrase sits at the very start/end of raw" and
  * "phrase sits between two other tokens" into the same `includes` check.
- * Exported for direct unit coverage (see feedback_normalize.test.ts) — no
- * shipped location name is currently a single token short enough to trigger
- * the old bug against real content, so the regression is pinned against this
- * helper directly rather than through the compiled index.
+ * Exported for direct testing — no shipped location name is currently a single
+ * token short enough to trigger the old bug against real content, so a
+ * regression test has to target this helper directly rather than the compiled
+ * index.
  */
 export function matchesAtTokenBoundary(normalizedRaw: string, phrase: string): boolean {
   if (phrase.length === 0) return false;

@@ -61,7 +61,6 @@
         "tests/unit/world_opening_registration.test.ts",
         "tests/unit/world_opening_registration_helpers.test.ts",
         "tests/unit/world_session_contact_presentation.test.ts",
-        "tests/starting_slice/character_background_counterfactual.test.ts",
         "tests/unit/world_session_snapshot.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/registration_promise_return_counterfactual.test.ts"
@@ -235,11 +234,7 @@
         "tests/unit/world_campaign_consequences.test.ts",
         "tests/unit/world_session_quests.test.ts",
         "tests/unit/world_campaign_service_rules.test.ts",
-        "tests/starting_slice/ally_content_gameplay.test.ts",
-        "tests/starting_slice/ally_commitment_counterfactual.test.ts",
         "tests/unit/world_session_snapshot.test.ts",
-        "tests/starting_slice/wolf_strategy_counterfactual.test.ts",
-        "tests/starting_slice/preparation_profile_gameplay.test.ts",
         "traces/bugs/bug_0523_wolf_winter_ally_commitment.yaml",
         "traces/bugs/bug_0528_wolf_winter_june_combat_boundary.yaml"
       ],
@@ -301,12 +296,7 @@
       "baseline_evidence": [
         "tests/unit/world_opening_preparation.test.ts",
         "tests/unit/world_opening_preparation_journal.test.ts",
-        "tests/starting_slice/opening_dispatch_briefing.test.ts",
         "tests/regression/overworld_optional_departure_interactions.test.ts",
-        "tests/starting_slice/preparation_profile_gameplay.test.ts",
-        "tests/starting_slice/preparation_dispatch_forecast.test.ts",
-        "tests/starting_slice/station_dispatch_impact.test.ts",
-        "tests/starting_slice/preparation_profiles_return_e2e.test.ts",
         "traces/bugs/bug_0522_wolf_winter_preparation_profiles.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/preparation_profiles_counterfactual.test.ts"
@@ -359,9 +349,7 @@
         "tests/unit/world_opening_relief_allocation.test.ts",
         "tests/unit/world_opening_relief_allocation_journal.test.ts",
         "tests/regression/overworld_optional_departure_interactions.test.ts",
-        "tests/regression/new_york_overworld.test.ts",
         "tests/unit/world_session_snapshot.test.ts",
-        "tests/starting_slice/wolf_route_tradeoff_projection.test.ts",
         "traces/bugs/bug_0527_wolf_winter_relief_allocation.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/relief_allocation_counterfactual.test.ts"
@@ -423,11 +411,9 @@
         "irreversible_tradeoff"
       ],
       "baseline_evidence": [
-        "tests/starting_slice/hill_approach_gameplay.test.ts",
         "tests/unit/world_quest_launch.test.ts",
         "tests/unit/world_quest_launch_resource_replay.test.ts",
         "tests/unit/world_session_snapshot.test.ts",
-        "tests/starting_slice/wolf_route_tradeoff_projection.test.ts",
         "tests/unit/world_quest_launch_resource_replay.test.ts",
         "traces/bugs/bug_0526_wolf_winter_hill_approach.yaml"
       ],
@@ -470,7 +456,6 @@
       "contract_tags": ["delayed", "cross_system", "cross_phase", "npc_memory", "failure_forward"],
       "baseline_evidence": [
         "tests/regression/wolf_winter_dialogue_surface.test.ts",
-        "tests/starting_slice/fortify_outlast_return_e2e.test.ts",
         "tests/unit/world_session_snapshot.test.ts",
         "traces/bugs/bug_0525_wolf_winter_fortify_outlast.yaml"
       ],
@@ -538,8 +523,6 @@
         "tests/regression/wolf_winter_cross_encounter_agency.test.ts",
         "tests/regression/wolf_winter_bloodied_byre_evacuation.test.ts",
         "tests/unit/rpg_pressure_tracks.test.ts",
-        "tests/starting_slice/wolf_strategy_counterfactual.test.ts",
-        "tests/starting_slice/bloodied_byre_evacuation_return_e2e.test.ts",
         "traces/bugs/bug_0520_wolf_winter_noncombat_strategy.yaml",
         "traces/bugs/bug_0531_wolf_winter_ridge_alarm_journal_truth.yaml"
       ],
@@ -597,10 +580,8 @@
         "failure_forward"
       ],
       "baseline_evidence": [
-        "tests/starting_slice/drive_crisis_return_counterfactual.test.ts",
         "tests/unit/world_campaign_consequences.test.ts",
         "tests/unit/world_journey_campaign.test.ts",
-        "tests/regression/new_york_overworld.test.ts",
         "tests/unit/world_session_snapshot.test.ts",
         "traces/bugs/bug_0524_wolf_winter_crisis_priority.yaml"
       ],
@@ -678,8 +659,7 @@
         "tests/unit/world_journey_campaign.test.ts",
         "tests/unit/world_campaign_service_rules.test.ts",
         "tests/unit/world_session_resource_replay.test.ts",
-        "tests/unit/ui_overworld.test.ts",
-        "tests/starting_slice/cade_return_packet_counterfactual.test.ts"
+        "tests/unit/ui_overworld.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_return_counterfactual.test.ts"
     },
@@ -712,8 +692,7 @@
       "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/unit/world_local_job_scene_conditions.test.ts",
-        "tests/unit/world_local_event_scene.test.ts",
-        "tests/unit/world_campaign_service_region_renown.test.ts"
+        "tests/unit/world_local_event_scene.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_market_scene_counterfactual.test.ts"
     },
@@ -818,8 +797,7 @@
       "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/unit/world_local_event_scene.test.ts",
-        "tests/unit/world_local_job_scene_conditions.test.ts",
-        "tests/starting_slice/albany_return_opportunity_leads.test.ts"
+        "tests/unit/world_local_job_scene_conditions.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_works_hazard_charter_counterfactual.test.ts"
     },
@@ -888,9 +866,7 @@
       "baseline_evidence": [
         "tests/unit/world_local_event_scene.test.ts",
         "tests/unit/world_local_job_scene_conditions.test.ts",
-        "tests/unit/world_session_snapshot.test.ts",
-        "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
-        "tests/starting_slice/albany_return_opportunity_leads.test.ts"
+        "tests/unit/world_session_snapshot.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts"
     },
@@ -934,11 +910,7 @@
       "baseline_evidence": [
         "tests/unit/world_campaign_consequences.test.ts",
         "tests/unit/world_campaign_service_rules.test.ts",
-        "tests/unit/world_session_local_discovery.test.ts",
-        "tests/unit/crawl_overworld.test.ts",
-        "tests/regression/mcp_server_registration.test.ts",
-        "tests/regression/blind_pure_prompt_contract.test.ts",
-        "tests/starting_slice/drive_crisis_return_counterfactual.test.ts"
+        "tests/unit/world_session_local_discovery.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/wolf_wound_care_counterfactual.test.ts"
     }

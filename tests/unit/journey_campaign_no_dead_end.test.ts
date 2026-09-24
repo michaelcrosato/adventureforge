@@ -12,7 +12,7 @@
  *     journeyCampaignPendingStoryStep (a story choice must present) is available.
  *
  * If a future goal/quest edit breaks this split, the campaign can silently dead-end
- * at a continue again (the bug behind journey_campaign_out_of_order_recovery.test.ts).
+ * at a continue again (the out-of-order campaign recovery bug).
  */
 import { describe, expect, it } from "vitest";
 
