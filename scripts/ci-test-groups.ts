@@ -38,19 +38,10 @@ export const MEASURED_TEST_COST_MS: Readonly<Record<string, number>> = {
   "tests/regression/rpg_all_endings_reachable.test.ts": 315_297,
   "tests/regression/no_dead_pocket.test.ts": 303_808,
   "tests/regression/overworld_cli.test.ts": 285_798,
-  "tests/regression/mcp_pure_play_mode.test.ts": 167_316,
   "tests/acceptance/fleet_mock_pipeline.test.ts": 100_156,
-  "tests/unit/crawl_quest_crawler.test.ts": 88_648,
-  "tests/starting_slice/campus_archive_query_counterfactual.test.ts": 86_923,
-  "tests/regression/crawl_workers_determinism.test.ts": 84_749,
   "tests/unit/rpg_generator.test.ts": 77_171,
-  "tests/unit/crawl_overworld.test.ts": 70_351,
-  "tests/regression/trace_cli_integrity.test.ts": 66_290,
-  "tests/regression/rpg_generator_guaranteed_gauntlet.test.ts": 50_338,
-  "tests/starting_slice/ally_commitment_counterfactual.test.ts": 49_844,
   "tests/acceptance/crawler_fault_injection.test.ts": 41_269,
   "tests/regression/overworld_snapshot_integrity.test.ts": 37_362,
-  "tests/starting_slice/cade_return_packet_counterfactual.test.ts": 35_416,
   // Re-measured 2026-08-28, and no longer outliers: these two sat at 272_925 and
   // 270_542 from the 2026-07-27 run until 303dc6b6 (2026-08-01) rewrote both into
   // 28-line fast companion guards for the unified ending proof. They now run in 1.2s

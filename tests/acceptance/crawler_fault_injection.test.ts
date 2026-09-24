@@ -2,7 +2,7 @@
  * Fault-injection acceptance suite (Task 9) — proves the mechanical crawler
  * actually CATCHES planted defects, end to end. Each test plants one bug in a
  * freshly generated pack (never a shipped one) using the exact mutation/wrapper
- * recipes proven in tests/unit/crawl_quest_crawler.test.ts, then asserts:
+ * recipes first proven in the since-retired crawl_quest_crawler unit suite, then asserts:
  *  (a) the crawl reports exactly the right finding code, and
  *  (b) the finding's ddmin-minimized repro trace re-triggers the SAME finding
  *      fingerprint via `reproducesFingerprint` — the repro is real, not a stub.

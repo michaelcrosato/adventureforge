@@ -275,10 +275,10 @@ it is **not yet milestone-certified**:
   hash but accepts no gameplay or journey decision. Actions, terms, mechanics,
   costs, gameplay state/effects except that receipt, RNG, outcomes, and
   accepted-decision counts are unchanged, with
-  focused proof in `station_dispatch_board.test.ts`,
-  `opening_dispatch_briefing.test.ts`, `opening_departure_recap.test.ts`,
-  `overworld_cli.test.ts`, `mcp_pure_play_mode.test.ts`,
-  `blind_pure_prompt_contract.test.ts`, `mcp_journey_surface.test.ts`,
+  focused proof in `station_dispatch_board.test.ts` (retired),
+  `opening_dispatch_briefing.test.ts` (retired), `opening_departure_recap.test.ts` (retired),
+  `overworld_cli.test.ts`, `mcp_pure_play_mode.test.ts` (retired),
+  `blind_pure_prompt_contract.test.ts` (retired), `mcp_journey_surface.test.ts` (retired),
   `ui_overworld.test.ts`, and `compact_legend.test.ts`;
 - the exact pure June talk authorized by a revealed V6 `field_team` row now has
   its own base-bound V1 modal transport. A non-consuming full observation first
@@ -377,7 +377,7 @@ Road-Warden's Fieldcraft 4 raises Wolf-Winter's visible starting DEF from 3 to 4
 rail while a Ledger Advocate at default DEF 3 splits it and receives the
 authored bind-the-rail recovery action. Direct quest starts remain exact pack
 defaults. Paired proof lives in
-[`character_background_counterfactual.test.ts`](../tests/starting_slice/character_background_counterfactual.test.ts).
+`character_background_counterfactual.test.ts` (retired in the 2026-09-23 suite halving).
 
 The return now closes the selected background's opening obligation as carefully
 as it closes the later relief oath. Every supported non-death Wolf-Winter
@@ -434,7 +434,7 @@ effect. A structurally supported save carrying a still-valid pending offer
 remains finishable, while a resolved save with the discovery removed remains
 invalid.
 Presentation and state proof live in
-[`opening_dispatch_briefing.test.ts`](../tests/starting_slice/opening_dispatch_briefing.test.ts),
+`opening_dispatch_briefing.test.ts` (retired in the 2026-09-23 suite halving),
 [`lead_source_counterfactual.test.ts`](../tests/starting_slice/lead_source_counterfactual.test.ts),
 and
 [`overworld_optional_departure_interactions.test.ts`](../tests/regression/overworld_optional_departure_interactions.test.ts).
@@ -459,7 +459,7 @@ unchanged. Presentation-only content revisions do not create a save migration;
 structurally compatible state restores against current content with an explicit
 provenance warning, after ordinary replay and integrity checks. Contract proof lives in
 [`compact_journey_projection.test.ts`](../tests/unit/compact_journey_projection.test.ts),
-[`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
+`mcp_journey_surface.test.ts` (retired in the 2026-09-23 suite halving), and
 [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
 The first narrative-first selected-receipt follow-up left that disclosure
@@ -674,7 +674,7 @@ campaign facts and memories, June's broken cattle-first agreement when retained
 dispatch, and save/restore are proved by
 [`wolf_winter_bloodied_byre_evacuation.test.ts`](../tests/regression/wolf_winter_bloodied_byre_evacuation.test.ts)
 and
-[`bloodied_byre_evacuation_return_e2e.test.ts`](../tests/starting_slice/bloodied_byre_evacuation_return_e2e.test.ts).
+[`bloodied_byre_evacuation_return_e2e.test.ts` (retired)](../tests/starting_slice/bloodied_byre_evacuation_return_e2e.test.ts).
 
 The sixth authored increment makes Albany preparation a durable, finite choice
 instead of a promise in the matrix. After source certification, every one of the
@@ -703,7 +703,7 @@ and browser-engine parity; paired core proofs cover all three consumers and
 return services. Proof lives in
 [`preparation_profiles_counterfactual.test.ts`](../tests/starting_slice/preparation_profiles_counterfactual.test.ts)
 and
-[`preparation_profiles_return_e2e.test.ts`](../tests/starting_slice/preparation_profiles_return_e2e.test.ts).
+[`preparation_profiles_return_e2e.test.ts` (retired)](../tests/starting_slice/preparation_profiles_return_e2e.test.ts).
 
 The seventh authored increment makes June Pike a persistent ally rather than a
 proposed cast note. After preparation, the Station Quarter presents three exact
@@ -756,11 +756,11 @@ negotiated refusal, explicit solo, and relationship loss produce distinct
 memories, Station testimony, and one-time service availability. Companion and
 promise state, chronological quest replay, RPG import receipts, overworld and
 RPG save/restore, and full/compact/UI parity are tamper-checked. Proof lives in
-[`ally_commitment_counterfactual.test.ts`](../tests/starting_slice/ally_commitment_counterfactual.test.ts)
+`ally_commitment_counterfactual.test.ts` (retired in the 2026-09-23 suite halving)
 and
-[`ally_content_gameplay.test.ts`](../tests/starting_slice/ally_content_gameplay.test.ts),
+`ally_content_gameplay.test.ts` (retired in the 2026-09-23 suite halving),
 with the paired rail proof in
-[`wolf_strategy_counterfactual.test.ts`](../tests/starting_slice/wolf_strategy_counterfactual.test.ts).
+`wolf_strategy_counterfactual.test.ts` (retired in the 2026-09-23 suite halving).
 
 Compact v29 adds a read-only `departure_contact_leads` tuple beside the existing
 pull-based departure choices. Before preparation it names June's optional field
@@ -816,7 +816,7 @@ foldback, structural snapshot integrity, full/compact MCP, UI, and
 service consumption. Proof lives in
 [`crisis_priority_counterfactual.test.ts`](../tests/starting_slice/crisis_priority_counterfactual.test.ts)
 and
-[`drive_crisis_return_counterfactual.test.ts`](../tests/starting_slice/drive_crisis_return_counterfactual.test.ts),
+`drive_crisis_return_counterfactual.test.ts` (retired in the 2026-09-23 suite halving),
 with the persistent care and downstream-action proof in
 [`wolf_wound_care_counterfactual.test.ts`](../tests/starting_slice/wolf_wound_care_counterfactual.test.ts).
 
@@ -848,7 +848,7 @@ full/compact/browser parity, structural save/restore, and one-use service
 consumption are covered by
 [`cade_trust_counterfactual.test.ts`](../tests/starting_slice/cade_trust_counterfactual.test.ts)
 and
-[`fortify_outlast_return_e2e.test.ts`](../tests/starting_slice/fortify_outlast_return_e2e.test.ts).
+[`fortify_outlast_return_e2e.test.ts` (retired)](../tests/starting_slice/fortify_outlast_return_e2e.test.ts).
 
 The tenth authored increment turns `SS-F07-hill-route` into the actual
 Wolf-Winter launch instead of adding a detached travel menu. Hayden's Station
@@ -885,7 +885,7 @@ proof boundary, relationship memory, import receipt, outcome, and exact return
 summary survive RPG/overworld replay, chronological foldback, full/compact MCP,
 browser and CLI parity, and structural v11 save/restore with the v10 upgrade.
 Proof lives in
-[`hill_approach_gameplay.test.ts`](../tests/starting_slice/hill_approach_gameplay.test.ts),
+`hill_approach_gameplay.test.ts` (retired in the 2026-09-23 suite halving),
 [`hill_approach_return_e2e.test.ts`](../tests/starting_slice/hill_approach_return_e2e.test.ts),
 and [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
@@ -1011,9 +1011,9 @@ each concept loses the other three witnesses. Together with the existing
 Road-Warden HUNT rail counterfactual, this proves native, nonpresentational
 advantages without locking any route or claiming fleet-level strategy balance.
 Proof lives in
-[`character_concept_route_balance.test.ts`](../tests/starting_slice/character_concept_route_balance.test.ts)
+`character_concept_route_balance.test.ts` (retired in the 2026-09-23 suite halving)
 and
-[`character_background_counterfactual.test.ts`](../tests/starting_slice/character_background_counterfactual.test.ts).
+`character_background_counterfactual.test.ts` (retired in the 2026-09-23 suite halving).
 
 ## Required resolution families
 
@@ -1082,7 +1082,7 @@ selects exactly one of four policy/outcome closures with outcome-dependent
 duration and policy-dependent standing. The paired held/evacuated, restore,
 structural replay, and surface
 proof is
-[`winter_return_docket_counterfactual.test.ts`](../tests/starting_slice/winter_return_docket_counterfactual.test.ts).
+`winter_return_docket_counterfactual.test.ts` (retired in the 2026-09-23 suite halving).
 Campus is the fifth authored Albany event. Blair's post-Wolf return-evidence
 mandate requires the Campus POI, Blair's contact, and an explicit investigation
 before a player records either clinic exposure thresholds or traceable route
@@ -1117,7 +1117,7 @@ creates or consolidates an exact one-use Albany service without duplicating a
 pre-existing returned-rig cache. Restore, replay, action-order, full/compact/UI/MCP,
 and all eleven Cade-packet outcome rows across both dawn-dispatch choices are
 proved by
-[`cade_return_packet_counterfactual.test.ts`](../tests/starting_slice/cade_return_packet_counterfactual.test.ts).
+`cade_return_packet_counterfactual.test.ts` (retired in the 2026-09-23 suite halving).
 Jamie's Market policy and disputed-crates pair adds a second authored event and
 fifth authored job: household-price protection consistently buys more standing
 for more time than the open-bid board at both fast and thorough settlement depths.
@@ -1182,7 +1182,7 @@ play reaches them. The structured journey object is authoritative, while the
 versioned compact v29 context receives only a bounded additive tuple and legend.
 Projection is read-only, adds no decision or action, and is covered across the
 Wolf completion, dawn choice, northward departure, restore, MCP, and UI surfaces
-by [`albany_return_opportunity_leads.test.ts`](../tests/starting_slice/albany_return_opportunity_leads.test.ts).
+by `albany_return_opportunity_leads.test.ts` (retired in the 2026-09-23 suite halving).
 Five verified exact-feature Terra journeys completed Wolf-Winter and continued,
 but none organically named, pursued, or declined a listed Return Opportunity;
 the separate Cade dawn dispatch does not count. Deterministic visibility therefore

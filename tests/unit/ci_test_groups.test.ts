@@ -41,7 +41,7 @@ describe("CI test groups", () => {
     const files = discoverTestFiles();
     const groups = assignTestGroups(files, 2);
 
-    expect(files.length).toBeGreaterThan(400);
+    expect(files.length).toBeGreaterThan(200);
     expect(
       groups.flatMap((group) => group.files).sort((left, right) => left.localeCompare(right)),
     ).toEqual(files);

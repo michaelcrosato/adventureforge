@@ -219,21 +219,19 @@ describe("sliceSeeds", () => {
 });
 
 /**
- * Review fix (Task 10 follow-up #2): the `finalizeFindings` tests above (and
- * `crawl_workers_determinism.test.ts`'s byte-diff test, which only ever runs
- * clean shipped content with `--no-overworld`) never exercise `findings`/
- * `countsByCode` with REAL findings produced by an actual `runPlanInProcess`
- * call — they hand-build `CrawlFinding` literals and call `finalizeFindings`/
- * `mergeSummaries` directly, or byte-diff a run whose `findings` array is
- * always `[]`. Neither can fail on the historical defect (`runPlanInProcess`
+ * Review fix (Task 10 follow-up #2): the `finalizeFindings` tests above never
+ * exercise `findings`/`countsByCode` with REAL findings produced by an actual
+ * `runPlanInProcess` call — they hand-build `CrawlFinding` literals and call
+ * `finalizeFindings`/`mergeSummaries` directly, so they cannot fail on the
+ * historical defect (`runPlanInProcess`
  * and `mergeSummaries` disagreeing on array/key order) actually firing on a
  * live crawl.
  *
  * This suite uses the new `CrawlRunOptions.prepareQuest` DI seam to hand
  * `runPlanInProcess` two in-memory, mutated packs — a RENDER template-marker
  * mutation (`generateRpgPack(3)`) and a throwing-resolver CRASH wrapper
- * (`generateRpgPack(4)`), both recipes proven in
- * `tests/unit/crawl_quest_crawler.test.ts` — under two different questIds
+ * (`generateRpgPack(4)`), the recipes crawler_fault_injection.test.ts also plants
+ * — under two different questIds
  * chosen so questId-alphabetical order and code-alphabetical order DISAGREE:
  * `quest_alpha_render` (RENDER) sorts before `quest_zulu_crash` (CRASH) by
  * questId, but "CRASH" sorts before "RENDER" alphabetically by code alone.
@@ -246,8 +244,7 @@ describe("runPlanInProcess with injected quests (real, non-empty findings)", () 
 
   function prepareRenderQuest(): PreparedQuest {
     const pack = generateRpgPack(3);
-    // pack.rooms is an array (src/rpg/schema.ts RpgPackSchema); pick any non-start room,
-    // same recipe as tests/unit/crawl_quest_crawler.test.ts's RENDER case.
+    // pack.rooms is an array (src/rpg/schema.ts RpgPackSchema); pick any non-start room.
     const room = pack.rooms.find((r) => r.id !== pack.meta.start_room)!;
     room.description = "You see {{treasure_name}} here.";
     return { ...preparePack(pack), questId: RENDER_QUEST_ID };

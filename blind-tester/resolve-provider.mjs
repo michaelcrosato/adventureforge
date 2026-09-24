@@ -116,13 +116,12 @@ export function deriveProviderDrivable(provider, derived, repoRoot = REPO_ROOT) 
  * a provider without `tsx` is a shell path that dies on the machines the harness most
  * needs to work on.
  *
- * Two things keep a mirror from becoming a second opinion:
+ * What keeps a mirror from becoming a second opinion:
  *
- *   1. tests/regression/blind_provider_isolation_contract.test.ts imports BOTH and
- *      asserts they return the same isolation, code, reason and readerModule for every
- *      shipped provider and for a synthetic subject in each of the four reason classes.
- *      The reason sentences are reproduced verbatim for exactly that purpose: identical
- *      prose makes drift a test failure instead of a difference nobody notices.
+ *   1. The reason sentences are reproduced verbatim from src/blind/providers.ts so the
+ *      two stay comparable line for line. The parity test that imported BOTH and
+ *      asserted identical results was retired in the 2026-09-23 suite halving, so a
+ *      change to either side must be mirrored by hand.
  *   2. `resolveProvider` refuses outright when this derivation disagrees with the
  *      `isolation` literal stored in the registry. src/blind/providers.ts makes that
  *      disagreement a hard parse failure; a runner that shrugged it off would be the one

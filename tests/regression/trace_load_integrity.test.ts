@@ -41,8 +41,7 @@ const ROOT = process.cwd();
 const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const api = () => createToolApi({ root: ROOT });
 
-// A real 5-action route through sunken_barrow's opening and shade dialogue — the
-// exact recipe reused from tests/regression/inspect_trace_divergence.test.ts.
+// A real 5-action route through sunken_barrow's opening and shade dialogue.
 const ACTIONS: RpgAction[] = [
   { type: "MOVE", direction: "down" },
   { type: "TAKE", item: "iron_bar" },
